@@ -191,9 +191,61 @@ export class GameScene extends Phaser.Scene {
       
       trigger.setSize(dialog.width, 100);
       trigger.setOrigin(0.5, 0.5);
-      trigger.setVisible(false);
       trigger.setData('dialogId', dialog.id);
       trigger.refreshBody();
+
+      // Create visual indicator for trigger zone (placeholder until sprite sheet is added)
+      const indicator = this.add.graphics();
+      indicator.lineStyle(3, 0xffff00, 0.6);
+      indicator.strokeRect(
+        dialog.x - dialog.width / 2,
+        700,
+        dialog.width,
+        100
+      );
+      indicator.fillStyle(0xffff00, 0.15);
+      indicator.fillRect(
+        dialog.x - dialog.width / 2,
+        700,
+        dialog.width,
+        100
+      );
+
+      // Add pulsing animation to indicator
+      this.tweens.add({
+        targets: indicator,
+        alpha: { from: 0.3, to: 0.8 },
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      // Add icon placeholder above trigger zone
+      const icon = this.add.graphics();
+      icon.fillStyle(0xffffff, 0.9);
+      icon.fillCircle(dialog.x, 690, 15);
+      icon.lineStyle(3, 0xffff00, 1);
+      icon.strokeCircle(dialog.x, 690, 15);
+      
+      // Draw "!" symbol
+      icon.fillStyle(0xffff00, 1);
+      icon.fillRect(dialog.x - 3, 680, 6, 12);
+      icon.fillCircle(dialog.x, 698, 3);
+
+      // Add subtle bounce animation to icon
+      this.tweens.add({
+        targets: icon,
+        y: '+=8',
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      // Store visual elements for potential future replacement
+      trigger.setData('indicator', indicator);
+      trigger.setData('icon', icon);
     });
   }
 
@@ -210,6 +262,29 @@ export class GameScene extends Phaser.Scene {
       const currentLang = localization.getLanguage();
       const dialogText = dialogData.text[currentLang];
       this.speechBubble.show(this.player.x, this.player.y, dialogText);
+
+      // Hide visual indicators after trigger
+      const indicator = trigger.getData('indicator') as Phaser.GameObjects.Graphics;
+      const icon = trigger.getData('icon') as Phaser.GameObjects.Graphics;
+      
+      if (indicator) {
+        this.tweens.add({
+          targets: indicator,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => indicator.destroy(),
+        });
+      }
+      
+      if (icon) {
+        this.tweens.add({
+          targets: icon,
+          alpha: 0,
+          scale: 0,
+          duration: 300,
+          onComplete: () => icon.destroy(),
+        });
+      }
     }
   }
 
@@ -224,6 +299,10 @@ export class GameScene extends Phaser.Scene {
     // Reset triggered dialogs so player can see them in new language
     this.triggeredDialogs.clear();
     this.speechBubble.hide();
+    
+    // Recreate trigger zones with fresh visual indicators
+    this.dialogTriggers.clear(true, true);
+    this.createDialogTriggers();
   }
 
   update(): void {

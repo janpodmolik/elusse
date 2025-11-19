@@ -140,6 +140,18 @@ export const DIALOGS: DialogData[] = [
 ];
 ```
 
+**Vizuální indikátory trigger zón:**
+- Žluté obdélníky s pulsující animací označují aktivní trigger zóny
+- Ikona "!" nad každou zónou poskakuje pro lepší viditelnost
+- Po průchodu zónou a zobrazení dialogu se indikátory plynule skryjí
+- Indikátory jsou placeholder - připravené pro nahrazení sprite sheety
+
+**Nahrazení vizuálních indikátorů vlastním sprite:**
+V `src/scenes/GameScene.ts`, metoda `createDialogTriggers()` obsahuje grafické placeholder elementy. Pro vlastní sprite:
+1. Nahrajte sprite sheet do `public/assets/ui/trigger-icon.png`
+2. V `preload()` přidejte: `this.load.image('trigger-icon', 'assets/ui/trigger-icon.png');`
+3. Nahraďte graphics kód za: `this.add.image(dialog.x, 690, 'trigger-icon');`
+
 ### 🌐 Lokalizace
 
 Hra podporuje **češtinu (CZ)** a **angličtinu (EN)**. Hráč může přepínat mezi jazyky klávesou **L**. Jazyk se ukládá do `localStorage`.
