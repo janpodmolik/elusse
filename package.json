@@ -1,7 +1,7 @@
 {
   "name": "elusse",
   "version": "1.0.0",
-  "description": "Interactive pixel art portfolio platformer game",
+  "description": "Interactive pixel art portfolio platformer - Translator & Proofreader",
   "type": "module",
   "scripts": {
     "dev": "vite",

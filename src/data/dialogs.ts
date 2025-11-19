@@ -6,8 +6,8 @@ export const DIALOGS: DialogData[] = [
     x: 200,
     width: 150,
     text: {
-      cs: 'Vítejte v mém portfoliu!',
-      en: 'Welcome to my portfolio!',
+      cs: 'Ahoj! Jsem překladatelka a korektorka.',
+      en: 'Hi! I\'m a translator and proofreader.',
     },
   },
   {
@@ -15,44 +15,44 @@ export const DIALOGS: DialogData[] = [
     x: 500,
     width: 150,
     text: {
-      cs: 'Jsem full-stack developer s vášní pro moderní technologie.',
-      en: 'I\'m a full-stack developer with passion for modern technologies.',
+      cs: 'Miluji gaming, cosplay a příběhy, které ožívají.',
+      en: 'I love gaming, cosplay and stories that come alive.',
     },
   },
   {
-    id: 'skills',
+    id: 'languages',
     x: 800,
     width: 150,
     text: {
-      cs: 'TypeScript, React, Node.js, Phaser...',
-      en: 'TypeScript, React, Node.js, Phaser...',
+      cs: 'Překládám z angličtiny a švédštiny do češtiny.',
+      en: 'I translate from English and Swedish to Czech.',
     },
   },
   {
-    id: 'projects',
+    id: 'games',
     x: 1100,
     width: 150,
     text: {
-      cs: 'Podívejte se na moje projekty!',
-      en: 'Check out my projects!',
+      cs: 'Překládám počítačové i stolní hry!',
+      en: 'I translate both video games and board games!',
     },
   },
   {
-    id: 'experience',
+    id: 'books',
     x: 1400,
     width: 150,
     text: {
-      cs: '5+ let zkušeností ve vývoji webu.',
-      en: '5+ years of web development experience.',
+      cs: 'Také se věnuji překladu knih a příběhů.',
+      en: 'I also work on book and story translations.',
     },
   },
   {
-    id: 'hobbies',
+    id: 'passion',
     x: 1700,
     width: 150,
     text: {
-      cs: 'Ve volném čase dělám indie hry.',
-      en: 'I make indie games in my free time.',
+      cs: 'Gaming není jen práce - je to můj životní styl!',
+      en: 'Gaming isn\'t just work - it\'s my lifestyle!',
     },
   },
   {
@@ -60,8 +60,8 @@ export const DIALOGS: DialogData[] = [
     x: 1900,
     width: 150,
     text: {
-      cs: 'Kontaktujte mě na email@example.com',
-      en: 'Contact me at email@example.com',
+      cs: 'Máte projekt? Napište mi na email@example.com',
+      en: 'Got a project? Contact me at email@example.com',
     },
   },
 ];
