@@ -107,17 +107,20 @@ export class GameScene extends Phaser.Scene {
 
     buttonContainer.add([buttonBackground, this.languageText]);
 
-    // Make button interactive
-    buttonBackground.setInteractive({ useHandCursor: true });
-    buttonBackground.on('pointerdown', () => {
+    // Make container interactive (better for mobile touch)
+    buttonContainer.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, 100, 40),
+      Phaser.Geom.Rectangle.Contains
+    );
+    buttonContainer.on('pointerdown', () => {
       this.toggleLanguage();
     });
 
     // Add hover effect
-    buttonBackground.on('pointerover', () => {
+    buttonContainer.on('pointerover', () => {
       buttonContainer.setScale(1.05);
     });
-    buttonBackground.on('pointerout', () => {
+    buttonContainer.on('pointerout', () => {
       buttonContainer.setScale(1);
     });
 
