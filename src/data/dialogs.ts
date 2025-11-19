@@ -12,8 +12,8 @@ export const DIALOGS: DialogData[] = [
   },
   {
     id: 'about',
-    x: 500,
-    width: 150,
+    x: 350,
+    width: 120,
     text: {
       cs: 'Miluji gaming, cosplay a příběhy, které ožívají.',
       en: 'I love gaming, cosplay and stories that come alive.',
@@ -21,8 +21,8 @@ export const DIALOGS: DialogData[] = [
   },
   {
     id: 'languages',
-    x: 800,
-    width: 150,
+    x: 600,
+    width: 120,
     text: {
       cs: 'Překládám z angličtiny a švédštiny do češtiny.',
       en: 'I translate from English and Swedish to Czech.',
@@ -30,8 +30,8 @@ export const DIALOGS: DialogData[] = [
   },
   {
     id: 'games',
-    x: 1100,
-    width: 150,
+    x: 900,
+    width: 120,
     text: {
       cs: 'Překládám počítačové i stolní hry!',
       en: 'I translate both video games and board games!',
@@ -39,8 +39,8 @@ export const DIALOGS: DialogData[] = [
   },
   {
     id: 'books',
-    x: 1400,
-    width: 150,
+    x: 1250,
+    width: 120,
     text: {
       cs: 'Také se věnuji překladu knih a příběhů.',
       en: 'I also work on book and story translations.',
@@ -48,8 +48,8 @@ export const DIALOGS: DialogData[] = [
   },
   {
     id: 'passion',
-    x: 1700,
-    width: 150,
+    x: 1600,
+    width: 120,
     text: {
       cs: 'Gaming není jen práce - je to můj životní styl!',
       en: 'Gaming isn\'t just work - it\'s my lifestyle!',

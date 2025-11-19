@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 
+// Touch control constants
+const TOUCH_THRESHOLD_X = 20;  // Horizontal movement threshold
+const TOUCH_THRESHOLD_Y = 80;  // Jump threshold (how far above player to tap)
+const LANGUAGE_BUTTON_WIDTH = 120;
+const LANGUAGE_BUTTON_HEIGHT = 60;
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keyA!: Phaser.Input.Keyboard.Key;
@@ -47,30 +53,46 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     let touchRight = false;
     let touchJump = false;
 
-    scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    const handlePointer = (pointer: Phaser.Input.Pointer) => {
       const x = pointer.x;
       const y = pointer.y;
       const screenWidth = scene.scale.width;
-      const screenHeight = scene.scale.height;
 
-      // Ignore touch if clicking on language button (top-right corner)
-      if (x > screenWidth - 120 && y < 60) {
+      // Ignore language button area
+      if (x > screenWidth - LANGUAGE_BUTTON_WIDTH && y < LANGUAGE_BUTTON_HEIGHT) {
         return;
       }
 
-      // Left half = move left
-      if (x < screenWidth / 3) {
+      // Calculate position relative to player
+      const camera = scene.cameras.main;
+      const playerScreenX = this.x - camera.scrollX;
+      const playerScreenY = this.y - camera.scrollY;
+      const deltaX = x - playerScreenX;
+      const deltaY = y - playerScreenY;
+
+      // Determine movement direction
+      if (deltaX < -TOUCH_THRESHOLD_X) {
         touchLeft = true;
         touchRight = false;
-      }
-      // Right half = move right
-      else if (x > (screenWidth * 2) / 3) {
+      } else if (deltaX > TOUCH_THRESHOLD_X) {
         touchRight = true;
         touchLeft = false;
+      } else {
+        touchLeft = false;
+        touchRight = false;
       }
-      // Top third = jump
-      if (y < screenHeight / 3) {
-        touchJump = true;
+
+      // Jump if touching above player
+      touchJump = deltaY < -TOUCH_THRESHOLD_Y;
+    };
+
+    scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      handlePointer(pointer);
+    });
+
+    scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.isDown) {
+        handlePointer(pointer);
       }
     });
 
