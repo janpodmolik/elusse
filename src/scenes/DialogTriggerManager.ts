@@ -61,21 +61,21 @@ export class DialogTriggerManager {
     const indicatorY = surfaceY - 80;
     const indicatorHeight = 80;
     
-    // Create indicator graphics
+    // Create indicator graphics (hidden)
     const indicator = this.scene.add.graphics();
-    indicator.lineStyle(3, 0xffff00, 0.6);
+    indicator.lineStyle(3, 0xffff00, 0);
     indicator.strokeRect(x - width / 2, indicatorY, width, indicatorHeight);
-    indicator.fillStyle(0xffff00, 0.15);
+    indicator.fillStyle(0xffff00, 0);
     indicator.fillRect(x - width / 2, indicatorY, width, indicatorHeight);
 
-    // Create icon graphics
+    // Create icon graphics (hidden)
     const iconY = indicatorY - 10;
     const icon = this.scene.add.graphics();
-    icon.fillStyle(0xffffff, 0.9);
+    icon.fillStyle(0xffffff, 0);
     icon.fillCircle(x, iconY, 15);
-    icon.lineStyle(3, 0xffff00, 1);
+    icon.lineStyle(3, 0xffff00, 0);
     icon.strokeCircle(x, iconY, 15);
-    icon.fillStyle(0xffff00, 1);
+    icon.fillStyle(0xffff00, 0);
     icon.fillRect(x - 3, iconY - 10, 6, 12);
     icon.fillCircle(x, iconY + 8, 3);
 

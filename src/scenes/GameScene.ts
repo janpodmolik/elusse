@@ -1,55 +1,38 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
-import { SpeechBubble } from '../ui/SpeechBubble';
-import { DIALOGS } from '../data/dialogs';
 import { localization } from '../data/localization';
-import { DialogTriggerManager } from './DialogTriggerManager';
 
 // Configuration constants
 const WORLD_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 800,
-  GROUND_Y: 700,
+  GROUND_Y: 500,
   GROUND_HEIGHT: 50,
 };
 
 const PLAYER_CONFIG = {
-  START_X: 100,
-  START_Y: 600,
+  START_X: 250,
+  START_Y: 450,
 };
-
-const PLATFORM_POSITIONS = [
-  { x: 350, y: 640 },
-  { x: 600, y: 630 },
-  { x: 900, y: 635 },
-  { x: 1250, y: 632 },
-  { x: 1600, y: 630 },
-];
-
-const PLATFORM_HEIGHT = 20;
-const PLATFORM_DIALOG_IDS = ['languages', 'passion'];
-const DIALOG_COOLDOWN_MS = 1000;
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
-  private platforms!: Phaser.Physics.Arcade.StaticGroup;
-  private speechBubble!: SpeechBubble;
-  private dialogTriggerManager!: DialogTriggerManager;
-  private triggeredDialogs: Map<string, number> = new Map();
-  private currentTrigger: Phaser.Physics.Arcade.Sprite | null = null;
   private languageToggleKey!: Phaser.Input.Keyboard.Key;
   private languageText!: Phaser.GameObjects.Text;
 
-  // Parallax backgrounds
-  private bg1!: Phaser.GameObjects.TileSprite;
-  private bg2!: Phaser.GameObjects.TileSprite;
+  // Parallax backgrounds (6 layers)
+  private bgLayers: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   preload(): void {
-    // Placeholder assets will be created procedurally
+    // Load background images
+    this.load.image('bg0', 'assets/backgrounds/0.png'); // Repeating base layer
+    for (let i = 1; i <= 6; i++) {
+      this.load.image(`bg${i}`, `assets/backgrounds/${i}.png`);
+    }
   }
 
   create(): void {
@@ -59,22 +42,29 @@ export class GameScene extends Phaser.Scene {
     // Create parallax background layers
     this.createParallaxBackground();
 
-    // Create platforms
-    this.createPlatforms();
+    const groundHeight = 80;
+    const groundY = WORLD_CONFIG.HEIGHT - groundHeight;
+    
+    const ground = this.add.rectangle(
+      0, 
+      groundY, 
+      WORLD_CONFIG.WIDTH, 
+      groundHeight, 
+      0x000000, 
+      0 // Alpha 0 for invisible
+    ).setOrigin(0, 0);
+    
+    this.physics.add.existing(ground, true); // true = static body
 
     // Create player
     this.player = new Player(this, PLAYER_CONFIG.START_X, PLAYER_CONFIG.START_Y);
-    this.physics.add.collider(this.player, this.platforms);
+
+    // Add collision between player and ground
+    this.physics.add.collider(this.player, ground);
 
     // Setup camera to follow player
     this.cameras.main.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-
-    // Create speech bubble UI
-    this.speechBubble = new SpeechBubble(this);
-
-    // Create dialog trigger manager
-    this.initializeDialogTriggers();
 
     // Setup language toggle (L key)
     if (this.input.keyboard) {
@@ -128,99 +118,36 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createParallaxBackground(): void {
-    // Create gradient background layers (placeholder)
-    const graphics1 = this.add.graphics();
-    graphics1.fillGradientStyle(0x87ceeb, 0x87ceeb, 0xe0f6ff, 0xe0f6ff, 1);
-    graphics1.fillRect(0, 0, 800, 800);
-    graphics1.generateTexture('bg1', 800, 800);
-    graphics1.destroy();
-
-    const graphics2 = this.add.graphics();
-    graphics2.fillStyle(0x90ee90, 0.3);
-    for (let i = 0; i < 10; i++) {
-      const x = Math.random() * 800;
-      const y = 600 + Math.random() * 150;
-      graphics2.fillCircle(x, y, 20 + Math.random() * 30);
+    // Create repeating base layer (0.png) that tiles vertically
+    const baseLayer = this.add.tileSprite(
+      0, 
+      0, 
+      WORLD_CONFIG.WIDTH, 
+      WORLD_CONFIG.HEIGHT * 3, // Make it tall enough to cover extended vertical space
+      'bg0'
+    );
+    baseLayer.setOrigin(0, 0);
+    baseLayer.setScrollFactor(1.0);
+    baseLayer.setDepth(-11); // Behind all other layers
+    
+    const scrollFactors = [
+      1.0,  // Layer 1: ground (moves fully with camera)
+      0.8, // Layer 2: furthest trees (almost static - moves only 2%)
+      0.85, // Layer 3: far trees (almost static)
+      0.9, // Layer 4: mid trees (almost static)  
+      0.95, // Layer 5: near trees (almost static)
+      1.0   // Layer 6: foreground (moves fully with camera)
+    ];
+    
+    for (let i = 1; i <= 6; i++) {
+      const layer = this.add.image(0, 0, `bg${i}`);
+      layer.setOrigin(0, 0);
+      layer.setScrollFactor(scrollFactors[i - 1]);
+      layer.setDepth(-10 + i);
+      layer.setDisplaySize(WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
+      
+      this.bgLayers.push(layer);
     }
-    graphics2.generateTexture('bg2', 800, 800);
-    graphics2.destroy();
-
-    // Create tile sprites for parallax
-    this.bg1 = this.add.tileSprite(0, 0, 2000, 800, 'bg1');
-    this.bg1.setOrigin(0, 0);
-    this.bg1.setScrollFactor(0);
-    this.bg1.setDepth(-2);
-
-    this.bg2 = this.add.tileSprite(0, 0, 2000, 800, 'bg2');
-    this.bg2.setOrigin(0, 0);
-    this.bg2.setScrollFactor(0.3);
-    this.bg2.setDepth(-1);
-  }
-
-  private createPlatforms(): void {
-    this.platforms = this.physics.add.staticGroup();
-
-    // Ground platform (full width)
-    const groundGraphics = this.add.graphics();
-    groundGraphics.fillStyle(0x8b4513, 1);
-    groundGraphics.fillRect(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.GROUND_HEIGHT);
-    groundGraphics.generateTexture('ground', WORLD_CONFIG.WIDTH, WORLD_CONFIG.GROUND_HEIGHT);
-    groundGraphics.destroy();
-
-    const ground = this.platforms.create(
-      WORLD_CONFIG.WIDTH / 2,
-      WORLD_CONFIG.GROUND_Y + WORLD_CONFIG.GROUND_HEIGHT / 2,
-      'ground'
-    ) as Phaser.Physics.Arcade.Sprite;
-    ground.setOrigin(0.5, 0.5);
-    ground.refreshBody();
-
-    // Create platform texture
-    const platformGraphics = this.add.graphics();
-    platformGraphics.fillStyle(0x654321, 1);
-    platformGraphics.fillRect(0, 0, 150, 20);
-    platformGraphics.generateTexture('platform', 150, 20);
-    platformGraphics.destroy();
-
-    // Jumping platforms
-    PLATFORM_POSITIONS.forEach(pos => {
-      const platform = this.platforms.create(pos.x, pos.y, 'platform') as Phaser.Physics.Arcade.Sprite;
-      platform.setOrigin(0.5, 0.5);
-      platform.refreshBody();
-    });
-  }
-
-  private createDialogTriggers(): void {
-    DIALOGS.forEach(dialog => {
-      this.dialogTriggerManager.createTrigger(dialog.id, dialog.x, dialog.width);
-    });
-  }
-
-  private initializeDialogTriggers(): void {
-    const platformSurfaceY = PLATFORM_POSITIONS[0].y - PLATFORM_HEIGHT / 2;
-    this.dialogTriggerManager = new DialogTriggerManager(
-      this,
-      PLATFORM_DIALOG_IDS,
-      WORLD_CONFIG.GROUND_Y,
-      platformSurfaceY
-    );
-    this.createDialogTriggers();
-
-    // Setup overlap detection
-    this.physics.add.overlap(
-      this.player,
-      this.dialogTriggerManager.getGroup(),
-      (player, trigger) => this.handleDialogTrigger(player as Phaser.Physics.Arcade.Sprite, trigger as Phaser.Physics.Arcade.Sprite),
-      undefined,
-      this
-    );
-  }
-
-  private handleDialogTrigger(
-    _player: Phaser.Physics.Arcade.Sprite,
-    trigger: Phaser.Physics.Arcade.Sprite
-  ): void {
-    this.currentTrigger = trigger;
   }
 
   private updateLanguageText(): void {
@@ -231,58 +158,10 @@ export class GameScene extends Phaser.Scene {
   private toggleLanguage(): void {
     localization.toggleLanguage();
     this.updateLanguageText();
-    
-    // Reset state
-    this.triggeredDialogs.clear();
-    this.currentTrigger = null;
-    this.speechBubble.hide();
-    
-    // Recreate triggers with fresh visual indicators
-    this.dialogTriggerManager.destroyAll();
-    this.initializeDialogTriggers();
   }
 
   update(): void {
     this.player.update();
-
-    // Check if player is still in trigger zone
-    if (this.currentTrigger) {
-      const trigger = this.currentTrigger;
-      const dialogId = trigger.getData('dialogId') as string;
-      const dialogData = DIALOGS.find(d => d.id === dialogId);
-
-      // Show dialog immediately when in trigger zone
-      if (dialogData && !this.speechBubble.isVisible()) {
-        const now = Date.now();
-        const lastTriggerTime = this.triggeredDialogs.get(dialogId) || 0;
-        
-        if (now - lastTriggerTime >= DIALOG_COOLDOWN_MS) {
-          this.triggeredDialogs.set(dialogId, now);
-          
-          const currentLang = localization.getLanguage();
-          const dialogText = dialogData.text[currentLang];
-          this.speechBubble.show(this.player.x, this.player.y, dialogText);
-
-          // Temporarily dim the indicator using manager
-          this.dialogTriggerManager.dimVisuals(dialogId);
-        }
-      }
-
-      // Check if player left the trigger zone
-      const overlapExists = this.physics.overlap(this.player, trigger);
-      if (!overlapExists) {
-        this.currentTrigger = null;
-        this.speechBubble.hide();
-      }
-    }
-
-    // Update speech bubble position to follow player
-    if (this.speechBubble.isVisible()) {
-      this.speechBubble.updatePosition(this.player.x, this.player.y);
-    }
-
-    // Update parallax background
-    this.bg2.tilePositionX = this.cameras.main.scrollX * 0.3;
 
     // Toggle language with L key
     if (Phaser.Input.Keyboard.JustDown(this.languageToggleKey)) {

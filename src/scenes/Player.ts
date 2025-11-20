@@ -5,6 +5,8 @@ const TOUCH_THRESHOLD_X = 20;  // Horizontal movement threshold
 const TOUCH_THRESHOLD_Y = 80;  // Jump threshold (how far above player to tap)
 const LANGUAGE_BUTTON_WIDTH = 120;
 const LANGUAGE_BUTTON_HEIGHT = 60;
+const MOVE_SPEED = 350;
+const JUMP_STRENGTH = -500;
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -30,9 +32,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Setup physics
     this.setCollideWorldBounds(true);
-    this.setBounce(0.1);
-    this.setSize(28, 28);
-    this.setOffset(2, 4);
+    this.setBounce(0);
+    this.setSize(32, 32);
+    this.setOffset(0, 0);
 
     // Setup controls
     if (scene.input.keyboard) {
@@ -112,18 +114,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   update(): void {
     const touchState = (this as any).touchState;
-    const onGround = this.body && (this.body as Phaser.Physics.Arcade.Body).touching.down;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    // Use blocked.down which is more reliable than touching.down
+    const onGround = body && (body.blocked.down || body.touching.down);
 
     // Horizontal movement
     let moveLeft = this.keyA?.isDown || this.cursors?.left?.isDown || touchState?.left || false;
     let moveRight = this.keyD?.isDown || this.cursors?.right?.isDown || touchState?.right || false;
 
     if (moveLeft) {
-      this.setVelocityX(-200);
+      this.setVelocityX(-MOVE_SPEED);
       this.setFlipX(true);
       if (onGround) this.animState = 'running';
     } else if (moveRight) {
-      this.setVelocityX(200);
+      this.setVelocityX(MOVE_SPEED);
       this.setFlipX(false);
       if (onGround) this.animState = 'running';
     } else {
@@ -133,8 +137,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Jump
     const jumpPressed = this.keySpace?.isDown || this.keyW?.isDown || this.cursors?.space?.isDown || this.cursors?.up?.isDown || touchState?.jump || false;
+    
     if (jumpPressed && onGround) {
-      this.setVelocityY(-400);
+      this.setVelocityY(JUMP_STRENGTH);
       this.animState = 'jumping';
     }
 
