@@ -17,24 +17,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private animState: 'idle' | 'running' | 'jumping' = 'idle';
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, '');
+    super(scene, x, y, 'cat-idle');
     
-    // Create placeholder sprite (32x32 colored rectangle)
-    const graphics = scene.add.graphics();
-    graphics.fillStyle(0xff6b9d, 1);
-    graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture('player-placeholder', 32, 32);
-    graphics.destroy();
-
-    this.setTexture('player-placeholder');
     scene.add.existing(this);
     scene.physics.add.existing(this);
+
+    // Create animations
+    this.createAnimations();
 
     // Setup physics
     this.setCollideWorldBounds(true);
     this.setBounce(0);
-    this.setSize(32, 32);
-    this.setOffset(0, 0);
+    this.setSize(40, 40);
+    this.setOffset(4, 8);
+    this.setScale(5);
+
+    // Start with idle animation
+    this.play('cat-idle');
+
+    // Scale up the cat to make it bigger
+    this.setScale(5);
 
     // Setup controls
     if (scene.input.keyboard) {
@@ -47,6 +49,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Setup touch controls (invisible zones)
     this.setupTouchControls();
+  }
+
+  private createAnimations(): void {
+    const scene = this.scene;
+
+    // Create idle animation (4 frames)
+    if (!scene.anims.exists('cat-idle')) {
+      scene.anims.create({
+        key: 'cat-idle',
+        frames: scene.anims.generateFrameNumbers('cat-idle', { start: 0, end: 3 }),
+        frameRate: 6,
+        repeat: -1
+      });
+    }
+
+    // Create walk animation (6 frames)
+    if (!scene.anims.exists('cat-walk')) {
+      scene.anims.create({
+        key: 'cat-walk',
+        frames: scene.anims.generateFrameNumbers('cat-walk', { start: 0, end: 5 }),
+        frameRate: 12,
+        repeat: -1
+      });
+    }
   }
 
   private setupTouchControls(): void {
@@ -148,17 +174,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.animState = 'jumping';
     }
 
-    // TODO: Play animations when sprite sheet is loaded
-    // For now, just change tint based on state
+    // Play appropriate animation
     switch (this.animState) {
       case 'idle':
-        this.setTint(0xff6b9d);
+        if (this.anims.currentAnim?.key !== 'cat-idle') {
+          this.play('cat-idle');
+        }
         break;
       case 'running':
-        this.setTint(0xff9dc6);
+        if (this.anims.currentAnim?.key !== 'cat-walk') {
+          this.play('cat-walk');
+        }
         break;
       case 'jumping':
-        this.setTint(0xffc6e3);
+        // Use first frame of walk for jumping
+        if (this.anims.currentAnim?.key !== 'cat-walk') {
+          this.play('cat-walk');
+        }
+        this.anims.pause();
+        this.setFrame(0);
         break;
     }
   }

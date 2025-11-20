@@ -33,6 +33,16 @@ export class GameScene extends Phaser.Scene {
     for (let i = 1; i <= 6; i++) {
       this.load.image(`bg${i}`, `assets/backgrounds/${i}.png`);
     }
+
+    // Load cat sprite sheets
+    this.load.spritesheet('cat-idle', 'assets/sprites/Idle.png', {
+      frameWidth: 48,
+      frameHeight: 48,
+    });
+    this.load.spritesheet('cat-walk', 'assets/sprites/Walk.png', {
+      frameWidth: 48,
+      frameHeight: 48,
+    });
   }
 
   create(): void {
