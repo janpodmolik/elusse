@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Player } from './Player';
 import { localization } from '../data/localization';
 import { catSkinManager, AVAILABLE_SKINS } from '../data/catSkin';
+import { UIManager } from '../ui/UIManager';
 
 // Configuration constants
 const WORLD_CONFIG = {
@@ -19,9 +20,8 @@ const PLAYER_CONFIG = {
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private languageToggleKey!: Phaser.Input.Keyboard.Key;
-  private languageText!: Phaser.GameObjects.Text;
   private skinToggleKey!: Phaser.Input.Keyboard.Key;
-  private skinText!: Phaser.GameObjects.Text;
+  private uiManager!: UIManager;
 
   // Parallax backgrounds (6 layers)
   private bgLayers: Phaser.GameObjects.Image[] = [];
@@ -87,87 +87,20 @@ export class GameScene extends Phaser.Scene {
       this.skinToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
     }
 
-    // Create language toggle button (fixed to camera, clickable)
-    const buttonBg = this.add.graphics();
-    buttonBg.fillStyle(0x000000, 0.7);
-    buttonBg.fillRoundedRect(0, 0, 100, 40, 8);
-    buttonBg.lineStyle(3, 0xffffff, 1);
-    buttonBg.strokeRoundedRect(0, 0, 100, 40, 8);
-    buttonBg.generateTexture('lang-button-bg', 100, 40);
-    buttonBg.destroy();
-
-    const buttonContainer = this.add.container(this.scale.width - 110, 10);
-    buttonContainer.setScrollFactor(0);
-    buttonContainer.setDepth(2000);
-
-    const buttonBackground = this.add.image(0, 0, 'lang-button-bg').setOrigin(0, 0);
+    // Initialize HTML UI Manager
+    this.uiManager = new UIManager();
     
-    this.languageText = this.add.text(50, 20, '', {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '14px',
-      color: '#ffffff',
-      align: 'center',
-    });
-    this.languageText.setOrigin(0.5, 0.5);
-    this.languageText.setScrollFactor(0);
-
-    buttonContainer.add([buttonBackground, this.languageText]);
-
-    // Make container interactive (better for mobile touch)
-    buttonContainer.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, 100, 40),
-      Phaser.Geom.Rectangle.Contains
-    );
-    buttonContainer.on('pointerdown', () => {
-      this.toggleLanguage();
-    });
-
-    // Add hover effect
-    buttonContainer.on('pointerover', () => {
-      buttonContainer.setScale(1.05);
-    });
-    buttonContainer.on('pointerout', () => {
-      buttonContainer.setScale(1);
-    });
-
-    this.updateLanguageText();
-
-    // Create skin toggle button (below language button)
-    const skinButtonContainer = this.add.container(this.scale.width - 110, 60);
-    skinButtonContainer.setScrollFactor(0);
-    skinButtonContainer.setDepth(2000);
-
-    const skinButtonBackground = this.add.image(0, 0, 'lang-button-bg').setOrigin(0, 0);
+    // Connect UI callbacks to game logic
+    this.uiManager.onLanguageToggle = () => this.toggleLanguage();
+    this.uiManager.onSkinToggle = () => this.toggleSkin();
     
-    this.skinText = this.add.text(50, 20, '', {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '10px',
-      color: '#ffffff',
-      align: 'center',
-    });
-    this.skinText.setOrigin(0.5, 0.5);
-    this.skinText.setScrollFactor(0);
-
-    skinButtonContainer.add([skinButtonBackground, this.skinText]);
-
-    // Make container interactive
-    skinButtonContainer.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, 100, 40),
-      Phaser.Geom.Rectangle.Contains
-    );
-    skinButtonContainer.on('pointerdown', () => {
-      this.toggleSkin();
-    });
-
-    // Add hover effect
-    skinButtonContainer.on('pointerover', () => {
-      skinButtonContainer.setScale(1.05);
-    });
-    skinButtonContainer.on('pointerout', () => {
-      skinButtonContainer.setScale(1);
-    });
-
-    this.updateSkinText();
+    // Update initial UI state
+    this.uiManager.updateLanguageText(localization.getLanguage());
+    this.uiManager.updateSkinText(catSkinManager.getSkin());
+    
+    // Show controls hint on first visit
+    const isTouchDevice = this.sys.game.device.input.touch;
+    this.uiManager.showControlsDialogIfNeeded(isTouchDevice);
   }
 
   private createParallaxBackground(): void {
@@ -203,25 +136,19 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private updateLanguageText(): void {
-    const lang = localization.getLanguage();
-    this.languageText.setText(lang.toUpperCase());
-  }
-
   private toggleLanguage(): void {
-    localization.toggleLanguage();
-    this.updateLanguageText();
-  }
-
-  private updateSkinText(): void {
-    const skin = catSkinManager.getSkin();
-    this.skinText.setText(skin.toUpperCase());
+    const newLang = localization.toggleLanguage();
+    this.uiManager.updateLanguageText(newLang);
   }
 
   private toggleSkin(): void {
-    catSkinManager.toggleSkin();
-    this.updateSkinText();
-    this.player.changeSkin(catSkinManager.getSkin());
+    const newSkin = catSkinManager.toggleSkin();
+    this.uiManager.updateSkinText(newSkin);
+    this.player.changeSkin(newSkin);
+  }
+
+  public notifyPlayerMoved(): void {
+    this.uiManager.notifyPlayerMoved();
   }
 
   update(): void {

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { catSkinManager, CatSkin } from '../data/catSkin';
+import type { GameScene } from './GameScene';
 
 // Touch control constants
 const TOUCH_THRESHOLD_X = 20;  // Horizontal movement threshold
@@ -28,6 +29,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private keySpace!: Phaser.Input.Keyboard.Key;
   private animState: 'idle' | 'running' | 'jumping' = 'idle';
   private currentSkin: CatSkin;
+  private hasNotifiedMovement: boolean = false;
+  private hasReceivedInput: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Get current skin from manager
@@ -255,6 +258,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     let moveLeft = this.keyA?.isDown || this.cursors?.left?.isDown || touchState?.left || false;
     let moveRight = this.keyD?.isDown || this.cursors?.right?.isDown || touchState?.right || false;
 
+    // Jump
+    const jumpPressed = this.keySpace?.isDown || this.keyW?.isDown || this.cursors?.space?.isDown || this.cursors?.up?.isDown || touchState?.jump || false;
+
+    // Track if user has given any input (not just falling)
+    if ((moveLeft || moveRight || jumpPressed) && !this.hasReceivedInput) {
+      this.hasReceivedInput = true;
+    }
+
+    // Notify scene on first keyboard movement
+    const isMoving = moveLeft || moveRight;
+    if (this.hasReceivedInput && (isMoving || jumpPressed) && !this.hasNotifiedMovement) {
+      this.hasNotifiedMovement = true;
+      const gameScene = this.scene as GameScene;
+      if (gameScene.notifyPlayerMoved) {
+        gameScene.notifyPlayerMoved();
+      }
+    }
+
     if (moveLeft) {
       this.setVelocityX(-MOVE_SPEED);
       this.setFlipX(true);
@@ -267,9 +288,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(0);
       if (onGround) this.animState = 'idle';
     }
-
-    // Jump
-    const jumpPressed = this.keySpace?.isDown || this.keyW?.isDown || this.cursors?.space?.isDown || this.cursors?.up?.isDown || touchState?.jump || false;
     
     if (jumpPressed && onGround) {
       this.setVelocityY(JUMP_STRENGTH);
