@@ -9,11 +9,13 @@ Interaktivní portfolio překladatelky a korektorky jako 2D platformer postaven�
 - **D** / **→** - Pohyb doprava
 - **W** / **↑** / **Mezerník** - Skok
 - **L** nebo **kliknutí na tlačítko jazyka** - Přepnout jazyk (CZ/EN)
+- **C** nebo **kliknutí na tlačítko barvy** - Přepnout barvu kočky
 
 ### Mobil
 - **Levá strana obrazovky** - Pohyb doleva
 - **Pravá strana obrazovky** - Pohyb doprava
 - **Horní třetina obrazovky** - Skok
+- **Tlačítko v pravém horním rohu** - Přepnout jazyk nebo barvu kočky
 
 ## 🚀 Vývoj
 
@@ -44,37 +46,32 @@ Projekt používá placeholder assety. Pro nahrání vlastních assetů postupuj
 ### 📁 Struktura složek
 ```
 public/assets/
-├── sprites/        # Sprite sheety pro postavu a objekty
+├── sprites/
+│   ├── orange/     # Orange skin kočky
+│   │   ├── Idle.png
+│   │   └── Walk.png
+│   └── white/      # White skin kočky
+│       ├── Idle.png
+│       └── Walk.png
 ├── backgrounds/    # Parallax pozadí (vrstvy)
 └── ui/            # UI elementy
 ```
 
-### 🐱 Sprite Sheet pro kočku (Player)
+### 🐱 Sprite Sheety pro kočku (Player)
 
-**Formát:** PNG sprite sheet v gridu 32x32px
+**Formát:** PNG sprite sheet, 48x48px per frame
 
-**Požadované animace:**
-- **idle** - Klidový stav (4-6 framů)
-- **running** - Běh (6-8 framů)
-- **jumping** - Skok (3-4 framů)
+**Požadované soubory pro každý skin:**
+- **Idle.png** - Klidový stav (4 framy)
+- **Walk.png** - Chůze (6 framů)
 
-**Doporučený layout:**
-```
-Frame 0-5:   idle animation (row 0)
-Frame 6-13:  running animation (row 1)
-Frame 14-17: jumping animation (row 2)
-```
+**Přidání nového skinu:**
+Viz [ADDING_SKINS.md](./ADDING_SKINS.md) pro detailní návod.
 
-**Umístění:** `public/assets/sprites/cat-spritesheet.png`
-
-**Úprava kódu:** V `src/scenes/Player.ts` nahraďte placeholder sprite:
-```typescript
-// Nahraďte tuto sekci:
-const graphics = scene.add.graphics();
-graphics.fillStyle(0xff6b9d, 1);
-graphics.fillRect(0, 0, 32, 32);
-graphics.generateTexture('player-placeholder', 32, 32);
-graphics.destroy();
+Stručně:
+1. Vytvořte složku `public/assets/sprites/[název-skinu]/`
+2. Přidejte `Idle.png` a `Walk.png`
+3. Do `src/data/catSkin.ts` přidejte název do `AVAILABLE_SKINS`
 
 this.setTexture('player-placeholder');
 

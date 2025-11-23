@@ -1,10 +1,14 @@
 import Phaser from 'phaser';
+import { catSkinManager, CatSkin } from '../data/catSkin';
 
 // Touch control constants
 const TOUCH_THRESHOLD_X = 20;  // Horizontal movement threshold
 const TOUCH_THRESHOLD_Y = 80;  // Jump threshold (how far above player to tap)
 const LANGUAGE_BUTTON_WIDTH = 120;
 const LANGUAGE_BUTTON_HEIGHT = 60;
+const SKIN_BUTTON_WIDTH = 120;
+const SKIN_BUTTON_HEIGHT = 60;
+const SKIN_BUTTON_Y_OFFSET = 60; // Skin button is 60px below language button
 
 // Movement constants
 const MOVE_SPEED = 350;
@@ -23,9 +27,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private keyW!: Phaser.Input.Keyboard.Key;
   private keySpace!: Phaser.Input.Keyboard.Key;
   private animState: 'idle' | 'running' | 'jumping' = 'idle';
+  private currentSkin: CatSkin;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'cat-idle');
+    // Get current skin from manager
+    const initialSkin = catSkinManager.getSkin();
+    super(scene, x, y, `cat-idle-${initialSkin}`);
+    
+    this.currentSkin = initialSkin;
     
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -41,7 +50,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setScale(5);
 
     // Start with idle animation
-    this.play('cat-idle');
+    this.play(`cat-idle-${this.currentSkin}`);
 
     // Setup controls
     if (scene.input.keyboard) {
@@ -58,66 +67,70 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private createAnimations(): void {
     const scene = this.scene;
+    const skins = catSkinManager.getAllSkins();
 
-    // Create idle animation (4 frames)
-    if (!scene.anims.exists('cat-idle')) {
-      scene.anims.create({
-        key: 'cat-idle',
-        frames: scene.anims.generateFrameNumbers('cat-idle', { start: 0, end: 3 }),
-        frameRate: 6,
-        repeat: -1
-      });
-    }
+    // Create animations for all skins
+    skins.forEach(skin => {
+      // Create idle animation (4 frames)
+      if (!scene.anims.exists(`cat-idle-${skin}`)) {
+        scene.anims.create({
+          key: `cat-idle-${skin}`,
+          frames: scene.anims.generateFrameNumbers(`cat-idle-${skin}`, { start: 0, end: 3 }),
+          frameRate: 6,
+          repeat: -1
+        });
+      }
 
-    // Create walk animation (6 frames)
-    if (!scene.anims.exists('cat-walk')) {
-      scene.anims.create({
-        key: 'cat-walk',
-        frames: scene.anims.generateFrameNumbers('cat-walk', { start: 0, end: 5 }),
-        frameRate: 12,
-        repeat: -1
-      });
-    }
+      // Create walk animation (6 frames)
+      if (!scene.anims.exists(`cat-walk-${skin}`)) {
+        scene.anims.create({
+          key: `cat-walk-${skin}`,
+          frames: scene.anims.generateFrameNumbers(`cat-walk-${skin}`, { start: 0, end: 5 }),
+          frameRate: 12,
+          repeat: -1
+        });
+      }
 
-    // Create jump up animation (frame 2 from walk - cat flying up)
-    if (!scene.anims.exists('cat-jump-up')) {
-      scene.anims.create({
-        key: 'cat-jump-up',
-        frames: [{ key: 'cat-walk', frame: 2 }],
-        frameRate: 1,
-        repeat: 0
-      });
-    }
+      // Create jump up animation (frame 2 from walk - cat flying up)
+      if (!scene.anims.exists(`cat-jump-up-${skin}`)) {
+        scene.anims.create({
+          key: `cat-jump-up-${skin}`,
+          frames: [{ key: `cat-walk-${skin}`, frame: 2 }],
+          frameRate: 1,
+          repeat: 0
+        });
+      }
 
-    // Create jump peak up animation (frame 3 from walk - slowing down at top)
-    if (!scene.anims.exists('cat-jump-peak-up')) {
-      scene.anims.create({
-        key: 'cat-jump-peak-up',
-        frames: [{ key: 'cat-walk', frame: 3 }],
-        frameRate: 1,
-        repeat: 0
-      });
-    }
+      // Create jump peak up animation (frame 3 from walk - slowing down at top)
+      if (!scene.anims.exists(`cat-jump-peak-up-${skin}`)) {
+        scene.anims.create({
+          key: `cat-jump-peak-up-${skin}`,
+          frames: [{ key: `cat-walk-${skin}`, frame: 3 }],
+          frameRate: 1,
+          repeat: 0
+        });
+      }
 
-    // Create jump peak down animation (frame 3 from walk - starting to fall)
-    if (!scene.anims.exists('cat-jump-peak-down')) {
-      scene.anims.create({
-        key: 'cat-jump-peak-down',
-        frames: [{ key: 'cat-walk', frame: 3 }],
-        frameRate: 1,
-        repeat: 0
-      });
-    }
+      // Create jump peak down animation (frame 3 from walk - starting to fall)
+      if (!scene.anims.exists(`cat-jump-peak-down-${skin}`)) {
+        scene.anims.create({
+          key: `cat-jump-peak-down-${skin}`,
+          frames: [{ key: `cat-walk-${skin}`, frame: 3 }],
+          frameRate: 1,
+          repeat: 0
+        });
+      }
 
-    // Create jump down animation (frame 4 from walk - cat flying down)
-    if (!scene.anims.exists('cat-jump-down')) {
-      scene.anims.create({
-        key: 'cat-jump-down',
-        frames: [{ key: 'cat-walk', frame: 4 }],
-        frameRate: 1,
-        repeat: 0
-      });
-    }
+      // Create jump down animation (frame 4 from walk - cat flying down)
+      if (!scene.anims.exists(`cat-jump-down-${skin}`)) {
+        scene.anims.create({
+          key: `cat-jump-down-${skin}`,
+          frames: [{ key: `cat-walk-${skin}`, frame: 4 }],
+          frameRate: 1,
+          repeat: 0
+        });
+      }
+    });
   }
 
   private setupTouchControls(): void {
@@ -131,8 +144,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       const y = pointer.y;
       const screenWidth = scene.scale.width;
 
-      // Ignore language button area
+      // Ignore language button area (top right)
       if (x > screenWidth - LANGUAGE_BUTTON_WIDTH && y < LANGUAGE_BUTTON_HEIGHT) {
+        return;
+      }
+
+      // Ignore skin button area (below language button)
+      if (x > screenWidth - SKIN_BUTTON_WIDTH && 
+          y >= SKIN_BUTTON_Y_OFFSET && 
+          y < SKIN_BUTTON_Y_OFFSET + SKIN_BUTTON_HEIGHT) {
         return;
       }
 
@@ -183,29 +203,43 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
   }
 
+  public changeSkin(newSkin: CatSkin): void {
+    this.currentSkin = newSkin;
+    // Replay current animation with new skin
+    const currentAnim = this.anims.currentAnim?.key;
+    if (currentAnim) {
+      // Extract animation type from current animation key
+      const animType = currentAnim.split('-').slice(1, -1).join('-');
+      const newAnimKey = `cat-${animType}-${newSkin}`;
+      if (this.scene.anims.exists(newAnimKey)) {
+        this.play(newAnimKey);
+      }
+    }
+  }
+
   private updateJumpAnimation(velocityY: number): void {
     if (velocityY < -FAST_VELOCITY_THRESHOLD) {
       // Going up fast
-      if (this.anims.currentAnim?.key !== 'cat-jump-up') {
-        this.play('cat-jump-up');
+      if (this.anims.currentAnim?.key !== `cat-jump-up-${this.currentSkin}`) {
+        this.play(`cat-jump-up-${this.currentSkin}`);
       }
       this.setAngle(this.flipX ? JUMP_ROTATION_FULL : -JUMP_ROTATION_FULL);
     } else if (velocityY < -SLOW_VELOCITY_THRESHOLD) {
       // Slowing down going up
-      if (this.anims.currentAnim?.key !== 'cat-jump-peak-up') {
-        this.play('cat-jump-peak-up');
+      if (this.anims.currentAnim?.key !== `cat-jump-peak-up-${this.currentSkin}`) {
+        this.play(`cat-jump-peak-up-${this.currentSkin}`);
       }
       this.setAngle(this.flipX ? JUMP_ROTATION_SLIGHT : -JUMP_ROTATION_SLIGHT);
     } else if (velocityY <= FAST_VELOCITY_THRESHOLD) {
       // At peak or starting to fall
-      if (this.anims.currentAnim?.key !== 'cat-jump-peak-down') {
-        this.play('cat-jump-peak-down');
+      if (this.anims.currentAnim?.key !== `cat-jump-peak-down-${this.currentSkin}`) {
+        this.play(`cat-jump-peak-down-${this.currentSkin}`);
       }
       this.setAngle(this.flipX ? -JUMP_ROTATION_SLIGHT : JUMP_ROTATION_SLIGHT);
     } else {
       // Falling fast
-      if (this.anims.currentAnim?.key !== 'cat-jump-down') {
-        this.play('cat-jump-down');
+      if (this.anims.currentAnim?.key !== `cat-jump-down-${this.currentSkin}`) {
+        this.play(`cat-jump-down-${this.currentSkin}`);
       }
       this.setAngle(this.flipX ? -JUMP_ROTATION_FULL : JUMP_ROTATION_FULL);
     }
@@ -250,14 +284,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Play appropriate animation
     switch (this.animState) {
       case 'idle':
-        if (this.anims.currentAnim?.key !== 'cat-idle') {
-          this.play('cat-idle');
+        if (this.anims.currentAnim?.key !== `cat-idle-${this.currentSkin}`) {
+          this.play(`cat-idle-${this.currentSkin}`);
         }
         this.setAngle(0); // Reset rotation
         break;
       case 'running':
-        if (this.anims.currentAnim?.key !== 'cat-walk') {
-          this.play('cat-walk');
+        if (this.anims.currentAnim?.key !== `cat-walk-${this.currentSkin}`) {
+          this.play(`cat-walk-${this.currentSkin}`);
         }
         this.setAngle(0); // Reset rotation
         break;

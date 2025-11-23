@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
 import { localization } from '../data/localization';
+import { catSkinManager, AVAILABLE_SKINS } from '../data/catSkin';
 
 // Configuration constants
 const WORLD_CONFIG = {
@@ -19,6 +20,8 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private languageToggleKey!: Phaser.Input.Keyboard.Key;
   private languageText!: Phaser.GameObjects.Text;
+  private skinToggleKey!: Phaser.Input.Keyboard.Key;
+  private skinText!: Phaser.GameObjects.Text;
 
   // Parallax backgrounds (6 layers)
   private bgLayers: Phaser.GameObjects.Image[] = [];
@@ -34,14 +37,16 @@ export class GameScene extends Phaser.Scene {
       this.load.image(`bg${i}`, `assets/backgrounds/${i}.png`);
     }
 
-    // Load cat sprite sheets
-    this.load.spritesheet('cat-idle', 'assets/sprites/Idle.png', {
-      frameWidth: 48,
-      frameHeight: 48,
-    });
-    this.load.spritesheet('cat-walk', 'assets/sprites/Walk.png', {
-      frameWidth: 48,
-      frameHeight: 48,
+    // Load cat sprite sheets for all available skins
+    AVAILABLE_SKINS.forEach(skin => {
+      this.load.spritesheet(`cat-idle-${skin}`, `assets/sprites/${skin}/Idle.png`, {
+        frameWidth: 48,
+        frameHeight: 48,
+      });
+      this.load.spritesheet(`cat-walk-${skin}`, `assets/sprites/${skin}/Walk.png`, {
+        frameWidth: 48,
+        frameHeight: 48,
+      });
     });
   }
 
@@ -76,9 +81,10 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-    // Setup language toggle (L key)
+    // Setup language toggle (L key) and skin toggle (C key)
     if (this.input.keyboard) {
       this.languageToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+      this.skinToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
     }
 
     // Create language toggle button (fixed to camera, clickable)
@@ -125,6 +131,43 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.updateLanguageText();
+
+    // Create skin toggle button (below language button)
+    const skinButtonContainer = this.add.container(this.scale.width - 110, 60);
+    skinButtonContainer.setScrollFactor(0);
+    skinButtonContainer.setDepth(2000);
+
+    const skinButtonBackground = this.add.image(0, 0, 'lang-button-bg').setOrigin(0, 0);
+    
+    this.skinText = this.add.text(50, 20, '', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '10px',
+      color: '#ffffff',
+      align: 'center',
+    });
+    this.skinText.setOrigin(0.5, 0.5);
+    this.skinText.setScrollFactor(0);
+
+    skinButtonContainer.add([skinButtonBackground, this.skinText]);
+
+    // Make container interactive
+    skinButtonContainer.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, 100, 40),
+      Phaser.Geom.Rectangle.Contains
+    );
+    skinButtonContainer.on('pointerdown', () => {
+      this.toggleSkin();
+    });
+
+    // Add hover effect
+    skinButtonContainer.on('pointerover', () => {
+      skinButtonContainer.setScale(1.05);
+    });
+    skinButtonContainer.on('pointerout', () => {
+      skinButtonContainer.setScale(1);
+    });
+
+    this.updateSkinText();
   }
 
   private createParallaxBackground(): void {
@@ -170,12 +213,28 @@ export class GameScene extends Phaser.Scene {
     this.updateLanguageText();
   }
 
+  private updateSkinText(): void {
+    const skin = catSkinManager.getSkin();
+    this.skinText.setText(skin.toUpperCase());
+  }
+
+  private toggleSkin(): void {
+    catSkinManager.toggleSkin();
+    this.updateSkinText();
+    this.player.changeSkin(catSkinManager.getSkin());
+  }
+
   update(): void {
     this.player.update();
 
     // Toggle language with L key
     if (Phaser.Input.Keyboard.JustDown(this.languageToggleKey)) {
       this.toggleLanguage();
+    }
+
+    // Toggle skin with C key
+    if (Phaser.Input.Keyboard.JustDown(this.skinToggleKey)) {
+      this.toggleSkin();
     }
   }
 }
