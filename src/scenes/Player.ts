@@ -5,8 +5,16 @@ const TOUCH_THRESHOLD_X = 20;  // Horizontal movement threshold
 const TOUCH_THRESHOLD_Y = 80;  // Jump threshold (how far above player to tap)
 const LANGUAGE_BUTTON_WIDTH = 120;
 const LANGUAGE_BUTTON_HEIGHT = 60;
+
+// Movement constants
 const MOVE_SPEED = 350;
 const JUMP_STRENGTH = -500;
+
+// Jump animation constants
+const FAST_VELOCITY_THRESHOLD = 100; // Velocity threshold for fast movement
+const SLOW_VELOCITY_THRESHOLD = 20;  // Velocity threshold for slow/peak movement
+const JUMP_ROTATION_FULL = 15;       // Full rotation angle for fast jumping
+const JUMP_ROTATION_SLIGHT = 8;      // Slight rotation angle for peak
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -34,9 +42,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Start with idle animation
     this.play('cat-idle');
-
-    // Scale up the cat to make it bigger
-    this.setScale(5);
 
     // Setup controls
     if (scene.input.keyboard) {
@@ -71,6 +76,46 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         frames: scene.anims.generateFrameNumbers('cat-walk', { start: 0, end: 5 }),
         frameRate: 12,
         repeat: -1
+      });
+    }
+
+    // Create jump up animation (frame 2 from walk - cat flying up)
+    if (!scene.anims.exists('cat-jump-up')) {
+      scene.anims.create({
+        key: 'cat-jump-up',
+        frames: [{ key: 'cat-walk', frame: 2 }],
+        frameRate: 1,
+        repeat: 0
+      });
+    }
+
+    // Create jump peak up animation (frame 3 from walk - slowing down at top)
+    if (!scene.anims.exists('cat-jump-peak-up')) {
+      scene.anims.create({
+        key: 'cat-jump-peak-up',
+        frames: [{ key: 'cat-walk', frame: 3 }],
+        frameRate: 1,
+        repeat: 0
+      });
+    }
+
+    // Create jump peak down animation (frame 3 from walk - starting to fall)
+    if (!scene.anims.exists('cat-jump-peak-down')) {
+      scene.anims.create({
+        key: 'cat-jump-peak-down',
+        frames: [{ key: 'cat-walk', frame: 3 }],
+        frameRate: 1,
+        repeat: 0
+      });
+    }
+
+    // Create jump down animation (frame 4 from walk - cat flying down)
+    if (!scene.anims.exists('cat-jump-down')) {
+      scene.anims.create({
+        key: 'cat-jump-down',
+        frames: [{ key: 'cat-walk', frame: 4 }],
+        frameRate: 1,
+        repeat: 0
       });
     }
   }
@@ -138,6 +183,34 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
   }
 
+  private updateJumpAnimation(velocityY: number): void {
+    if (velocityY < -FAST_VELOCITY_THRESHOLD) {
+      // Going up fast
+      if (this.anims.currentAnim?.key !== 'cat-jump-up') {
+        this.play('cat-jump-up');
+      }
+      this.setAngle(this.flipX ? JUMP_ROTATION_FULL : -JUMP_ROTATION_FULL);
+    } else if (velocityY < -SLOW_VELOCITY_THRESHOLD) {
+      // Slowing down going up
+      if (this.anims.currentAnim?.key !== 'cat-jump-peak-up') {
+        this.play('cat-jump-peak-up');
+      }
+      this.setAngle(this.flipX ? JUMP_ROTATION_SLIGHT : -JUMP_ROTATION_SLIGHT);
+    } else if (velocityY <= FAST_VELOCITY_THRESHOLD) {
+      // At peak or starting to fall
+      if (this.anims.currentAnim?.key !== 'cat-jump-peak-down') {
+        this.play('cat-jump-peak-down');
+      }
+      this.setAngle(this.flipX ? -JUMP_ROTATION_SLIGHT : JUMP_ROTATION_SLIGHT);
+    } else {
+      // Falling fast
+      if (this.anims.currentAnim?.key !== 'cat-jump-down') {
+        this.play('cat-jump-down');
+      }
+      this.setAngle(this.flipX ? -JUMP_ROTATION_FULL : JUMP_ROTATION_FULL);
+    }
+  }
+
   update(): void {
     const touchState = (this as any).touchState;
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -180,19 +253,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.anims.currentAnim?.key !== 'cat-idle') {
           this.play('cat-idle');
         }
+        this.setAngle(0); // Reset rotation
         break;
       case 'running':
         if (this.anims.currentAnim?.key !== 'cat-walk') {
           this.play('cat-walk');
         }
+        this.setAngle(0); // Reset rotation
         break;
       case 'jumping':
-        // Use first frame of walk for jumping
-        if (this.anims.currentAnim?.key !== 'cat-walk') {
-          this.play('cat-walk');
-        }
-        this.anims.pause();
-        this.setFrame(0);
+        const velocityY = (this.body as Phaser.Physics.Arcade.Body).velocity.y;
+        this.updateJumpAnimation(velocityY);
         break;
     }
   }
