@@ -21,8 +21,8 @@
 
 .pixel-button {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: calc(10px + env(safe-area-inset-top));
+  right: calc(10px + env(safe-area-inset-right));
   width: 100px;
   height: 40px;
   background: rgba(0, 0, 0, 0.7);
@@ -34,6 +34,10 @@
   cursor: pointer;
   transition: transform 0.1s;
   image-rendering: pixelated;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .pixel-button:hover {
@@ -45,7 +49,7 @@
 }
 
 #skin-btn {
-  top: 60px;
+  top: calc(60px + env(safe-area-inset-top));
   font-size: 10px;
 }
 
@@ -192,15 +196,15 @@
 
 @media (max-width: 600px) {
   .pixel-button {
-    right: 5px;
-    top: 5px;
+    right: calc(5px + env(safe-area-inset-right));
+    top: calc(5px + env(safe-area-inset-top));
     width: 80px;
     height: 35px;
     font-size: 11px;
   }
   
   #skin-btn {
-    top: 45px;
+    top: calc(45px + env(safe-area-inset-top));
     font-size: 8px;
   }
   

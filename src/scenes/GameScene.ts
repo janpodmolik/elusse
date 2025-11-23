@@ -8,8 +8,6 @@ import { UIManager } from '../ui/UIManager';
 const WORLD_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 800,
-  GROUND_Y: 500,
-  GROUND_HEIGHT: 50,
 };
 
 const PLAYER_CONFIG = {
@@ -51,9 +49,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Set world bounds
-    this.physics.world.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
-
     // Create parallax background layers
     this.createParallaxBackground();
 
@@ -78,8 +73,9 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, ground);
 
     // Setup camera to follow player
-    this.cameras.main.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
+    this.physics.world.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
 
     // Setup language toggle (L key) and skin toggle (C key)
     if (this.input.keyboard) {
@@ -104,12 +100,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createParallaxBackground(): void {
-    // Create repeating base layer (0.png) that tiles vertically
+    // Get actual viewport height to cover entire screen
+    const viewportHeight = Math.max(WORLD_CONFIG.HEIGHT, this.scale.height);
+    
+    // Create repeating base layer (0.png) that tiles to cover any viewport size
     const baseLayer = this.add.tileSprite(
       0, 
       0, 
       WORLD_CONFIG.WIDTH, 
-      WORLD_CONFIG.HEIGHT * 3, // Make it tall enough to cover extended vertical space
+      viewportHeight,
       'bg0'
     );
     baseLayer.setOrigin(0, 0);
