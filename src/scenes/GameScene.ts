@@ -3,6 +3,8 @@ import { Player } from './Player';
 import { localization } from '../data/localization';
 import { catSkinManager, AVAILABLE_SKINS } from '../data/catSkin';
 import { UIManager } from '../ui/UIManager';
+import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
+import { loadBackgroundAssets } from './BackgroundLoader';
 
 // Configuration constants
 const WORLD_CONFIG = {
@@ -19,21 +21,30 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private languageToggleKey!: Phaser.Input.Keyboard.Key;
   private skinToggleKey!: Phaser.Input.Keyboard.Key;
+  private backgroundToggleKey!: Phaser.Input.Keyboard.Key;
   private uiManager!: UIManager;
 
-  // Parallax backgrounds (6 layers)
+  // Parallax backgrounds (flexible layer count)
   private bgLayers: Phaser.GameObjects.Image[] = [];
+  private baseLayer: Phaser.GameObjects.TileSprite | null = null;
+  private loadedBackgrounds: Set<string> = new Set();
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   preload(): void {
-    // Load background images
-    this.load.image('bg0', 'assets/backgrounds/0.png'); // Repeating base layer
-    for (let i = 1; i <= 6; i++) {
-      this.load.image(`bg${i}`, `assets/backgrounds/${i}.png`);
+    // Load default background images
+    const defaultConfig = backgroundManager.getCurrentConfig();
+    this.load.image(`bg0-${defaultConfig.folder}`, `assets/backgrounds/${defaultConfig.folder}/0.png`);
+    for (let i = 0; i < defaultConfig.scrollFactors.length; i++) {
+      const layerNum = i + 1;
+      this.load.image(
+        `bg${layerNum}-${defaultConfig.folder}`,
+        `assets/backgrounds/${defaultConfig.folder}/${layerNum}.png`
+      );
     }
+    this.loadedBackgrounds.add(defaultConfig.folder);
 
     // Load cat sprite sheets for all available skins
     AVAILABLE_SKINS.forEach(skin => {
@@ -52,7 +63,7 @@ export class GameScene extends Phaser.Scene {
     // Create parallax background layers
     this.createParallaxBackground();
 
-    const groundHeight = 80;
+    const groundHeight = 40;
     const groundY = WORLD_CONFIG.HEIGHT - groundHeight;
     
     const ground = this.add.rectangle(
@@ -77,10 +88,11 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
     this.physics.world.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
 
-    // Setup language toggle (L key) and skin toggle (C key)
+    // Setup toggle keys (L: language, C: skin, B: background)
     if (this.input.keyboard) {
       this.languageToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
       this.skinToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+      this.backgroundToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.B);
     }
 
     // Initialize HTML UI Manager
@@ -89,10 +101,12 @@ export class GameScene extends Phaser.Scene {
     // Connect UI callbacks to game logic
     this.uiManager.onLanguageToggle = () => this.toggleLanguage();
     this.uiManager.onSkinToggle = () => this.toggleSkin();
+    this.uiManager.onBackgroundToggle = () => this.toggleBackground();
     
     // Update initial UI state
     this.uiManager.updateLanguageText(localization.getLanguage());
     this.uiManager.updateSkinText(catSkinManager.getSkin());
+    this.uiManager.updateBackgroundText(backgroundManager.getCurrentConfig().name);
     
     // Show controls hint on first visit
     const isTouchDevice = this.sys.game.device.input.touch;
@@ -100,35 +114,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createParallaxBackground(): void {
-    // Get actual viewport height to cover entire screen
+    const config = backgroundManager.getCurrentConfig();
     const viewportHeight = Math.max(WORLD_CONFIG.HEIGHT, this.scale.height);
     
     // Create repeating base layer (0.png) that tiles to cover any viewport size
-    const baseLayer = this.add.tileSprite(
+    this.baseLayer = this.add.tileSprite(
       0, 
       0, 
       WORLD_CONFIG.WIDTH, 
       viewportHeight,
-      'bg0'
+      `bg0-${config.folder}`
     );
-    baseLayer.setOrigin(0, 0);
-    baseLayer.setScrollFactor(1.0);
-    baseLayer.setDepth(-11); // Behind all other layers
+    this.baseLayer.setOrigin(0, 0);
+    this.baseLayer.setScrollFactor(1.0);
+    this.baseLayer.setDepth(-11); // Behind all other layers
     
-    const scrollFactors = [
-      1.0,  // Layer 1: ground (moves fully with camera)
-      0.8, // Layer 2: furthest trees (almost static - moves only 2%)
-      0.85, // Layer 3: far trees (almost static)
-      0.9, // Layer 4: mid trees (almost static)  
-      0.95, // Layer 5: near trees (almost static)
-      1.0   // Layer 6: foreground (moves fully with camera)
-    ];
-    
-    for (let i = 1; i <= 6; i++) {
-      const layer = this.add.image(0, 0, `bg${i}`);
+    // Create parallax layers based on config
+    for (let i = 0; i < config.scrollFactors.length; i++) {
+      const layerNum = i + 1;
+      const layer = this.add.image(0, 0, `bg${layerNum}-${config.folder}`);
       layer.setOrigin(0, 0);
-      layer.setScrollFactor(scrollFactors[i - 1]);
-      layer.setDepth(-10 + i);
+      layer.setScrollFactor(config.scrollFactors[i]);
+      layer.setDepth(-10 + layerNum);
       layer.setDisplaySize(WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
       
       this.bgLayers.push(layer);
@@ -146,6 +153,61 @@ export class GameScene extends Phaser.Scene {
     this.player.changeSkin(newSkin);
   }
 
+  private async toggleBackground(): Promise<void> {
+    backgroundManager.toggleBackground();
+    await this.reloadBackground();
+  }
+
+  private async loadBackgroundIfNeeded(config: typeof AVAILABLE_BACKGROUNDS[0]): Promise<boolean> {
+    // Skip if already loaded
+    if (this.loadedBackgrounds.has(config.folder)) {
+      return true;
+    }
+
+    // Load background assets
+    const success = await loadBackgroundAssets(this, config);
+    if (success) {
+      this.loadedBackgrounds.add(config.folder);
+    }
+    return success;
+  }
+
+  private async reloadBackground(): Promise<void> {
+    let config = backgroundManager.getCurrentConfig();
+    
+    // Show loader
+    this.uiManager.showLoader();
+
+    // Load background if needed
+    let success = await this.loadBackgroundIfNeeded(config);
+    
+    // Fallback to forest on error
+    if (!success) {
+      console.error(`Failed to load background: ${config.folder}, falling back to forest`);
+      backgroundManager.setBackground('forest');
+      config = backgroundManager.getCurrentConfig();
+      success = await this.loadBackgroundIfNeeded(config);
+      
+      if (!success) {
+        console.error('Failed to load fallback background');
+        this.uiManager.hideLoader();
+        return;
+      }
+    }
+
+    // Destroy old layers
+    this.baseLayer?.destroy();
+    this.bgLayers.forEach(layer => layer.destroy());
+    this.bgLayers = [];
+
+    // Create new layers
+    this.createParallaxBackground();
+
+    // Hide loader and update UI
+    this.uiManager.hideLoader();
+    this.uiManager.updateBackgroundText(config.name);
+  }
+
   public notifyPlayerMoved(): void {
     this.uiManager.notifyPlayerMoved();
   }
@@ -161,6 +223,11 @@ export class GameScene extends Phaser.Scene {
     // Toggle skin with C key
     if (Phaser.Input.Keyboard.JustDown(this.skinToggleKey)) {
       this.toggleSkin();
+    }
+
+    // Toggle background with B key
+    if (Phaser.Input.Keyboard.JustDown(this.backgroundToggleKey)) {
+      this.toggleBackground();
     }
   }
 }

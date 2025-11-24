@@ -6,6 +6,8 @@
 export class UIManager {
   private langButton: HTMLButtonElement;
   private skinButton: HTMLButtonElement;
+  private backgroundButton: HTMLButtonElement;
+  private loaderOverlay: HTMLElement;
   private controlsDialog: HTMLDialogElement;
   private hasPlayerMoved: boolean = false;
 
@@ -13,9 +15,11 @@ export class UIManager {
     // Get UI elements
     this.langButton = document.getElementById('lang-btn') as HTMLButtonElement;
     this.skinButton = document.getElementById('skin-btn') as HTMLButtonElement;
+    this.backgroundButton = document.getElementById('background-btn') as HTMLButtonElement;
+    this.loaderOverlay = document.getElementById('loader-overlay') as HTMLElement;
     this.controlsDialog = document.getElementById('controls-dialog') as HTMLDialogElement;
 
-    if (!this.langButton || !this.skinButton || !this.controlsDialog) {
+    if (!this.langButton || !this.skinButton || !this.backgroundButton || !this.loaderOverlay || !this.controlsDialog) {
       throw new Error('UI elements not found in DOM');
     }
 
@@ -35,13 +39,19 @@ export class UIManager {
       this.onSkinToggle?.();
     });
 
+    // Background button click
+    this.backgroundButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onBackgroundToggle?.();
+    });
+
     // Close dialog on any click/tap (first interaction)
     document.addEventListener('pointerdown', (e) => {
       if (!this.controlsDialog.open) return;
       
       // Don't close if clicking UI buttons
       const target = e.target as Node;
-      if (this.langButton.contains(target) || this.skinButton.contains(target)) {
+      if (this.langButton.contains(target) || this.skinButton.contains(target) || this.backgroundButton.contains(target)) {
         return;
       }
       
@@ -52,6 +62,7 @@ export class UIManager {
   // Callbacks for game logic
   public onLanguageToggle?: () => void;
   public onSkinToggle?: () => void;
+  public onBackgroundToggle?: () => void;
 
   /**
    * Update language button text
@@ -71,6 +82,30 @@ export class UIManager {
     if (skinText) {
       skinText.textContent = skin.toUpperCase();
     }
+  }
+
+  /**
+   * Update background button text
+   */
+  public updateBackgroundText(name: string): void {
+    const backgroundText = this.backgroundButton.querySelector('#background-text');
+    if (backgroundText) {
+      backgroundText.textContent = name;
+    }
+  }
+
+  /**
+   * Show loading overlay
+   */
+  public showLoader(): void {
+    this.loaderOverlay.style.display = 'flex';
+  }
+
+  /**
+   * Hide loading overlay
+   */
+  public hideLoader(): void {
+    this.loaderOverlay.style.display = 'none';
   }
 
   /**
