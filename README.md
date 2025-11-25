@@ -1,6 +1,6 @@
 # Interactive Pixel Art Portfolio
 
-Interaktivní portfolio překladatelky a korektorky jako 2D platformer postavený s **Phaser 3**, **TypeScript** a **Vite**.
+*Documentation coming soon...*
 
 ## 🎮 Ovládání
 

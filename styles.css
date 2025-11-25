@@ -38,6 +38,7 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  outline: none;
 }
 
 .pixel-button:hover {
@@ -48,12 +49,16 @@
   transform: scale(0.95);
 }
 
-#skin-btn {
+.pixel-button:focus {
+  outline: none;
+}
+
+.pixel-button--skin {
   top: calc(60px + env(safe-area-inset-top));
   font-size: 10px;
 }
 
-#background-btn {
+.pixel-button--background {
   top: calc(110px + env(safe-area-inset-top));
   font-size: 9px;
 }
@@ -101,7 +106,7 @@
 
 /* Dialog content box */
 .pixel-dialog h1,
-.pixel-dialog #controls-content {
+.pixel-dialog .controls-content {
   background: #f5f5dc;
   border: 6px solid #000000;
   box-shadow: 
@@ -122,7 +127,7 @@
   box-sizing: border-box;
 }
 
-#controls-content {
+.controls-content {
   padding: 30px 40px 20px;
   display: flex;
   flex-direction: column;
@@ -208,12 +213,12 @@
     font-size: 11px;
   }
   
-  #skin-btn {
+  .pixel-button--skin {
     top: calc(45px + env(safe-area-inset-top));
     font-size: 8px;
   }
   
-  #background-btn {
+  .pixel-button--background {
     top: calc(85px + env(safe-area-inset-top));
     font-size: 7px;
   }
@@ -251,7 +256,7 @@
 
 /* ==================== Loading Overlay ==================== */
 
-#loader-overlay {
+.loader-overlay {
   position: fixed;
   top: 0;
   left: 0;

@@ -1,0 +1,148 @@
+<script lang="ts">
+  import { 
+    currentLanguage, 
+    currentSkin, 
+    currentBackground, 
+    isLoading, 
+    showControlsDialog, 
+    isTouchDevice,
+    hasPlayerMoved,
+    backgroundChangeCounter
+  } from '../stores';
+  import { localization } from '../data/localization';
+  import { catSkinManager } from '../data/catSkin';
+  import { backgroundManager } from '../data/background';
+
+  let dialogElement: HTMLDialogElement;
+
+  // Reactive statement to handle dialog visibility
+  $: if (dialogElement) {
+    if ($showControlsDialog) {
+      dialogElement.showModal();
+    } else {
+      dialogElement.close();
+    }
+  }
+
+  // Check if player has moved and close dialog
+  $: if ($hasPlayerMoved && dialogElement?.open) {
+    showControlsDialog.set(false);
+  }
+
+  function handleLanguageToggle() {
+    const newLang = localization.toggleLanguage();
+    currentLanguage.set(newLang);
+  }
+
+  function handleSkinToggle() {
+    const newSkin = catSkinManager.toggleSkin();
+    currentSkin.set(newSkin);
+  }
+
+  function handleBackgroundToggle() {
+    backgroundManager.toggleBackground();
+    currentBackground.set(backgroundManager.getCurrentConfig().name);
+    // Trigger background reload in GameScene by incrementing counter
+    backgroundChangeCounter.update(n => n + 1);
+  }
+
+  // Listen to document pointerdown for dialog closing
+  function handlePointerDown(e: PointerEvent) {
+    if (!dialogElement?.open) return;
+    
+    const target = e.target as HTMLElement;
+    if (target.closest('.pixel-button')) {
+      return;
+    }
+    
+    showControlsDialog.set(false);
+  }
+</script>
+
+<svelte:document on:pointerdown={handlePointerDown} />
+
+<div class="game-ui-wrapper">
+  <!-- Language & Skin & Background Buttons -->
+  <button 
+    class="pixel-button" 
+    title="Toggle Language (L)"
+    on:click={handleLanguageToggle}
+  >
+    {$currentLanguage.toUpperCase()}
+  </button>
+
+  <button 
+    class="pixel-button pixel-button--skin" 
+    title="Toggle Skin (C)"
+    on:click={handleSkinToggle}
+  >
+    {$currentSkin.toUpperCase()}
+  </button>
+
+  <button 
+    class="pixel-button pixel-button--background" 
+    title="Toggle Background (B)"
+    on:click={handleBackgroundToggle}
+  >
+    {$currentBackground}
+  </button>
+
+  <!-- Controls Dialog -->
+  <dialog 
+    bind:this={dialogElement}
+    class="pixel-dialog"
+  >
+    <h1>CONTROLS</h1>
+    <div class="controls-content">
+      {#if $isTouchDevice}
+        <!-- Touch controls -->
+        <div class="touch-controls">
+          <p class="touch-text">Tap and hold<br>where you want<br>to move</p>
+        </div>
+      {:else}
+        <!-- Desktop controls -->
+        <div class="desktop-controls">
+          <div class="key-row">
+            <div class="pixel-key">A</div>
+            <div class="pixel-key">W</div>
+            <div class="pixel-key">D</div>
+          </div>
+          <p class="or-text">or</p>
+          <div class="key-row">
+            <div class="pixel-key">←</div>
+            <div class="pixel-key">↑</div>
+            <div class="pixel-key">→</div>
+          </div>
+        </div>
+      {/if}
+    </div>
+  </dialog>
+
+  <!-- Loading Overlay -->
+  {#if $isLoading}
+    <div class="loader-overlay">
+      <div class="pixel-loader"></div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .game-ui-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks through to canvas */
+    z-index: 1000;
+    font-family: 'Press Start 2P', cursive;
+  }
+
+  /* Re-enable pointer events on interactive elements */
+  .game-ui-wrapper :global(button),
+  .game-ui-wrapper :global(dialog) {
+    pointer-events: auto;
+  }
+
+  /* All other styles are inherited from styles.css */
+</style>

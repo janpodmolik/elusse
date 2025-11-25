@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
 import { localization } from '../data/localization';
-import { catSkinManager, AVAILABLE_SKINS } from '../data/catSkin';
-import { UIManager } from '../ui/UIManager';
+import { catSkinManager, AVAILABLE_SKINS, CatSkin } from '../data/catSkin';
 import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
+import { currentLanguage, currentSkin, currentBackground, isLoading, backgroundChangeCounter } from '../stores';
 
 // Configuration constants
 const WORLD_CONFIG = {
@@ -22,12 +22,14 @@ export class GameScene extends Phaser.Scene {
   private languageToggleKey!: Phaser.Input.Keyboard.Key;
   private skinToggleKey!: Phaser.Input.Keyboard.Key;
   private backgroundToggleKey!: Phaser.Input.Keyboard.Key;
-  private uiManager!: UIManager;
 
   // Parallax backgrounds (flexible layer count)
   private bgLayers: Phaser.GameObjects.Image[] = [];
   private baseLayer: Phaser.GameObjects.TileSprite | null = null;
   private loadedBackgrounds: Set<string> = new Set();
+
+  // Store unsubscribe functions
+  private unsubscribers: Array<() => void> = [];
 
   constructor() {
     super({ key: 'GameScene' });
@@ -95,22 +97,22 @@ export class GameScene extends Phaser.Scene {
       this.backgroundToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.B);
     }
 
-    // Initialize HTML UI Manager
-    this.uiManager = new UIManager();
-    
-    // Connect UI callbacks to game logic
-    this.uiManager.onLanguageToggle = () => this.toggleLanguage();
-    this.uiManager.onSkinToggle = () => this.toggleSkin();
-    this.uiManager.onBackgroundToggle = () => this.toggleBackground();
-    
-    // Update initial UI state
-    this.uiManager.updateLanguageText(localization.getLanguage());
-    this.uiManager.updateSkinText(catSkinManager.getSkin());
-    this.uiManager.updateBackgroundText(backgroundManager.getCurrentConfig().name);
-    
-    // Show controls hint on first visit
-    const isTouchDevice = this.sys.game.device.input.touch;
-    this.uiManager.showControlsDialogIfNeeded(isTouchDevice);
+    // Subscribe to store changes to react to UI updates
+    const skinUnsubscribe = currentSkin.subscribe((skin: string) => {
+      const catSkin = skin as CatSkin;
+      if (this.player && AVAILABLE_SKINS.includes(catSkin)) {
+        this.player.changeSkin(catSkin);
+      }
+    });
+
+    // Subscribe to background change requests from UI
+    const backgroundUnsubscribe = backgroundChangeCounter.subscribe(async () => {
+      // Trigger background reload when counter changes
+      await this.reloadBackground();
+    });
+
+    // Store unsubscribe functions for cleanup
+    this.unsubscribers.push(skinUnsubscribe, backgroundUnsubscribe);
   }
 
   private createParallaxBackground(): void {
@@ -144,12 +146,12 @@ export class GameScene extends Phaser.Scene {
 
   private toggleLanguage(): void {
     const newLang = localization.toggleLanguage();
-    this.uiManager.updateLanguageText(newLang);
+    currentLanguage.set(newLang);
   }
 
   private toggleSkin(): void {
     const newSkin = catSkinManager.toggleSkin();
-    this.uiManager.updateSkinText(newSkin);
+    currentSkin.set(newSkin);
     this.player.changeSkin(newSkin);
   }
 
@@ -176,7 +178,7 @@ export class GameScene extends Phaser.Scene {
     let config = backgroundManager.getCurrentConfig();
     
     // Show loader
-    this.uiManager.showLoader();
+    isLoading.set(true);
 
     // Load background if needed
     let success = await this.loadBackgroundIfNeeded(config);
@@ -190,7 +192,7 @@ export class GameScene extends Phaser.Scene {
       
       if (!success) {
         console.error('Failed to load fallback background');
-        this.uiManager.hideLoader();
+        isLoading.set(false);
         return;
       }
     }
@@ -204,12 +206,14 @@ export class GameScene extends Phaser.Scene {
     this.createParallaxBackground();
 
     // Hide loader and update UI
-    this.uiManager.hideLoader();
-    this.uiManager.updateBackgroundText(config.name);
+    isLoading.set(false);
+    currentBackground.set(config.name);
   }
 
-  public notifyPlayerMoved(): void {
-    this.uiManager.notifyPlayerMoved();
+  shutdown(): void {
+    // Clean up store subscriptions to prevent memory leaks
+    this.unsubscribers.forEach(unsubscribe => unsubscribe());
+    this.unsubscribers = [];
   }
 
   update(): void {

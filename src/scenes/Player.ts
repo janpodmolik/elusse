@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { catSkinManager, CatSkin } from '../data/catSkin';
-import type { GameScene } from './GameScene';
+import { hasPlayerMoved } from '../stores';
 
 // Touch control constants
 const TOUCH_THRESHOLD_X = 20;  // Horizontal movement threshold
@@ -31,6 +31,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private currentSkin: CatSkin;
   private hasNotifiedMovement: boolean = false;
   private hasReceivedInput: boolean = false;
+  private touchHandlers?: {
+    pointerdown: (pointer: Phaser.Input.Pointer) => void;
+    pointermove: (pointer: Phaser.Input.Pointer) => void;
+    pointerup: () => void;
+  };
+  private touchState?: {
+    left: boolean;
+    right: boolean;
+    jump: boolean;
+  };
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Get current skin from manager
@@ -182,24 +192,35 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       touchJump = deltaY < -TOUCH_THRESHOLD_Y;
     };
 
-    scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    const pointerdownHandler = (pointer: Phaser.Input.Pointer) => {
       handlePointer(pointer);
-    });
+    };
 
-    scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    const pointermoveHandler = (pointer: Phaser.Input.Pointer) => {
       if (pointer.isDown) {
         handlePointer(pointer);
       }
-    });
+    };
 
-    scene.input.on('pointerup', () => {
+    const pointerupHandler = () => {
       touchLeft = false;
       touchRight = false;
       touchJump = false;
-    });
+    };
+
+    scene.input.on('pointerdown', pointerdownHandler);
+    scene.input.on('pointermove', pointermoveHandler);
+    scene.input.on('pointerup', pointerupHandler);
+
+    // Store handlers for cleanup
+    this.touchHandlers = {
+      pointerdown: pointerdownHandler,
+      pointermove: pointermoveHandler,
+      pointerup: pointerupHandler,
+    };
 
     // Store touch state for update method
-    (this as any).touchState = {
+    this.touchState = {
       get left() { return touchLeft; },
       get right() { return touchRight; },
       get jump() { return touchJump; },
@@ -249,7 +270,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(): void {
-    const touchState = (this as any).touchState;
+    const touchState = this.touchState;
     const body = this.body as Phaser.Physics.Arcade.Body;
     // Use blocked.down which is more reliable than touching.down
     const onGround = body && (body.blocked.down || body.touching.down);
@@ -270,10 +291,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const isMoving = moveLeft || moveRight;
     if (this.hasReceivedInput && (isMoving || jumpPressed) && !this.hasNotifiedMovement) {
       this.hasNotifiedMovement = true;
-      const gameScene = this.scene as GameScene;
-      if (gameScene.notifyPlayerMoved) {
-        gameScene.notifyPlayerMoved();
-      }
+      hasPlayerMoved.set(true);
     }
 
     if (moveLeft) {
@@ -318,5 +336,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.updateJumpAnimation(velocityY);
         break;
     }
+  }
+
+  destroy(fromScene?: boolean): void {
+    // Clean up touch event listeners
+    if (this.touchHandlers) {
+      this.scene.input.off('pointerdown', this.touchHandlers.pointerdown);
+      this.scene.input.off('pointermove', this.touchHandlers.pointermove);
+      this.scene.input.off('pointerup', this.touchHandlers.pointerup);
+      this.touchHandlers = undefined;
+    }
+    
+    // Call parent destroy
+    super.destroy(fromScene);
   }
 }
