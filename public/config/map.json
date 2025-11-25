@@ -1,0 +1,59 @@
+{
+  "worldWidth": 2500,
+  "worldHeight": 800,
+  "playerStartX": 250,
+  "playerStartY": 450,
+  "dialogs": [
+    {
+      "id": "welcome",
+      "x": 200,
+      "width": 150,
+      "triggerType": "sign_right",
+      "text": {
+        "cs": "Ahoj! Jsem Koczka a budu vaším průvodcem. Za mňau!",
+        "en": "Hi! I'm Koczka and I'll be your guide. Follow meow!"
+      }
+    },
+    {
+      "id": "about",
+      "x": 800,
+      "width": 120,
+      "triggerType": "tent",
+      "yOffset": -20,
+      "text": {
+        "cs": "Nacházíme se ve hvozdu zvaném Skogen. Kromě mě tu žije člověčice El, prý je to překladatelka a korektorka. Rozumí hrám a překládá je z angličtiny a švédštiny. Víc o ní zjistíte tadyhle.",
+        "en": "We're in a forest called Skogen. Besides me, there's a human named El who lives here. She's a translator and proofreader. She understands games and translates from English and Swedish. Find out more about her here."
+      }
+    },
+    {
+      "id": "games",
+      "x": 1100,
+      "width": 120,
+      "triggerType": "lamp",
+      "text": {
+        "cs": "Chcete, aby vaše hra mňoukala česky? El vám přeloží pravidla deskovky, stránku hry na Steam nebo rovnou celý herní obsah včetně všech nabídek, rozhraní a dialogů. Ráda zajistí i lokalizační testování. Její portfolio najdete tady.",
+        "en": "Want your game to meow in Czech? El can translate board game rules, Steam pages, or entire game content including menus, interfaces, and dialogues. She's happy to provide localization testing too. Check out her portfolio here."
+      }
+    },
+    {
+      "id": "other-services",
+      "x": 1400,
+      "width": 120,
+      "triggerType": "stone_0",
+      "text": {
+        "cs": "Kromě her prý ráda vymňoukne i jiné texty: od jazykových korektur diplomek či knih, přes marketingová sdělení, chytlavé slogany a příspěvky na sociální sítě až po otextování e-shopu.",
+        "en": "Besides games, she loves to meow out other texts too: from proofreading theses and books, to marketing messages, catchy slogans, social media posts, and e-shop content."
+      }
+    },
+    {
+      "id": "contact",
+      "x": 1700,
+      "width": 150,
+      "triggerType": "stone_1",
+      "text": {
+        "cs": "El je poctivka, zakládá si na osobním přístupu ke každému klientovi a všechny její texty jsou pravou člověčí (a občas i kočičí) prací, která má duši. Žádné AI slátaniny ani sterilní byrokratština. Naškrábejte jí zprávu, mňau!",
+        "en": "El is honest, values a personal approach to each client, and all her texts are genuine human (and sometimes feline) work with soul. No AI patchwork or sterile bureaucracy. Scratch her a message, meow!"
+      }
+    }
+  ]
+}

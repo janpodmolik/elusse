@@ -4,18 +4,9 @@ import { localization } from '../data/localization';
 import { catSkinManager, AVAILABLE_SKINS, CatSkin } from '../data/catSkin';
 import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
-import { currentLanguage, currentSkin, currentBackground, isLoading, backgroundChangeCounter } from '../stores';
-
-// Configuration constants
-const WORLD_CONFIG = {
-  WIDTH: 2000,
-  HEIGHT: 800,
-};
-
-const PLAYER_CONFIG = {
-  START_X: 250,
-  START_Y: 450,
-};
+import { DialogTriggerManager } from './DialogTriggerManager';
+import { loadMapConfig, MapConfig } from '../data/mapConfig';
+import { currentLanguage, currentSkin, currentBackground, isLoading, backgroundChangeCounter, activeDialogId } from '../stores';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -23,16 +14,27 @@ export class GameScene extends Phaser.Scene {
   private skinToggleKey!: Phaser.Input.Keyboard.Key;
   private backgroundToggleKey!: Phaser.Input.Keyboard.Key;
 
+  // Map configuration (loaded from JSON)
+  private mapConfig!: MapConfig;
+
   // Parallax backgrounds (flexible layer count)
   private bgLayers: Phaser.GameObjects.Image[] = [];
   private baseLayer: Phaser.GameObjects.TileSprite | null = null;
   private loadedBackgrounds: Set<string> = new Set();
+
+  // Dialog trigger system
+  private triggerManager!: DialogTriggerManager;
 
   // Store unsubscribe functions
   private unsubscribers: Array<() => void> = [];
 
   constructor() {
     super({ key: 'GameScene' });
+  }
+
+  async init(): Promise<void> {
+    // Load map configuration from JSON
+    this.mapConfig = await loadMapConfig();
   }
 
   preload(): void {
@@ -59,6 +61,9 @@ export class GameScene extends Phaser.Scene {
         frameHeight: 48,
       });
     });
+
+    // Load dialog trigger sprites
+    DialogTriggerManager.preloadAssets(this);
   }
 
   create(): void {
@@ -66,12 +71,12 @@ export class GameScene extends Phaser.Scene {
     this.createParallaxBackground();
 
     const groundHeight = 40;
-    const groundY = WORLD_CONFIG.HEIGHT - groundHeight;
+    const groundY = this.mapConfig.worldHeight - groundHeight;
     
     const ground = this.add.rectangle(
       0, 
       groundY, 
-      WORLD_CONFIG.WIDTH, 
+      this.mapConfig.worldWidth, 
       groundHeight, 
       0x000000, 
       0 // Alpha 0 for invisible
@@ -80,15 +85,32 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.existing(ground, true); // true = static body
 
     // Create player
-    this.player = new Player(this, PLAYER_CONFIG.START_X, PLAYER_CONFIG.START_Y);
+    this.player = new Player(this, this.mapConfig.playerStartX, this.mapConfig.playerStartY);
 
     // Add collision between player and ground
     this.physics.add.collider(this.player, ground);
 
+    // Initialize dialog trigger system
+    this.triggerManager = new DialogTriggerManager(this, groundY);
+    this.triggerManager.createTriggers(this.mapConfig.dialogs);
+    this.triggerManager.setupCollisionDetection(
+      this.player,
+      (dialogId: string) => {
+        // Player entered trigger zone
+        console.log(`Entered trigger: ${dialogId}`);
+        activeDialogId.set(dialogId);
+      },
+      () => {
+        // Player exited trigger zone
+        console.log('Exited trigger');
+        activeDialogId.set(null);
+      }
+    );
+
     // Setup camera to follow player
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
-    this.physics.world.setBounds(0, 0, WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
+    this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+    this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
 
     // Setup toggle keys (L: language, C: skin, B: background)
     if (this.input.keyboard) {
@@ -117,13 +139,13 @@ export class GameScene extends Phaser.Scene {
 
   private createParallaxBackground(): void {
     const config = backgroundManager.getCurrentConfig();
-    const viewportHeight = Math.max(WORLD_CONFIG.HEIGHT, this.scale.height);
+    const viewportHeight = Math.max(this.mapConfig.worldHeight, this.scale.height);
     
     // Create repeating base layer (0.png) that tiles to cover any viewport size
     this.baseLayer = this.add.tileSprite(
       0, 
       0, 
-      WORLD_CONFIG.WIDTH, 
+      this.mapConfig.worldWidth, 
       viewportHeight,
       `bg0-${config.folder}`
     );
@@ -138,7 +160,7 @@ export class GameScene extends Phaser.Scene {
       layer.setOrigin(0, 0);
       layer.setScrollFactor(config.scrollFactors[i]);
       layer.setDepth(-10 + layerNum);
-      layer.setDisplaySize(WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT);
+      layer.setDisplaySize(this.mapConfig.worldWidth, this.mapConfig.worldHeight);
       
       this.bgLayers.push(layer);
     }
@@ -214,6 +236,11 @@ export class GameScene extends Phaser.Scene {
     // Clean up store subscriptions to prevent memory leaks
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
     this.unsubscribers = [];
+    
+    // Clean up dialog triggers
+    if (this.triggerManager) {
+      this.triggerManager.destroy();
+    }
   }
 
   update(): void {
