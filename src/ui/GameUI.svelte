@@ -9,9 +9,12 @@
     hasPlayerMoved,
     backgroundChangeCounter
   } from '../stores';
+  import { isBuilderMode } from '../stores/builderStores';
   import { localization } from '../data/localization';
   import { catSkinManager } from '../data/catSkin';
   import { backgroundManager } from '../data/background';
+  import BuilderUI from './BuilderUI.svelte';
+  import { switchToBuilder, getCurrentMapConfig } from '../utils/sceneManager';
 
   let dialogElement: HTMLDialogElement;
 
@@ -57,12 +60,41 @@
     
     showControlsDialog.set(false);
   }
+
+  function handleBuilderToggle() {
+    const currentMapConfig = getCurrentMapConfig();
+    
+    if (!currentMapConfig) {
+      console.error('Cannot enter builder mode: map config not found');
+      return;
+    }
+
+    switchToBuilder(currentMapConfig);
+  }
+
 </script>
 
 <svelte:document on:pointerdown={handlePointerDown} />
 
 <div class="game-ui-wrapper">
-  <!-- Language & Skin & Background Buttons -->
+  <!-- Builder Mode UI -->
+  {#if $isBuilderMode}
+    <BuilderUI />
+  {/if}
+
+  <!-- Builder Mode Toggle Button (only in play mode) -->
+  {#if !$isBuilderMode}
+  <button 
+    class="pixel-button pixel-button--builder" 
+    title="Toggle Builder Mode"
+    on:click={handleBuilderToggle}
+  >
+    BUILD
+  </button>
+  {/if}
+
+  <!-- Language & Skin & Background Buttons (only in play mode) -->
+  {#if !$isBuilderMode}
   <button 
     class="pixel-button" 
     title="Toggle Language (L)"
@@ -86,6 +118,7 @@
   >
     {$currentBackground}
   </button>
+  {/if}
 
   <!-- Controls Dialog -->
   <dialog 

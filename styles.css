@@ -63,6 +63,22 @@
   font-size: 9px;
 }
 
+.pixel-button--builder {
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(10px + env(safe-area-inset-left));
+  right: auto;
+  width: 120px;
+  background: rgba(0, 255, 0, 0.2);
+  border-color: #00ff00;
+  color: #00ff00;
+  font-size: 11px;
+}
+
+.pixel-button--builder:hover {
+  background: rgba(0, 255, 0, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
 /* ==================== Pixel Art Dialog ==================== */
 
 .pixel-dialog {

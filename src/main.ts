@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
+import { BuilderScene } from './scenes/BuilderScene';
 import { mount } from 'svelte';
 import GameUI from './ui/GameUI.svelte';
 import { currentLanguage, currentSkin, currentBackground, isTouchDevice, showControlsDialog } from './stores';
 import { localization } from './data/localization';
 import { catSkinManager } from './data/catSkin';
 import { backgroundManager } from './data/background';
+import { initSceneManager } from './utils/sceneManager';
 
 // Wait for DOM to be ready
 const gameUIElement = document.getElementById('game-ui');
@@ -46,10 +48,13 @@ const config: Phaser.Types.Core.GameConfig = {
   audio: {
     noAudio: true,
   },
-  scene: [GameScene],
+  scene: [GameScene, BuilderScene],
 };
 
 const game = new Phaser.Game(config);
+
+// Initialize scene manager
+initSceneManager(game);
 
 // Detect touch device and show controls dialog on first load
 const isTouch = game.device.input.touch;
