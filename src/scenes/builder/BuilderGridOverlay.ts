@@ -1,4 +1,18 @@
 import Phaser from 'phaser';
+import {
+  GRID_SIZE,
+  GRID_LINE_COLOR,
+  GRID_LINE_ALPHA,
+  GRID_LINE_WIDTH,
+  GROUND_HEIGHT,
+  GROUND_LINE_COLOR,
+  GROUND_LINE_WIDTH,
+  GROUND_LINE_ALPHA,
+  GROUND_AREA_ALPHA,
+  GROUND_AREA_LINE_WIDTH,
+  GROUND_AREA_LINE_ALPHA,
+  OVERLAY_DEPTH
+} from './builderConstants';
 
 /**
  * BuilderGridOverlay - Manages grid visualization for builder mode
@@ -20,7 +34,7 @@ export class BuilderGridOverlay {
    */
   create(): Phaser.GameObjects.Graphics {
     this.graphics = this.scene.add.graphics();
-    this.graphics.setDepth(1000); // On top of everything
+    this.graphics.setDepth(OVERLAY_DEPTH);
     this.draw();
     return this.graphics;
   }
@@ -30,13 +44,12 @@ export class BuilderGridOverlay {
    */
   private draw(): void {
     this.graphics.clear();
-    this.graphics.lineStyle(1, 0x00ff00, 0.3);
+    this.graphics.lineStyle(GRID_LINE_WIDTH, GRID_LINE_COLOR, GRID_LINE_ALPHA);
 
-    const gridSize = 100;
     const viewportHeight = Math.max(this.worldHeight, this.scene.scale.height);
 
     // Vertical lines
-    for (let x = 0; x <= this.worldWidth; x += gridSize) {
+    for (let x = 0; x <= this.worldWidth; x += GRID_SIZE) {
       this.graphics.beginPath();
       this.graphics.moveTo(x, 0);
       this.graphics.lineTo(x, viewportHeight);
@@ -44,7 +57,7 @@ export class BuilderGridOverlay {
     }
 
     // Horizontal lines
-    for (let y = 0; y <= viewportHeight; y += gridSize) {
+    for (let y = 0; y <= viewportHeight; y += GRID_SIZE) {
       this.graphics.beginPath();
       this.graphics.moveTo(0, y);
       this.graphics.lineTo(this.worldWidth, y);
@@ -52,16 +65,16 @@ export class BuilderGridOverlay {
     }
 
     // Highlight ground level
-    const groundY = this.worldHeight - 40;
-    this.graphics.lineStyle(2, 0xff0000, 0.6);
+    const groundY = this.worldHeight - GROUND_HEIGHT;
+    this.graphics.lineStyle(GROUND_LINE_WIDTH, GROUND_LINE_COLOR, GROUND_LINE_ALPHA);
     this.graphics.beginPath();
     this.graphics.moveTo(0, groundY);
     this.graphics.lineTo(this.worldWidth, groundY);
     this.graphics.strokePath();
     
     // Ground reference area
-    this.graphics.lineStyle(1, 0xff0000, 0.2);
-    this.graphics.fillStyle(0xff0000, 0.1);
+    this.graphics.lineStyle(GROUND_AREA_LINE_WIDTH, GROUND_LINE_COLOR, GROUND_AREA_LINE_ALPHA);
+    this.graphics.fillStyle(GROUND_LINE_COLOR, GROUND_AREA_ALPHA);
     this.graphics.fillRect(0, groundY, this.worldWidth, viewportHeight - groundY);
   }
 
