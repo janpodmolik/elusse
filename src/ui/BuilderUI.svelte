@@ -2,7 +2,6 @@
   import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection } from '../stores/builderStores';
   import { switchToGame } from '../utils/sceneManager';
   import AssetPalette from './AssetPalette.svelte';
-  import PlayerWarning from './PlayerWarning.svelte';
   import PixelButton from './PixelButton.svelte';
 
   function handleSave() {
@@ -30,7 +29,6 @@
 </script>
 
 <AssetPalette />
-<PlayerWarning />
 
 <!-- Save button - top left -->
 <PixelButton 

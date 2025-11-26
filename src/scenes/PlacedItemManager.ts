@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
 import { updatePlacedItem, selectItem, clearSelection } from '../stores/builderStores';
+import { ASSETS } from '../data/assets';
 
 /**
  * PlacedItemManager - Universal manager for placed items
@@ -37,10 +38,8 @@ export class PlacedItemManager {
    * Call this in scene's preload() method
    */
   static preloadAssets(scene: Phaser.Scene): void {
-    const uiAssets = ['tent', 'lamp', 'sign_left', 'sign_right', 'stone_0', 'stone_1', 'stone_2'];
-    
-    uiAssets.forEach(asset => {
-      scene.load.image(asset, `assets/ui/${asset}.png`);
+    ASSETS.forEach(asset => {
+      scene.load.image(asset.key, asset.path);
     });
   }
 
@@ -98,6 +97,11 @@ export class PlacedItemManager {
     sprite.on('dragstart', () => {
       this.isDragging = false;
       sprite.setTint(0x00ff00);
+      
+      // Notify BuilderScene that we're dragging an object
+      if (this.scene.data) {
+        this.scene.data.set('isDraggingItem', true);
+      }
     });
     
     sprite.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
@@ -108,6 +112,11 @@ export class PlacedItemManager {
     
     sprite.on('dragend', () => {
       sprite.clearTint();
+      
+      // Notify BuilderScene that dragging ended
+      if (this.scene.data) {
+        this.scene.data.set('isDraggingItem', false);
+      }
       
       // Update store with new position
       const worldX = Math.round(sprite.x);

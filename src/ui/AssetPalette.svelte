@@ -1,20 +1,8 @@
 <script lang="ts">
   import PixelButton from './PixelButton.svelte';
+  import { ASSETS } from '../data/assets';
   
-  interface AssetInfo {
-    key: string;
-    name: string;
-  }
-  
-  const assets: AssetInfo[] = [
-    { key: 'tent', name: 'Tent' },
-    { key: 'lamp', name: 'Lamp' },
-    { key: 'sign_left', name: 'Sign ←' },
-    { key: 'sign_right', name: 'Sign →' },
-    { key: 'stone_0', name: 'Stone 0' },
-    { key: 'stone_1', name: 'Stone 1' },
-    { key: 'stone_2', name: 'Stone 2' },
-  ];
+  const assets = ASSETS;
   
   let isOpen = $state(false);
   let draggedAsset = $state<string | null>(null);
@@ -23,11 +11,6 @@
     event.stopPropagation();
     event.preventDefault();
     isOpen = !isOpen;
-    
-    // Notify BuilderScene about palette state
-    window.dispatchEvent(new CustomEvent('paletteStateChanged', {
-      detail: { isOpen }
-    }));
   }
   
   function onDragStart(event: DragEvent, assetKey: string) {
@@ -131,7 +114,7 @@
             tabindex="0"
           >
             <img 
-              src={`assets/ui/${asset.key}.png`} 
+              src={asset.path} 
               alt={asset.name}
               class="asset-preview"
             />
