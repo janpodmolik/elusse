@@ -1,4 +1,4 @@
-import { Language } from '../types/DialogData';
+import type { Language } from '../types/Language';
 
 class LocalizationManager {
   private currentLanguage: Language = 'cs';

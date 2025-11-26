@@ -3,7 +3,6 @@
  * Defines structure for JSON-based map configuration
  */
 
-import type { LocalizedText } from '../types/DialogData';
 import { getAssetScale } from './assets';
 import { getItemDepth } from '../constants/depthLayers';
 
@@ -19,13 +18,6 @@ export interface PlacedItem {
   scale?: number; // Default: 1
   depth?: number; // Default: 0
   yOffset?: number; // Additional Y offset (for fine-tuning vertical position)
-  
-  // Optional: Dialog configuration
-  // If present, this item will trigger a dialog on collision
-  dialogConfig?: {
-    width: number; // Collision zone width
-    text: LocalizedText;
-  };
 }
 
 export interface MapConfig {
@@ -68,7 +60,6 @@ export interface CreatePlacedItemOptions {
   yOffset?: number;
   depthLayer?: 'behind' | 'front';
   scale?: number;
-  dialogConfig?: PlacedItem['dialogConfig'];
 }
 
 /**
@@ -87,7 +78,7 @@ export const PlacedItemFactory = {
    * Create a new PlacedItem with default values
    */
   create(options: CreatePlacedItemOptions): PlacedItem {
-    const { assetKey, x, yOffset = 0, depthLayer = 'behind', scale, dialogConfig } = options;
+    const { assetKey, x, yOffset = 0, depthLayer = 'behind', scale } = options;
     
     return {
       id: PlacedItemFactory.generateId(),
@@ -97,7 +88,6 @@ export const PlacedItemFactory = {
       scale: scale ?? getAssetScale(assetKey),
       depth: getItemDepth(depthLayer),
       yOffset: Math.round(yOffset),
-      ...(dialogConfig && { dialogConfig }),
     };
   },
   

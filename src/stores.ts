@@ -36,14 +36,6 @@ export const hasPlayerMoved = writable<boolean>(false);
 /** Background change trigger (increment to trigger reload in GameScene) */
 export const backgroundChangeCounter = writable<number>(0);
 
-// ==================== Dialog System Stores ====================
-
-/** Active dialog ID (null = no dialog active) */
-export const activeDialogId = writable<string | null>(null);
-
-/** List of dismissed dialog IDs (for tracking which dialogs user has seen) */
-export const dismissedDialogs = writable<string[]>([]);
-
 // ==================== Store Utilities ====================
 
 /**
