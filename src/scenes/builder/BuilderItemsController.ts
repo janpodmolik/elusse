@@ -83,10 +83,12 @@ export class BuilderItemsController {
     const subscription = EventBus.on<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, (data) => {
       const { assetKey, canvasX, canvasY } = data;
       
-      // Convert canvas coordinates to world coordinates
+      // Convert canvas coordinates to world coordinates using Phaser's built-in method
+      // This correctly handles zoom and scroll
       const camera = this.scene.cameras.main;
-      const worldX = camera.scrollX + canvasX / camera.zoom;
-      const worldY = camera.scrollY + canvasY / camera.zoom;
+      const worldPoint = camera.getWorldPoint(canvasX, canvasY);
+      const worldX = worldPoint.x;
+      const worldY = worldPoint.y;
       
       // Get current depth layer preference
       let currentDepthLayer: 'behind' | 'front' = 'behind';

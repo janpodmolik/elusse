@@ -1,12 +1,18 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection } from '../stores/builderStores';
-  import { switchToGame } from '../utils/sceneManager';
+  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut } from '../stores/builderStores';
+  import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { getItemDepth } from '../constants/depthLayers';
   import AssetPalette from './AssetPalette.svelte';
   import PixelButton from './PixelButton.svelte';
+  import BuilderMinimap from './BuilderMinimap.svelte';
+  import LandscapeHint from './LandscapeHint.svelte';
 
   function handleSave() {
     switchToGame();
+  }
+  
+  function handleZoomToggle() {
+    toggleBuilderZoom();
   }
   
   function handleToggleDepth() {
@@ -32,16 +38,30 @@
 </script>
 
 <AssetPalette />
+<BuilderMinimap />
+<LandscapeHint />
 
-<!-- Save button - top left -->
-<PixelButton 
-  position="top-left" 
-  variant="green" 
-  width="120px"
-  onclick={handleSave}
->
-  SAVE
-</PixelButton>
+<!-- Top-left buttons -->
+<div class="top-left-buttons">
+  <!-- Save button -->
+  <PixelButton 
+    variant="green" 
+    width="100px"
+    onclick={handleSave}
+  >
+    SAVE
+  </PixelButton>
+  
+  <!-- Zoom toggle button -->
+  <PixelButton 
+    variant={$isBuilderZoomedOut ? 'orange' : 'blue'}
+    width="80px"
+    onclick={handleZoomToggle}
+    title="Toggle zoom (F)"
+  >
+    {$isBuilderZoomedOut ? '1:1' : 'FIT'}
+  </PixelButton>
+</div>
 
 <!-- Item controls - top center (when item selected) -->
 {#if $selectedItemId}
@@ -65,6 +85,23 @@
 {/if}
 
 <style>
+  .top-left-buttons {
+    position: fixed;
+    top: calc(10px + env(safe-area-inset-top));
+    left: calc(10px + env(safe-area-inset-left));
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+    pointer-events: auto;
+  }
+  
+  .top-left-buttons :global(.pixel-btn) {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+  }
+  
   .item-controls {
     position: fixed;
     top: 20px;
@@ -84,6 +121,18 @@
   }
 
   @media (max-width: 600px) {
+    .top-left-buttons {
+      top: calc(5px + env(safe-area-inset-top));
+      left: calc(5px + env(safe-area-inset-left));
+      gap: 6px;
+    }
+    
+    .top-left-buttons :global(.pixel-btn) {
+      font-size: 10px;
+      padding: 10px 12px;
+      border-width: 2px;
+    }
+    
     .item-controls {
       top: 10px;
       gap: 8px;

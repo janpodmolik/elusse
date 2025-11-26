@@ -259,6 +259,8 @@
     overflow-x: hidden;
     image-rendering: pixelated;
     pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
     
     /* Pixel art scrollbar */
     scrollbar-width: thin;

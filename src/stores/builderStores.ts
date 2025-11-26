@@ -171,3 +171,45 @@ export function exitBuilderMode(): void {
 export function getBuilderConfig(): MapConfig | null {
   return get(builderState).config;
 }
+
+// ==================== Zoom State (separate for performance) ====================
+
+/** Whether builder camera is zoomed out to show full map */
+export const isBuilderZoomedOut = writable<boolean>(false);
+
+/** Set zoom state (called from BuilderCameraController) */
+export function setBuilderZoom(isZoomedOut: boolean): void {
+  isBuilderZoomedOut.set(isZoomedOut);
+}
+
+// ==================== Camera Info (for minimap) ====================
+
+export interface CameraInfo {
+  scrollX: number;
+  scrollY: number;
+  viewWidth: number;
+  viewHeight: number;
+  worldWidth: number;
+  worldHeight: number;
+  zoom: number;
+  playerX: number;
+  playerY: number;
+}
+
+/** Camera state for minimap rendering */
+export const builderCameraInfo = writable<CameraInfo>({
+  scrollX: 0,
+  scrollY: 0,
+  viewWidth: 0,
+  viewHeight: 0,
+  worldWidth: 0,
+  worldHeight: 0,
+  zoom: 1,
+  playerX: 0,
+  playerY: 0,
+});
+
+/** Update camera info (called from BuilderScene on each frame) */
+export function updateCameraInfo(info: Partial<CameraInfo>): void {
+  builderCameraInfo.update(state => ({ ...state, ...info }));
+}

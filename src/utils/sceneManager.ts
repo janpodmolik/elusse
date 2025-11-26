@@ -6,6 +6,7 @@
 import type { MapConfig } from '../data/mapConfig';
 import { enterBuilderMode, exitBuilderMode } from '../stores/builderStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
+import type { BuilderScene } from '../scenes/BuilderScene';
 
 let gameInstance: Phaser.Game | null = null;
 
@@ -89,5 +90,19 @@ export function switchToGame(): boolean {
   } catch (error) {
     console.error('Failed to switch to game:', error);
     return false;
+  }
+}
+
+/**
+ * Toggle builder camera zoom (fit-all / normal)
+ */
+export function toggleBuilderZoom(): void {
+  if (!gameInstance) return;
+  
+  try {
+    const builderScene = gameInstance.scene.getScene(SCENE_KEYS.BUILDER) as BuilderScene;
+    builderScene?.toggleZoom();
+  } catch (error) {
+    console.error('Failed to toggle zoom:', error);
   }
 }

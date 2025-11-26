@@ -11,6 +11,8 @@ import { PlacedItemManager } from './PlacedItemManager';
 import { GROUND_HEIGHT } from './builder/builderConstants';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
+import { setBuilderZoom, updateCameraInfo } from '../stores/builderStores';
+import { EventBus, EVENTS, type MinimapNavigateEvent } from '../events/EventBus';
 
 /**
  * BuilderScene - Interactive map builder with visual editor
@@ -29,9 +31,17 @@ export class BuilderScene extends Phaser.Scene {
   // Configuration
   private config!: MapConfig;
   
+  // Event subscriptions
+  private minimapSubscription?: { unsubscribe: () => void };
+  
   // Public access for UI
   public get itemManager(): PlacedItemManager {
     return this.itemsController?.getManager();
+  }
+  
+  /** Toggle camera zoom between fit-all and normal */
+  public toggleZoom(): void {
+    this.cameraController?.toggleZoomToFit();
   }
 
   constructor() {
@@ -82,7 +92,17 @@ export class BuilderScene extends Phaser.Scene {
 
     // Setup camera and controls
     this.cameraController.setup();
-    this.cameraController.centerOn(this.config.playerStartX, this.config.worldHeight / 2);
+    this.cameraController.centerOn(this.config.playerStartX, this.config.playerStartY);
+    
+    // Connect zoom state changes to store for UI
+    this.cameraController.setOnZoomChange((isZoomedOut) => {
+      setBuilderZoom(isZoomedOut);
+    });
+    
+    // Listen for minimap navigation events
+    this.minimapSubscription = EventBus.on<MinimapNavigateEvent>(EVENTS.MINIMAP_NAVIGATE, (data) => {
+      this.navigateToPosition(data.worldX, data.worldY);
+    });
   }
 
   private async createBackground(): Promise<void> {
@@ -124,9 +144,36 @@ export class BuilderScene extends Phaser.Scene {
     if (this.parallaxLayers) {
       updateParallaxTiling(this.parallaxLayers.baseLayer, this.cameras.main);
     }
+    
+    // Update camera info for minimap
+    const camera = this.cameras.main;
+    const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
+    
+    updateCameraInfo({
+      scrollX: camera.scrollX,
+      scrollY: camera.scrollY,
+      viewWidth: camera.width,
+      viewHeight: camera.height,
+      worldWidth: this.config.worldWidth,
+      worldHeight: this.config.worldHeight,
+      zoom: camera.zoom,
+      playerX: playerSprite?.x ?? this.config.playerStartX,
+      playerY: playerSprite?.y ?? this.config.playerStartY,
+    });
+  }
+  
+  /** Navigate camera to a position (called from minimap click) */
+  private navigateToPosition(x: number, y: number): void {
+    if (this.cameraController.getIsZoomedOut()) return;
+    this.cameraController.centerOn(x, y);
   }
 
   shutdown(): void {
+    // Clean up event subscriptions
+    if (this.minimapSubscription) {
+      this.minimapSubscription.unsubscribe();
+    }
+    
     // Clean up controllers
     if (this.cameraController) {
       this.cameraController.destroy();

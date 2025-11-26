@@ -130,6 +130,12 @@ export interface SceneTransitionEvent {
   data?: Record<string, unknown>;
 }
 
+/** Minimap navigation requested */
+export interface MinimapNavigateEvent {
+  worldX: number;
+  worldY: number;
+}
+
 // ============================================
 // Event name constants
 // ============================================
@@ -163,6 +169,9 @@ export const EVENTS = {
   // Camera events
   CAMERA_PAN_START: 'camera:panStart',
   CAMERA_PAN_END: 'camera:panEnd',
+  
+  // Minimap events
+  MINIMAP_NAVIGATE: 'minimap:navigate',
 } as const;
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS];
