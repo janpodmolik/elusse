@@ -50,7 +50,7 @@ export class ItemDragController {
     // Drag handlers
     sprite.on('dragstart', () => {
       this.isDragging = false; // Will be set to true on actual drag
-      sprite.setTint(0x00ff00);
+      sprite.setTint(0x4a90e2);
       
       // Notify scene that we're dragging an item
       this.scene.data?.set('isDraggingItem', true);

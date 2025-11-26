@@ -8,6 +8,16 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: true,
+    // Phaser is ~1.2MB minified - this is expected for a full game engine
+    chunkSizeWarningLimit: 1300,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate Phaser into its own chunk for better caching
+          phaser: ['phaser'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,

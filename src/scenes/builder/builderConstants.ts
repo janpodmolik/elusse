@@ -14,8 +14,8 @@ export const PLAYER_DEPTH = DEPTH_LAYERS.PLAYER;
 
 // Grid overlay
 export const GRID_SIZE = 100;
-export const GRID_LINE_COLOR = 0x00ff00;
-export const GRID_LINE_ALPHA = 0.3;
+export const GRID_LINE_COLOR = 0x4a5568;  // Gray-blue for subtle grid
+export const GRID_LINE_ALPHA = 0.4;
 export const GRID_LINE_WIDTH = 1;
 export const OVERLAY_DEPTH = DEPTH_LAYERS.GRID_OVERLAY;
 
@@ -37,4 +37,4 @@ export const DRAG_MARGIN_TOP = 50;
 export const DRAG_MARGIN_BOTTOM = 10;
 
 // Visual feedback
-export const DRAG_TINT = 0x00ff00;
+export const DRAG_TINT = 0x4a90e2;  // Blue accent

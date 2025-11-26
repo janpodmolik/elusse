@@ -17,10 +17,10 @@ export interface SelectionStyle {
 
 const DEFAULT_STYLE: SelectionStyle = {
   lineWidth: 3,
-  lineColor: 0x00ff00,
+  lineColor: 0x4a90e2,
   lineAlpha: 1,
   handleSize: 8,
-  handleColor: 0x00ff00,
+  handleColor: 0x4a90e2,
   padding: 5,
 };
 

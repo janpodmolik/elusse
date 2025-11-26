@@ -65,7 +65,9 @@
         z-index: 10000;
         opacity: 0.9;
         image-rendering: pixelated;
-        filter: drop-shadow(0 4px 8px rgba(0, 255, 0, 0.5));
+        filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.5));
+        border: 2px solid #4a90e2;
+        background: rgba(26, 26, 46, 0.9);
       `;
       dragEl.querySelector('img')!.style.cssText = `
         width: 100%;
@@ -188,7 +190,8 @@
   <PixelButton 
     onclick={togglePalette}
     position="top-right"
-    width="150px"
+    variant="blue"
+    width="140px"
     title="Asset Palette"
   >
     {isOpen ? '▼' : '◀'} ASSETS
@@ -201,6 +204,10 @@
       tabindex="-1"
       onpointerdown={stopMouseDown}
     >
+      <div class="palette-header">
+        <span class="palette-title">Assets</span>
+        <span class="palette-hint">Drag to place</span>
+      </div>
       <div class="palette-grid">
         {#each assets as asset}
           <div 
@@ -238,22 +245,24 @@
   
   .palette-dropdown {
     position: fixed;
-    top: calc(80px + env(safe-area-inset-top));
+    top: calc(60px + env(safe-area-inset-top));
     right: calc(10px + env(safe-area-inset-right));
     width: clamp(240px, 30vw, 320px);
     min-height: 200px;
     max-height: min(calc(100vh - 150px), 500px);
-    background: rgba(0, 0, 0, 0.95);
-    border: 2px solid #00ff00;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    background: #1a1a2e;
+    border: 3px solid #333;
+    box-shadow: 
+      6px 6px 0 rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     overflow-y: auto;
     overflow-x: hidden;
     image-rendering: pixelated;
-    pointer-events: auto; /* Enable pointer events */
+    pointer-events: auto;
     
     /* Pixel art scrollbar */
     scrollbar-width: thin;
-    scrollbar-color: #00ff00 rgba(0, 0, 0, 0.5);
+    scrollbar-color: #4a90e2 #0f0f1a;
   }
   
   /* Webkit scrollbar styling */
@@ -262,18 +271,44 @@
   }
   
   .palette-dropdown::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.5);
-    border-left: 1px solid #00ff00;
+    background: #0f0f1a;
+    border-left: 2px solid #333;
   }
   
   .palette-dropdown::-webkit-scrollbar-thumb {
-    background: #00ff00;
-    border: 2px solid rgba(0, 0, 0, 0.5);
+    background: #4a90e2;
+    border: 2px solid #333;
   }
   
   .palette-dropdown::-webkit-scrollbar-thumb:hover {
-    background: #00ff00;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+    background: #5da0f2;
+  }
+  
+  .palette-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #252540;
+    border-bottom: 2px solid #333;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  
+  .palette-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .palette-hint {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #888;
+    text-transform: uppercase;
   }
   
   .palette-grid {
@@ -290,27 +325,31 @@
     justify-content: center;
     gap: 8px;
     padding: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(0, 255, 0, 0.3);
+    background: #252540;
+    border: 2px solid #333;
     cursor: grab;
-    transition: all 0.15s;
+    transition: all 0.1s ease-out;
     min-height: 100px;
     user-select: none;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
   }
   
   .asset-item:active {
     cursor: grabbing;
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   }
   
   .asset-item.dragging {
     opacity: 0.5;
+    border-color: #4a90e2;
   }
   
   .asset-item:hover {
-    background: rgba(0, 255, 0, 0.15);
-    border-color: #00ff00;
-    box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.2);
-    transform: scale(1.02);
+    background: #2d2d50;
+    border-color: #4a90e2;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
   }
   
   .asset-preview {
@@ -318,30 +357,46 @@
     height: 48px;
     object-fit: contain;
     image-rendering: pixelated;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
   }
   
   .asset-name {
-    font-size: 10px;
-    color: #00ff00;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #aaa;
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: bold;
+    letter-spacing: 0.5px;
   }
   
   .asset-item:hover .asset-name {
-    color: #ffffff;
-    text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+    color: #fff;
+  }
+  
+  .asset-item:hover .asset-preview {
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5))
+            drop-shadow(0 0 4px rgba(74, 144, 226, 0.4));
   }
   
   /* Mobile optimization */
   @media (max-width: 600px) {
     .palette-dropdown {
-      top: calc(68px + env(safe-area-inset-top));
+      top: calc(50px + env(safe-area-inset-top));
       right: calc(5px + env(safe-area-inset-right));
       width: clamp(200px, 90vw, 280px);
       max-height: min(calc(100vh - 120px), 400px);
+    }
+    
+    .palette-header {
+      padding: 8px 10px;
+    }
+    
+    .palette-title {
+      font-size: 8px;
+    }
+    
+    .palette-hint {
+      font-size: 6px;
     }
     
     .palette-grid {
@@ -353,6 +408,8 @@
       padding: 8px;
       min-height: 80px;
       gap: 6px;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
     }
     
     .asset-preview {
@@ -361,8 +418,8 @@
     }
     
     .asset-name {
-      font-size: 8px;
-      letter-spacing: 0.5px;
+      font-size: 7px;
+      letter-spacing: 0;
     }
   }
 </style>
