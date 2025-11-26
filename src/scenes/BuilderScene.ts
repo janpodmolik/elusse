@@ -11,7 +11,7 @@ import { PlacedItemManager } from './PlacedItemManager';
 import { GROUND_HEIGHT } from './builder/builderConstants';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { setBuilderZoom, updateCameraInfo } from '../stores/builderStores';
+import { updateCameraInfo } from '../stores/builderStores';
 import { EventBus, EVENTS, type MinimapNavigateEvent } from '../events/EventBus';
 
 /**
@@ -33,6 +33,9 @@ export class BuilderScene extends Phaser.Scene {
   
   // Event subscriptions
   private minimapSubscription?: { unsubscribe: () => void };
+  
+  // Shutdown guard to prevent double cleanup
+  private isShuttingDown = false;
   
   // Public access for UI
   public get itemManager(): PlacedItemManager {
@@ -64,6 +67,9 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset shutdown guard for scene restart
+    this.isShuttingDown = false;
+    
     // Set world bounds
     this.physics.world.setBounds(0, 0, this.config.worldWidth, this.config.worldHeight);
 
@@ -94,15 +100,16 @@ export class BuilderScene extends Phaser.Scene {
     this.cameraController.setup();
     this.cameraController.centerOn(this.config.playerStartX, this.config.playerStartY);
     
-    // Connect zoom state changes to store for UI
-    this.cameraController.setOnZoomChange((isZoomedOut) => {
-      setBuilderZoom(isZoomedOut);
-    });
-    
     // Listen for minimap navigation events
     this.minimapSubscription = EventBus.on<MinimapNavigateEvent>(EVENTS.MINIMAP_NAVIGATE, (data) => {
       this.navigateToPosition(data.worldX, data.worldY);
     });
+    
+    // Setup resize handler
+    this.scale.on('resize', this.handleResize, this);
+    
+    // Register shutdown handler for proper cleanup when scene stops
+    this.events.on('shutdown', this.shutdown, this);
   }
 
   private async createBackground(): Promise<void> {
@@ -167,8 +174,38 @@ export class BuilderScene extends Phaser.Scene {
     if (this.cameraController.getIsZoomedOut()) return;
     this.cameraController.centerOn(x, y);
   }
+  
+  /**
+   * Handle window/canvas resize
+   */
+  private handleResize(gameSize: Phaser.Structs.Size): void {
+    // Guard: only handle resize when scene is active
+    if (!this.cameras?.main || !this.config) return;
+    
+    // Update camera bounds (unless zoomed out)
+    if (!this.cameraController?.getIsZoomedOut()) {
+      this.cameras.main.setBounds(0, 0, this.config.worldWidth, this.config.worldHeight);
+    }
+    
+    // Update parallax base layer to cover new viewport
+    if (this.parallaxLayers?.baseLayer) {
+      const viewportHeight = Math.max(this.config.worldHeight, gameSize.height);
+      this.parallaxLayers.baseLayer.setSize(this.config.worldWidth, viewportHeight);
+    }
+    
+    // Update grid overlay if exists
+    if (this.gridOverlay) {
+      this.gridOverlay.redraw();
+    }
+  }
 
   shutdown(): void {
+    // Guard against double shutdown
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
+    
+    // Remove resize listener
+    this.scale.off('resize', this.handleResize, this);
     // Clean up event subscriptions
     if (this.minimapSubscription) {
       this.minimapSubscription.unsubscribe();

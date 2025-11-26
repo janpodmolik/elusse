@@ -107,6 +107,9 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
       this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
       this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+      
+      // Setup resize handler
+      this.scale.on('resize', this.handleResize, this);
     } catch (error) {
       console.error('[GameScene] Failed to initialize scene:', error);
       // Show error state to user - could emit event or set error store
@@ -164,7 +167,27 @@ export class GameScene extends Phaser.Scene {
     return success;
   }
 
+  /**
+   * Handle window/canvas resize
+   */
+  private handleResize(gameSize: Phaser.Structs.Size): void {
+    // Guard: only handle resize when scene is active
+    if (!this.cameras?.main || !this.mapConfig) return;
+    
+    // Update camera bounds
+    this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+    
+    // Update parallax base layer to cover new viewport
+    if (this.parallaxLayers?.baseLayer) {
+      const viewportHeight = Math.max(this.mapConfig.worldHeight, gameSize.height);
+      this.parallaxLayers.baseLayer.setSize(this.mapConfig.worldWidth, viewportHeight);
+    }
+  }
+
   shutdown(): void {
+    // Remove resize listener
+    this.scale.off('resize', this.handleResize, this);
+    
     // Clean up store subscriptions to prevent memory leaks
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
     this.unsubscribers = [];

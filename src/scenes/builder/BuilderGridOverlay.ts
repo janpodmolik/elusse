@@ -86,6 +86,13 @@ export class BuilderGridOverlay {
   }
 
   /**
+   * Redraw grid (useful after resize)
+   */
+  redraw(): void {
+    this.draw();
+  }
+
+  /**
    * Cleanup
    */
   destroy(): void {

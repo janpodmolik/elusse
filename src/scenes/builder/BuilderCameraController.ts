@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setBuilderZoom } from '../../stores/builderStores';
 
 // Zoom constants
 const MIN_ZOOM = 0.3;  // Minimum zoom (zoomed out) - keeps text readable
@@ -29,11 +30,9 @@ export class BuilderCameraController {
   
   // Zoom state
   private isZoomedOut: boolean = false;
+  private isAnimating: boolean = false;
   private savedScrollX: number = 0;
   private savedScrollY: number = 0;
-  
-  // Callback for zoom state changes
-  private onZoomChange?: (isZoomedOut: boolean) => void;
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -223,13 +222,6 @@ export class BuilderCameraController {
   }
 
   /**
-   * Set callback for zoom state changes
-   */
-  setOnZoomChange(callback: (isZoomedOut: boolean) => void): void {
-    this.onZoomChange = callback;
-  }
-
-  /**
    * Get current zoom state
    */
   getIsZoomedOut(): boolean {
@@ -251,11 +243,16 @@ export class BuilderCameraController {
    * Zoom out to show the entire map
    */
   zoomToFit(): void {
-    if (this.isZoomedOut) return;
+    if (this.isZoomedOut || this.isAnimating) return;
     
     // Save current position for return
     this.savedScrollX = this.camera.scrollX;
     this.savedScrollY = this.camera.scrollY;
+    
+    // Update state immediately (before animation) so UI reacts right away
+    this.isZoomedOut = true;
+    this.isAnimating = true;
+    setBuilderZoom(true);
     
     // Calculate zoom level to fit entire map
     const zoomX = this.camera.width / this.worldWidth;
@@ -276,8 +273,7 @@ export class BuilderCameraController {
     this.camera.pan(centerX, centerY, ZOOM_DURATION, 'Sine.easeInOut');
     this.camera.zoomTo(targetZoom, ZOOM_DURATION, 'Sine.easeInOut', false, (_cam, progress) => {
       if (progress === 1) {
-        this.isZoomedOut = true;
-        this.onZoomChange?.(true);
+        this.isAnimating = false;
       }
     });
   }
@@ -286,7 +282,12 @@ export class BuilderCameraController {
    * Reset zoom to normal (1:1) and restore previous position
    */
   resetZoom(): void {
-    if (!this.isZoomedOut) return;
+    if (!this.isZoomedOut || this.isAnimating) return;
+    
+    // Update state immediately (before animation) so UI reacts right away
+    this.isZoomedOut = false;
+    this.isAnimating = true;
+    setBuilderZoom(false);
     
     // Animate back to saved position and normal zoom
     const targetX = this.savedScrollX + this.camera.width / 2;
@@ -297,8 +298,7 @@ export class BuilderCameraController {
       if (progress === 1) {
         // Restore camera bounds after zoom completes
         this.camera.setBounds(0, 0, this.worldWidth, this.worldHeight);
-        this.isZoomedOut = false;
-        this.onZoomChange?.(false);
+        this.isAnimating = false;
       }
     });
   }

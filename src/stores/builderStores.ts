@@ -152,6 +152,8 @@ export function enterBuilderMode(config: MapConfig): void {
     selectedItemId: null,
     itemDepthLayer: 'behind'
   });
+  // Reset zoom state when entering builder
+  isBuilderZoomedOut.set(false);
 }
 
 /** Exit builder mode (preserves config for potential return) */
@@ -161,6 +163,8 @@ export function exitBuilderMode(): void {
     isActive: false,
     selectedItemId: null
   }));
+  // Reset zoom state when exiting builder
+  isBuilderZoomedOut.set(false);
 }
 
 /**

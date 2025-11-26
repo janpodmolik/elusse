@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import PixelButton from './PixelButton.svelte';
   import { ASSETS } from '../data/assets';
   import { EventBus, EVENTS, type AssetDroppedEvent } from '../events/EventBus';
@@ -132,35 +133,37 @@
   }
   
   // Setup drop zone on canvas (for desktop drag & drop)
-  $effect(() => {
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }
+  
+  function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    
+    const assetKey = e.dataTransfer?.getData('assetKey');
+    if (!assetKey) return;
+    
+    // Get canvas-relative coordinates
+    const canvas = e.target as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+    
+    // Emit drop event via EventBus
+    EventBus.emit<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, {
+      assetKey,
+      canvasX,
+      canvasY
+    });
+  }
+  
+  // Use onMount for one-time canvas listener setup
+  onMount(() => {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
-    
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = 'copy';
-      }
-    };
-    
-    const handleDrop = (e: DragEvent) => {
-      e.preventDefault();
-      
-      const assetKey = e.dataTransfer?.getData('assetKey');
-      if (!assetKey) return;
-      
-      // Get canvas-relative coordinates
-      const rect = canvas.getBoundingClientRect();
-      const canvasX = e.clientX - rect.left;
-      const canvasY = e.clientY - rect.top;
-      
-      // Emit drop event via EventBus
-      EventBus.emit<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, {
-        assetKey,
-        canvasX,
-        canvasY
-      });
-    };
     
     canvas.addEventListener('dragover', handleDragOver);
     canvas.addEventListener('drop', handleDrop);

@@ -28,7 +28,8 @@
     red: { base: '#e74c3c', hover: '#c0392b', active: '#a02e22' }
   };
   
-  const currentColor = colors[variant];
+  // Use $derived for reactive color computation when variant changes
+  const currentColor = $derived(colors[variant]);
 </script>
 
 <button
