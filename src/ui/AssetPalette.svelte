@@ -7,12 +7,16 @@
   let isOpen = $state(false);
   let draggedAsset = $state<string | null>(null);
   
+  // Touch drag state
+  let touchDragElement = $state<HTMLElement | null>(null);
+  
   function togglePalette(event: MouseEvent) {
     event.stopPropagation();
     event.preventDefault();
     isOpen = !isOpen;
   }
   
+  // Desktop drag & drop handlers
   function onDragStart(event: DragEvent, assetKey: string) {
     if (!event.dataTransfer) return;
     
@@ -36,13 +40,94 @@
     draggedAsset = null;
   }
   
+  // Touch drag handlers for mobile
+  function onTouchStart(event: TouchEvent, assetKey: string) {
+    if (event.touches.length !== 1) return;
+    
+    const touch = event.touches[0];
+    draggedAsset = assetKey;
+    
+    // Create floating drag element
+    const target = event.currentTarget as HTMLElement;
+    const img = target.querySelector('img');
+    if (img) {
+      const dragEl = document.createElement('div');
+      dragEl.className = 'touch-drag-preview';
+      dragEl.innerHTML = `<img src="${img.src}" alt="" />`;
+      dragEl.style.cssText = `
+        position: fixed;
+        top: ${touch.clientY - 24}px;
+        left: ${touch.clientX - 24}px;
+        width: 48px;
+        height: 48px;
+        pointer-events: none;
+        z-index: 10000;
+        opacity: 0.9;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 4px 8px rgba(0, 255, 0, 0.5));
+      `;
+      dragEl.querySelector('img')!.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        image-rendering: pixelated;
+      `;
+      document.body.appendChild(dragEl);
+      touchDragElement = dragEl;
+    }
+  }
+  
+  function onTouchMove(event: TouchEvent) {
+    if (!draggedAsset || !touchDragElement) return;
+    
+    const touch = event.touches[0];
+    touchDragElement.style.top = `${touch.clientY - 24}px`;
+    touchDragElement.style.left = `${touch.clientX - 24}px`;
+    
+    event.preventDefault();
+  }
+  
+  function onTouchEnd(event: TouchEvent) {
+    if (!draggedAsset) return;
+    
+    const touch = event.changedTouches[0];
+    const canvas = document.querySelector('canvas');
+    
+    // Clean up drag preview
+    if (touchDragElement) {
+      touchDragElement.remove();
+      touchDragElement = null;
+    }
+    
+    // Check if dropped on canvas
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX;
+      const y = touch.clientY;
+      
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        // Calculate canvas-relative coordinates
+        const canvasX = x - rect.left;
+        const canvasY = y - rect.top;
+        
+        // Dispatch drop event
+        const dropEvent = new CustomEvent('assetDropped', {
+          detail: { assetKey: draggedAsset, canvasX, canvasY }
+        });
+        window.dispatchEvent(dropEvent);
+      }
+    }
+    
+    draggedAsset = null;
+  }
+  
   function stopMouseDown(event: PointerEvent) {
     // Prevent mousedown from reaching canvas to avoid dragging sprites underneath
     // Drag events (ondragstart, ondrag, ondrop) continue to work normally
     event.stopPropagation();
   }
   
-  // Setup drop zone on canvas
+  // Setup drop zone on canvas (for desktop drag & drop)
   $effect(() => {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
@@ -81,6 +166,19 @@
       canvas.removeEventListener('drop', handleDrop);
     };
   });
+  
+  // Global touch move/end listeners (need to be on document for drag outside palette)
+  $effect(() => {
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+    
+    return () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
+  });
 </script>
 
 <div class="palette-container">
@@ -109,6 +207,7 @@
             draggable="true"
             ondragstart={(e) => onDragStart(e, asset.key)}
             ondragend={onDragEnd}
+            ontouchstart={(e) => onTouchStart(e, asset.key)}
             title={asset.name}
             role="button"
             tabindex="0"
