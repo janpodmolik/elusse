@@ -17,68 +17,6 @@
   pointer-events: auto;
 }
 
-/* ==================== Pixel Art Buttons ==================== */
-
-.pixel-button {
-  position: absolute;
-  top: calc(10px + env(safe-area-inset-top));
-  right: calc(10px + env(safe-area-inset-right));
-  width: 100px;
-  height: 40px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 3px solid #ffffff;
-  border-radius: 8px;
-  color: #ffffff;
-  font-family: 'Press Start 2P', cursive;
-  font-size: 14px;
-  cursor: pointer;
-  transition: transform 0.1s;
-  image-rendering: pixelated;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  outline: none;
-}
-
-.pixel-button:hover {
-  transform: scale(1.05);
-}
-
-.pixel-button:active {
-  transform: scale(0.95);
-}
-
-.pixel-button:focus {
-  outline: none;
-}
-
-.pixel-button--skin {
-  top: calc(60px + env(safe-area-inset-top));
-  font-size: 10px;
-}
-
-.pixel-button--background {
-  top: calc(110px + env(safe-area-inset-top));
-  font-size: 9px;
-}
-
-.pixel-button--builder {
-  top: calc(10px + env(safe-area-inset-top));
-  left: calc(10px + env(safe-area-inset-left));
-  right: auto;
-  width: 120px;
-  background: rgba(0, 255, 0, 0.2);
-  border-color: #00ff00;
-  color: #00ff00;
-  font-size: 11px;
-}
-
-.pixel-button--builder:hover {
-  background: rgba(0, 255, 0, 0.3);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-}
-
 /* ==================== Pixel Art Dialog ==================== */
 
 .pixel-dialog {
@@ -221,24 +159,6 @@
 /* ==================== Responsive Design ==================== */
 
 @media (max-width: 600px) {
-  .pixel-button {
-    right: calc(5px + env(safe-area-inset-right));
-    top: calc(5px + env(safe-area-inset-top));
-    width: 80px;
-    height: 35px;
-    font-size: 11px;
-  }
-  
-  .pixel-button--skin {
-    top: calc(45px + env(safe-area-inset-top));
-    font-size: 8px;
-  }
-  
-  .pixel-button--background {
-    top: calc(85px + env(safe-area-inset-top));
-    font-size: 7px;
-  }
-  
   .pixel-dialog {
     width: 90vw;
   }

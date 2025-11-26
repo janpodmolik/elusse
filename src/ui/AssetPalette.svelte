@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PixelButton from './PixelButton.svelte';
+  
   interface AssetInfo {
     key: string;
     name: string;
@@ -98,17 +100,19 @@
   });
 </script>
 
-<div class="asset-palette">
-  <button class="palette-toggle pixel-button" onclick={togglePalette}>
+<div class="palette-container">
+  <!-- ASSETS button - always top-right -->
+  <PixelButton 
+    onclick={togglePalette}
+    position="top-right"
+    width="150px"
+    title="Asset Palette"
+  >
     {isOpen ? '▼' : '◀'} ASSETS
-  </button>
-  
+  </PixelButton>
+
   {#if isOpen}
-    <div class="palette-warning">
-      ⚠️ Close palette to drag player sprite
-    </div>
-    
-    <div 
+    <div
       class="palette-dropdown"
       role="toolbar"
       tabindex="-1"
@@ -140,60 +144,18 @@
 </div>
 
 <style>
-  .asset-palette {
-    position: fixed;
-    right: 20px;
-    top: 70px;
-    z-index: 998;
-    font-family: 'Courier New', monospace;
-    pointer-events: auto; /* Enable pointer events */
+  .palette-container {
+    pointer-events: none; /* Allow clicks through */
   }
   
-  .palette-toggle {
-    position: static !important;
-    width: 140px;
-    height: 36px;
-    background: rgba(0, 0, 0, 0.9);
-    border: 2px solid #00ff00;
-    color: #00ff00;
-    font-size: 11px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    image-rendering: pixelated;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-  
-  .palette-toggle:hover {
-    background: rgba(0, 255, 0, 0.15);
-    box-shadow: 0 0 12px rgba(0, 255, 0, 0.4);
-  }
-  
-  .palette-warning {
-    position: absolute;
-    top: 40px;
-    right: 0;
-    width: clamp(240px, 30vw, 320px);
-    padding: 8px 12px;
-    background: rgba(255, 165, 0, 0.95);
-    border: 2px solid #ff8800;
-    border-bottom: none;
-    color: #000;
-    font-size: 10px;
-    font-weight: bold;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(255, 136, 0, 0.3);
+  .palette-container :global(.pixel-btn) {
+    pointer-events: auto; /* Re-enable for button */
   }
   
   .palette-dropdown {
-    position: absolute;
-    top: 72px;
-    right: 0;
+    position: fixed;
+    top: calc(80px + env(safe-area-inset-top));
+    right: calc(10px + env(safe-area-inset-right));
     width: clamp(240px, 30vw, 320px);
     min-height: 200px;
     max-height: min(calc(100vh - 150px), 500px);
@@ -287,5 +249,36 @@
   .asset-item:hover .asset-name {
     color: #ffffff;
     text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+  }
+  
+  /* Mobile optimization */
+  @media (max-width: 600px) {
+    .palette-dropdown {
+      top: calc(68px + env(safe-area-inset-top));
+      right: calc(5px + env(safe-area-inset-right));
+      width: clamp(200px, 90vw, 280px);
+      max-height: min(calc(100vh - 120px), 400px);
+    }
+    
+    .palette-grid {
+      gap: 6px;
+      padding: 8px;
+    }
+    
+    .asset-item {
+      padding: 8px;
+      min-height: 80px;
+      gap: 6px;
+    }
+    
+    .asset-preview {
+      width: 40px;
+      height: 40px;
+    }
+    
+    .asset-name {
+      font-size: 8px;
+      letter-spacing: 0.5px;
+    }
   }
 </style>

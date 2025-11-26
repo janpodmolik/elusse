@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
-import { updatePlayerPosition, selectedItemId, deletePlacedItem, addPlacedItem, itemDepthLayer, builderConfig } from '../stores/builderStores';
+import { updatePlayerPosition, selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig } from '../stores/builderStores';
 import { backgroundManager } from '../data/background';
 import type { MapConfig, PlacedItem } from '../data/mapConfig';
 import { PlacedItemManager } from './PlacedItemManager';
@@ -195,6 +195,17 @@ export class BuilderScene extends Phaser.Scene {
     this.player.on('drag', this.onPlayerDrag, this);
     this.player.on('dragend', this.onPlayerDragEnd, this);
     
+    // Player click handler - notify when clicked while palette is open
+    this.player.on('pointerdown', () => {
+      // Convert world coordinates to screen coordinates
+      const screenX = (this.player.x - this.cameras.main.scrollX) * this.cameras.main.zoom;
+      const screenY = (this.player.y - this.cameras.main.scrollY) * this.cameras.main.zoom;
+      
+      window.dispatchEvent(new CustomEvent('playerClickedWhilePaletteOpen', {
+        detail: { x: screenX, y: screenY }
+      }));
+    });
+    
     // Palette state listener - disable player drag when palette is open
     const handlePaletteState = (event: CustomEvent) => {
       const { isOpen } = event.detail;
@@ -325,6 +336,9 @@ export class BuilderScene extends Phaser.Scene {
       // Add to store and create sprite
       addPlacedItem(newItem);
       this.itemManager.createItem(newItem);
+      
+      // Select the newly added item
+      selectItem(newItem.id);
     };
     
     window.addEventListener('assetDropped', handleAssetDrop as EventListener);

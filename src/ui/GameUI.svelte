@@ -14,6 +14,7 @@
   import { catSkinManager } from '../data/catSkin';
   import { backgroundManager } from '../data/background';
   import BuilderUI from './BuilderUI.svelte';
+  import PixelButton from './PixelButton.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../utils/sceneManager';
 
   let dialogElement: HTMLDialogElement;
@@ -84,40 +85,48 @@
 
   <!-- Builder Mode Toggle Button (only in play mode) -->
   {#if !$isBuilderMode}
-  <button 
-    class="pixel-button pixel-button--builder" 
-    title="Toggle Builder Mode"
-    on:click={handleBuilderToggle}
-  >
-    BUILD
-  </button>
+    <PixelButton 
+      position="top-left"
+      variant="green"
+      width="120px"
+      onclick={handleBuilderToggle}
+      title="Toggle Builder Mode"
+    >
+      BUILD
+    </PixelButton>
   {/if}
 
   <!-- Language & Skin & Background Buttons (only in play mode) -->
   {#if !$isBuilderMode}
-  <button 
-    class="pixel-button" 
-    title="Toggle Language (L)"
-    on:click={handleLanguageToggle}
-  >
-    {$currentLanguage.toUpperCase()}
-  </button>
+    <PixelButton 
+      position="top-right"
+      variant="default"
+      width="100px"
+      onclick={handleLanguageToggle}
+      title="Toggle Language (L)"
+    >
+      {$currentLanguage.toUpperCase()}
+    </PixelButton>
 
-  <button 
-    class="pixel-button pixel-button--skin" 
-    title="Toggle Skin (C)"
-    on:click={handleSkinToggle}
-  >
-    {$currentSkin.toUpperCase()}
-  </button>
+    <PixelButton 
+      position="stack-2"
+      variant="default"
+      width="100px"
+      onclick={handleSkinToggle}
+      title="Toggle Skin (C)"
+    >
+      {$currentSkin.toUpperCase()}
+    </PixelButton>
 
-  <button 
-    class="pixel-button pixel-button--background" 
-    title="Toggle Background (B)"
-    on:click={handleBackgroundToggle}
-  >
-    {$currentBackground}
-  </button>
+    <PixelButton 
+      position="stack-3"
+      variant="default"
+      width="120px"
+      onclick={handleBackgroundToggle}
+      title="Toggle Background (B)"
+    >
+      {$currentBackground}
+    </PixelButton>
   {/if}
 
   <!-- Controls Dialog -->
