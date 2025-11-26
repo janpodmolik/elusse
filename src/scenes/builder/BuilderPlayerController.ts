@@ -37,6 +37,9 @@ export class BuilderPlayerController {
     this.player.setDepth(PLAYER_DEPTH);
     this.player.setInteractive({ draggable: true, cursor: 'grab' });
 
+    // Store player sprite in scene data for camera controller access
+    this.scene.data.set('playerSprite', this.player);
+
     this.setupDragHandlers();
 
     return this.player;

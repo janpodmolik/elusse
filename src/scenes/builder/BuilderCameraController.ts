@@ -142,6 +142,12 @@ export class BuilderCameraController {
       d: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     
+    // Spacebar to center on player
+    const spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    spaceKey.on('down', () => {
+      this.centerOnPlayer();
+    });
+    
     this.scene.events.on('update', () => {
       const panSpeed = 10;
 
@@ -165,6 +171,16 @@ export class BuilderCameraController {
         );
       }
     });
+  }
+
+  /**
+   * Center camera on player sprite (triggered by spacebar)
+   */
+  private centerOnPlayer(): void {
+    const playerSprite = this.scene.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
+    if (playerSprite) {
+      this.camera.centerOn(playerSprite.x, playerSprite.y);
+    }
   }
 
   /**
