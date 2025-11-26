@@ -134,6 +134,9 @@ export class PlacedItemManager {
    */
   removeAllItems(): void {
     this.items.forEach(item => {
+      // Guard against already destroyed sprites
+      if (!item.sprite || !item.sprite.scene) return;
+      
       if (this.dragController) {
         this.dragController.removeInteractivity(item.sprite);
       }

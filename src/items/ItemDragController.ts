@@ -91,6 +91,9 @@ export class ItemDragController {
    * Remove interactivity from sprite
    */
   removeInteractivity(sprite: Phaser.GameObjects.Sprite): void {
+    // Guard against already destroyed sprites
+    if (!sprite || !sprite.scene) return;
+    
     sprite.removeInteractive();
     sprite.off('pointerdown');
     sprite.off('dragstart');

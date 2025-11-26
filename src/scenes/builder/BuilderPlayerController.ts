@@ -35,7 +35,16 @@ export class BuilderPlayerController {
     this.player = this.scene.add.sprite(startX, startY, 'cat-idle-white', 0);
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(PLAYER_DEPTH);
-    this.player.setInteractive({ draggable: true, cursor: 'grab' });
+    
+    // Use smaller hit area to avoid overlapping with nearby items
+    // Sprite is 48x48 pixels - use central 32x40 area for interaction
+    const hitArea = new Phaser.Geom.Rectangle(8, 4, 32, 40);
+    this.player.setInteractive({
+      hitArea,
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      draggable: true,
+      cursor: 'grab'
+    });
 
     // Store player sprite in scene data for camera controller access
     this.scene.data.set('playerSprite', this.player);
