@@ -5,6 +5,7 @@
 
 import type { MapConfig } from '../data/mapConfig';
 import { enterBuilderMode, exitBuilderMode } from '../stores/builderStores';
+import { SCENE_KEYS } from '../constants/sceneKeys';
 
 let gameInstance: Phaser.Game | null = null;
 
@@ -25,7 +26,7 @@ export function getCurrentMapConfig(): MapConfig | null {
   }
 
   try {
-    const gameScene = gameInstance.scene.getScene('GameScene') as any;
+    const gameScene = gameInstance.scene.getScene(SCENE_KEYS.GAME) as any;
     return gameScene?.mapConfig || null;
   } catch (error) {
     console.error('Failed to get map config:', error);
@@ -43,20 +44,20 @@ export function switchToBuilder(mapConfig: MapConfig): boolean {
   }
 
   try {
-    const gameScene = gameInstance.scene.getScene('GameScene');
+    const gameScene = gameInstance.scene.getScene(SCENE_KEYS.GAME);
     if (!gameScene) {
       console.error('GameScene not found');
       return false;
     }
 
     // Stop game scene
-    gameInstance.scene.stop('GameScene');
+    gameInstance.scene.stop(SCENE_KEYS.GAME);
     
     // Enter builder mode with current config
     enterBuilderMode(mapConfig);
     
     // Start builder scene
-    gameInstance.scene.start('BuilderScene', { config: mapConfig });
+    gameInstance.scene.start(SCENE_KEYS.BUILDER, { config: mapConfig });
     
     return true;
   } catch (error) {
@@ -76,13 +77,13 @@ export function switchToGame(): boolean {
 
   try {
     // Stop builder scene
-    gameInstance.scene.stop('BuilderScene');
+    gameInstance.scene.stop(SCENE_KEYS.BUILDER);
     
     // Exit builder mode
     exitBuilderMode();
     
     // Start game scene with builder config
-    gameInstance.scene.start('GameScene', { useBuilderConfig: true });
+    gameInstance.scene.start(SCENE_KEYS.GAME, { useBuilderConfig: true });
     
     return true;
   } catch (error) {

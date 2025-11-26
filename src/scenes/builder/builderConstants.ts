@@ -2,20 +2,22 @@
  * Shared constants for Builder mode
  */
 
+import { DEPTH_LAYERS } from '../../constants/depthLayers';
+
 // Ground level
 export const GROUND_HEIGHT = 40;
 
 // Player sprite dimensions
 export const PLAYER_SPRITE_FRAME_HEIGHT = 48;
 export const PLAYER_SCALE = 5;
-export const PLAYER_DEPTH = 10;
+export const PLAYER_DEPTH = DEPTH_LAYERS.PLAYER;
 
 // Grid overlay
 export const GRID_SIZE = 100;
 export const GRID_LINE_COLOR = 0x00ff00;
 export const GRID_LINE_ALPHA = 0.3;
 export const GRID_LINE_WIDTH = 1;
-export const OVERLAY_DEPTH = 1000;
+export const OVERLAY_DEPTH = DEPTH_LAYERS.GRID_OVERLAY;
 
 // Ground visualization
 export const GROUND_LINE_COLOR = 0xff0000;

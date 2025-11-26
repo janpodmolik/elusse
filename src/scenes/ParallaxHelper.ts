@@ -6,6 +6,7 @@
 
 import Phaser from 'phaser';
 import type { BackgroundConfig } from '../data/background';
+import { DEPTH_LAYERS } from '../constants/depthLayers';
 
 export interface ParallaxLayers {
   baseLayer: Phaser.GameObjects.TileSprite;
@@ -39,7 +40,7 @@ export function createParallaxBackground(
   );
   baseLayer.setOrigin(0, 0);
   baseLayer.setScrollFactor(1.0);
-  baseLayer.setDepth(-100);
+  baseLayer.setDepth(DEPTH_LAYERS.BACKGROUND_BASE);
   
   // Initialize tile positions for proper repeating
   baseLayer.tilePositionX = 0;
@@ -56,7 +57,7 @@ export function createParallaxBackground(
       const layer = scene.add.image(0, 0, texture);
       layer.setOrigin(0, 0);
       layer.setScrollFactor(config.scrollFactors[i]);
-      layer.setDepth(-99 + i);
+      layer.setDepth(DEPTH_LAYERS.BACKGROUND_LAYER_START + i);
       layer.setDisplaySize(worldWidth, worldHeight);
       bgLayers.push(layer);
     }

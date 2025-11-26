@@ -4,6 +4,8 @@
  */
 
 import type { LocalizedText } from '../types/DialogData';
+import { getAssetScale } from './assets';
+import { getItemDepth } from '../constants/depthLayers';
 
 /**
  * Placed item in the game world
@@ -52,3 +54,79 @@ export async function loadMapConfig(): Promise<MapConfig> {
   
   return config;
 }
+
+// ============================================
+// PlacedItem Factory
+// ============================================
+
+/**
+ * Options for creating a new PlacedItem
+ */
+export interface CreatePlacedItemOptions {
+  assetKey: string;
+  x: number;
+  yOffset?: number;
+  depthLayer?: 'behind' | 'front';
+  scale?: number;
+  dialogConfig?: PlacedItem['dialogConfig'];
+}
+
+/**
+ * Factory for creating PlacedItem objects
+ * Centralizes item creation logic for consistency
+ */
+export const PlacedItemFactory = {
+  /**
+   * Generate unique item ID
+   */
+  generateId(): string {
+    return `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  },
+  
+  /**
+   * Create a new PlacedItem with default values
+   */
+  create(options: CreatePlacedItemOptions): PlacedItem {
+    const { assetKey, x, yOffset = 0, depthLayer = 'behind', scale, dialogConfig } = options;
+    
+    return {
+      id: PlacedItemFactory.generateId(),
+      assetKey,
+      x: Math.round(x),
+      y: 0, // Always 0, position is calculated from yOffset
+      scale: scale ?? getAssetScale(assetKey),
+      depth: getItemDepth(depthLayer),
+      yOffset: Math.round(yOffset),
+      ...(dialogConfig && { dialogConfig }),
+    };
+  },
+  
+  /**
+   * Create item at world coordinates (converts to yOffset)
+   */
+  createAtWorldPosition(
+    assetKey: string,
+    worldX: number,
+    worldY: number,
+    groundY: number,
+    depthLayer: 'behind' | 'front' = 'behind'
+  ): PlacedItem {
+    return PlacedItemFactory.create({
+      assetKey,
+      x: worldX,
+      yOffset: worldY - groundY,
+      depthLayer,
+    });
+  },
+  
+  /**
+   * Clone an existing item with a new ID
+   */
+  clone(item: PlacedItem, offsetX: number = 50): PlacedItem {
+    return {
+      ...item,
+      id: PlacedItemFactory.generateId(),
+      x: item.x + offsetX,
+    };
+  },
+};

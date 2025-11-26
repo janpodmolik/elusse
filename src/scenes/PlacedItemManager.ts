@@ -1,21 +1,25 @@
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
-import { updatePlacedItem, selectItem, clearSelection } from '../stores/builderStores';
-import { ASSETS } from '../data/assets';
+import { selectItem } from '../stores/builderStores';
+import { ItemRenderer, ItemDragController, ItemSelectionManager } from '../items';
 
 /**
  * PlacedItemManager - Universal manager for placed items
- * Handles item creation, rendering, and interaction in both builder and game modes
+ * 
+ * Uses composition with:
+ * - ItemRenderer for sprite creation
+ * - ItemDragController for drag & drop (builder mode)
+ * - ItemSelectionManager for selection visuals (builder mode)
  */
 export class PlacedItemManager {
   private scene: Phaser.Scene;
-  private groundY: number;
   private items: Map<string, { sprite: Phaser.GameObjects.Sprite; data: PlacedItem }> = new Map();
   private isBuilderMode: boolean = false;
   
-  // Builder-specific state
-  private selectionGraphics?: Phaser.GameObjects.Graphics;
-  private isDragging: boolean = false;
+  // Composed modules
+  private renderer: ItemRenderer;
+  private dragController?: ItemDragController;
+  private selectionManager?: ItemSelectionManager;
 
   /**
    * @param scene - Phaser scene instance
@@ -24,12 +28,17 @@ export class PlacedItemManager {
    */
   constructor(scene: Phaser.Scene, groundY: number, builderMode: boolean = false) {
     this.scene = scene;
-    this.groundY = groundY;
     this.isBuilderMode = builderMode;
     
+    // Initialize renderer (always needed)
+    this.renderer = new ItemRenderer(scene, groundY);
+    
+    // Initialize builder-specific modules
     if (this.isBuilderMode) {
-      this.selectionGraphics = this.scene.add.graphics();
-      this.selectionGraphics.setDepth(999);
+      this.dragController = new ItemDragController(scene, groundY, {
+        onDrag: () => this.updateSelectionVisuals(),
+      });
+      this.selectionManager = new ItemSelectionManager(scene);
     }
   }
 
@@ -38,9 +47,7 @@ export class PlacedItemManager {
    * Call this in scene's preload() method
    */
   static preloadAssets(scene: Phaser.Scene): void {
-    ASSETS.forEach(asset => {
-      scene.load.image(asset.key, asset.path);
-    });
+    ItemRenderer.preloadAssets(scene);
   }
 
   /**
@@ -56,116 +63,42 @@ export class PlacedItemManager {
    * Create a single item
    */
   createItem(itemData: PlacedItem): void {
-    const { id, assetKey, x, scale = 1, depth = 5, yOffset = 0 } = itemData;
-    
-    // Calculate final Y position (ground + offset)
-    const finalY = this.groundY + yOffset;
-    
-    // Create sprite
-    const sprite = this.scene.add.sprite(x, finalY, assetKey);
-    sprite.setScale(scale);
-    sprite.setDepth(depth);
-    sprite.setData('itemId', id);
+    const sprite = this.renderer.createSprite(itemData);
     
     // Store item reference
-    this.items.set(id, { sprite, data: itemData });
+    this.items.set(itemData.id, { sprite, data: itemData });
     
     // Add builder interactivity if in builder mode
-    if (this.isBuilderMode) {
-      this.makeInteractive(sprite, id);
-    }
-  }
-
-  /**
-   * Make sprite interactive for builder mode
-   */
-  private makeInteractive(sprite: Phaser.GameObjects.Sprite, id: string): void {
-    sprite.setInteractive({ cursor: 'pointer' });
-    
-    // Enable dragging via scene input
-    this.scene.input.setDraggable(sprite);
-    
-    // Click to select
-    sprite.on('pointerdown', () => {
-      if (!this.isDragging) {
-        selectItem(id);
-        this.updateSelectionVisuals();
-      }
-    });
-    
-    // Drag handlers
-    sprite.on('dragstart', () => {
-      this.isDragging = false;
-      sprite.setTint(0x00ff00);
+    if (this.isBuilderMode && this.dragController) {
+      this.dragController.makeInteractive(sprite, itemData.id);
       
-      // Notify BuilderScene that we're dragging an object
-      if (this.scene.data) {
-        this.scene.data.set('isDraggingItem', true);
-      }
-    });
-    
-    sprite.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      this.isDragging = true;
-      sprite.setPosition(dragX, dragY);
-      this.updateSelectionVisuals();
-    });
-    
-    sprite.on('dragend', () => {
-      sprite.clearTint();
-      
-      // Notify BuilderScene that dragging ended
-      if (this.scene.data) {
-        this.scene.data.set('isDraggingItem', false);
-      }
-      
-      // Update store with new position
-      const worldX = Math.round(sprite.x);
-      const worldY = Math.round(sprite.y);
-      const yOffset = worldY - this.groundY;
-      
-      updatePlacedItem(id, { x: worldX, yOffset });
-      
-      // Reset dragging flag after a short delay
-      this.scene.time.delayedCall(50, () => {
-        this.isDragging = false;
+      // Override pointerdown for selection sync
+      sprite.on('pointerdown', () => {
+        if (!this.dragController?.getIsDragging()) {
+          selectItem(itemData.id);
+          this.updateSelectionVisuals();
+        }
       });
-    });
+    }
   }
 
   /**
    * Update selection visual indicators
    */
   updateSelectionVisuals(): void {
-    if (!this.selectionGraphics) return;
-    
-    this.selectionGraphics.clear();
+    if (!this.selectionManager) return;
     
     // Get selected item ID from scene data
-    const selectedId = this.scene.data.get('selectedItemId');
-    if (!selectedId) return;
+    const selectedId = this.scene.data.get('selectedItemId') as string | null;
+    this.selectionManager.setSelectedId(selectedId);
+    
+    if (!selectedId) {
+      this.selectionManager.clearVisuals();
+      return;
+    }
     
     const item = this.items.get(selectedId);
-    if (!item) return;
-    
-    const sprite = item.sprite;
-    const bounds = sprite.getBounds();
-    
-    // Draw selection rectangle
-    this.selectionGraphics.lineStyle(3, 0x00ff00, 1);
-    this.selectionGraphics.strokeRect(
-      bounds.x - 5,
-      bounds.y - 5,
-      bounds.width + 10,
-      bounds.height + 10
-    );
-    
-    // Draw corner handles
-    const handleSize = 8;
-    this.selectionGraphics.fillStyle(0x00ff00, 1);
-    this.selectionGraphics.fillCircle(bounds.x, bounds.y, handleSize);
-    this.selectionGraphics.fillCircle(bounds.x + bounds.width, bounds.y, handleSize);
-    this.selectionGraphics.fillCircle(bounds.x, bounds.y + bounds.height, handleSize);
-    this.selectionGraphics.fillCircle(bounds.x + bounds.width, bounds.y + bounds.height, handleSize);
+    this.selectionManager.updateVisuals(item?.sprite ?? null);
   }
 
   /**
@@ -175,19 +108,8 @@ export class PlacedItemManager {
     const item = this.items.get(id);
     if (!item) return;
     
-    // Update sprite properties
-    if (updates.x !== undefined) {
-      item.sprite.x = updates.x;
-    }
-    if (updates.yOffset !== undefined) {
-      item.sprite.y = this.groundY + updates.yOffset;
-    }
-    if (updates.scale !== undefined) {
-      item.sprite.setScale(updates.scale);
-    }
-    if (updates.depth !== undefined) {
-      item.sprite.setDepth(updates.depth);
-    }
+    // Apply visual updates via renderer
+    this.renderer.applyUpdates(item.sprite, updates);
     
     // Update stored data
     item.data = { ...item.data, ...updates };
@@ -199,6 +121,9 @@ export class PlacedItemManager {
   removeItem(id: string): void {
     const item = this.items.get(id);
     if (item) {
+      if (this.dragController) {
+        this.dragController.removeInteractivity(item.sprite);
+      }
       item.sprite.destroy();
       this.items.delete(id);
     }
@@ -208,7 +133,12 @@ export class PlacedItemManager {
    * Remove all items
    */
   removeAllItems(): void {
-    this.items.forEach(item => item.sprite.destroy());
+    this.items.forEach(item => {
+      if (this.dragController) {
+        this.dragController.removeInteractivity(item.sprite);
+      }
+      item.sprite.destroy();
+    });
     this.items.clear();
   }
 
@@ -231,27 +161,17 @@ export class PlacedItemManager {
    */
   destroy(): void {
     this.removeAllItems();
-    this.selectionGraphics?.destroy();
+    this.selectionManager?.destroy();
   }
 
   /**
    * Setup click handler for deselecting when clicking empty space
    */
   setupBackgroundDeselect(): void {
-    if (!this.isBuilderMode) return;
+    if (!this.isBuilderMode || !this.selectionManager) return;
     
-    this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Only deselect if clicking on empty space (not on any sprite)
-      if (!this.isDragging) {
-        const hitSprite = this.scene.input.hitTestPointer(pointer).find(
-          obj => obj.type === 'Sprite' && obj.getData('itemId')
-        );
-        
-        if (!hitSprite) {
-          clearSelection();
-          this.updateSelectionVisuals();
-        }
-      }
-    });
+    this.selectionManager.setupBackgroundDeselect(
+      () => this.dragController?.getIsDragging() ?? false
+    );
   }
 }

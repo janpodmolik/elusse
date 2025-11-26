@@ -2,15 +2,8 @@ import Phaser from 'phaser';
 import { PlacedItemManager } from '../PlacedItemManager';
 import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig } from '../../stores/builderStores';
 import type { PlacedItem } from '../../data/mapConfig';
-import { getAssetScale } from '../../data/assets';
-
-/**
- * Depth values for item placement relative to player
- */
-const DEPTH_VALUES = {
-  BEHIND: 5,
-  FRONT: 15
-} as const;
+import { PlacedItemFactory } from '../../data/mapConfig';
+import { EventBus, EVENTS, type AssetDroppedEvent } from '../../events/EventBus';
 
 /**
  * BuilderItemsController - Manages placed items and their interactions
@@ -86,8 +79,9 @@ export class BuilderItemsController {
   }
 
   private setupAssetDropListener(): void {
-    const handleAssetDrop = (event: CustomEvent) => {
-      const { assetKey, canvasX, canvasY } = event.detail;
+    // Subscribe to asset drop events from EventBus
+    const subscription = EventBus.on<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, (data) => {
+      const { assetKey, canvasX, canvasY } = data;
       
       // Convert canvas coordinates to world coordinates
       const camera = this.scene.cameras.main;
@@ -101,28 +95,23 @@ export class BuilderItemsController {
       });
       unsubscribe();
       
-      // Create new item at drop position
-      const newItem = {
-        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // Create new item using factory
+      const newItem = PlacedItemFactory.createAtWorldPosition(
         assetKey,
-        x: Math.round(worldX),
-        y: 0,
-        scale: getAssetScale(assetKey),
-        depth: currentDepthLayer === 'behind' ? DEPTH_VALUES.BEHIND : DEPTH_VALUES.FRONT,
-        yOffset: Math.round(worldY - this.groundY),
-      };
+        worldX,
+        worldY,
+        this.groundY,
+        currentDepthLayer
+      );
       
       // Add to store and create sprite
       addPlacedItem(newItem);
       this.itemManager.createItem(newItem);
       selectItem(newItem.id);
-    };
-    
-    window.addEventListener('assetDropped', handleAssetDrop as EventListener);
-    
-    this.scene.events.once('shutdown', () => {
-      window.removeEventListener('assetDropped', handleAssetDrop as EventListener);
     });
+    
+    // Store subscription for cleanup
+    this.unsubscribers.push(() => subscription.unsubscribe());
   }
 
   private setupDeleteKeys(): void {

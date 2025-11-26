@@ -1,6 +1,7 @@
 <script lang="ts">
   import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection } from '../stores/builderStores';
   import { switchToGame } from '../utils/sceneManager';
+  import { getItemDepth } from '../constants/depthLayers';
   import AssetPalette from './AssetPalette.svelte';
   import PixelButton from './PixelButton.svelte';
 
@@ -12,7 +13,9 @@
     if (!$selectedItemId) return;
     
     // Calculate new depth based on CURRENT state (before toggle)
-    const newDepth = $itemDepthLayer === 'behind' ? 15 : 5;
+    // Current is 'behind', so new will be 'front' after toggle
+    const newLayer = $itemDepthLayer === 'behind' ? 'front' : 'behind';
+    const newDepth = getItemDepth(newLayer);
     
     // Toggle the state
     toggleItemDepthLayer();

@@ -1,37 +1,53 @@
 /**
  * Builder Mode Stores
- * Simple state management for map builder
+ * State management for map builder using Svelte stores
+ * 
+ * Note: Using writable/derived for cross-context compatibility.
+ * The builder state is accessed from both Svelte UI and Phaser scenes.
  */
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import type { MapConfig, PlacedItem } from '../data/mapConfig';
 
-// Main builder state store
-const builderState = writable<{
+// ==================== Types ====================
+
+export type ItemDepthLayer = 'behind' | 'front';
+
+interface BuilderState {
   isActive: boolean;
   config: MapConfig | null;
   selectedItemId: string | null;
-  itemDepthLayer: 'behind' | 'front';
-}>({
+  itemDepthLayer: ItemDepthLayer;
+}
+
+// ==================== Main State Store ====================
+
+const initialState: BuilderState = {
   isActive: false,
   config: null,
   selectedItemId: null,
-  itemDepthLayer: 'behind'
-});
+  itemDepthLayer: 'behind',
+};
 
-// Derived store - public read-only access to builder mode state
+const builderState = writable<BuilderState>(initialState);
+
+// ==================== Derived Stores (Read-only) ====================
+
+/** Whether builder mode is active */
 export const isBuilderMode = derived(builderState, $state => $state.isActive);
 
-// Derived store - public read-only access to builder config (for UI display)
+/** Current builder map configuration */
 export const builderConfig = derived(builderState, $state => $state.config);
 
-// Derived store - public read-only access to selected item ID
+/** Currently selected item ID (null if none) */
 export const selectedItemId = derived(builderState, $state => $state.selectedItemId);
 
-// Derived store - public read-only access to item depth layer preference
+/** Current depth layer preference for new items */
 export const itemDepthLayer = derived(builderState, $state => $state.itemDepthLayer);
 
-// Actions - Player
+// ==================== Actions - Player ====================
+
+/** Update player start position in builder config */
 export function updatePlayerPosition(x: number, y: number): void {
   builderState.update(state => {
     if (!state.config) return state;
@@ -42,7 +58,9 @@ export function updatePlayerPosition(x: number, y: number): void {
   });
 }
 
-// Actions - Placed Items
+// ==================== Actions - Placed Items ====================
+
+/** Add a new placed item to the builder config */
 export function addPlacedItem(item: PlacedItem): void {
   builderState.update(state => {
     if (!state.config) return state;
@@ -58,6 +76,7 @@ export function addPlacedItem(item: PlacedItem): void {
   });
 }
 
+/** Update an existing placed item by ID */
 export function updatePlacedItem(id: string, updates: Partial<PlacedItem>): void {
   builderState.update(state => {
     if (!state.config || !state.config.placedItems) return state;
@@ -74,6 +93,7 @@ export function updatePlacedItem(id: string, updates: Partial<PlacedItem>): void
   });
 }
 
+/** Delete a placed item by ID (also clears selection if deleted item was selected) */
 export function deletePlacedItem(id: string): void {
   builderState.update(state => {
     if (!state.config || !state.config.placedItems) return state;
@@ -89,7 +109,9 @@ export function deletePlacedItem(id: string): void {
   });
 }
 
-// Actions - Selection
+// ==================== Actions - Selection ====================
+
+/** Select an item by ID (or null to deselect) */
 export function selectItem(id: string | null): void {
   builderState.update(state => ({
     ...state,
@@ -97,6 +119,7 @@ export function selectItem(id: string | null): void {
   }));
 }
 
+/** Clear current selection */
 export function clearSelection(): void {
   builderState.update(state => ({
     ...state,
@@ -104,7 +127,9 @@ export function clearSelection(): void {
   }));
 }
 
-// Actions - Depth Layer
+// ==================== Actions - Depth Layer ====================
+
+/** Toggle depth layer preference between 'behind' and 'front' */
 export function toggleItemDepthLayer(): void {
   builderState.update(state => ({
     ...state,
@@ -112,11 +137,14 @@ export function toggleItemDepthLayer(): void {
   }));
 }
 
+/** Update depth of an existing item */
 export function updateItemDepth(id: string, depth: number): void {
   updatePlacedItem(id, { depth });
 }
 
-// Actions - Builder Mode
+// ==================== Actions - Builder Mode ====================
+
+/** Enter builder mode with a map configuration */
 export function enterBuilderMode(config: MapConfig): void {
   builderState.set({
     isActive: true,
@@ -126,6 +154,7 @@ export function enterBuilderMode(config: MapConfig): void {
   });
 }
 
+/** Exit builder mode (preserves config for potential return) */
 export function exitBuilderMode(): void {
   builderState.update(state => ({
     ...state,
@@ -136,14 +165,9 @@ export function exitBuilderMode(): void {
 
 /**
  * Get current builder configuration snapshot
- * Used by GameScene to load builder-modified map config
+ * Uses Svelte's get() for synchronous access
  * @returns Current map configuration or null if not in builder mode
  */
 export function getBuilderConfig(): MapConfig | null {
-  let config: MapConfig | null = null;
-  const unsubscribe = builderState.subscribe(state => {
-    config = state.config;
-  });
-  unsubscribe();
-  return config;
+  return get(builderState).config;
 }

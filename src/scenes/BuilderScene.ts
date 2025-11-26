@@ -8,7 +8,9 @@ import { BuilderPlayerController } from './builder/BuilderPlayerController';
 import { BuilderGridOverlay } from './builder/BuilderGridOverlay';
 import { BuilderItemsController } from './builder/BuilderItemsController';
 import { PlacedItemManager } from './PlacedItemManager';
-import { GROUND_HEIGHT, GROUND_COLOR, GROUND_ALPHA } from './builder/builderConstants';
+import { GROUND_HEIGHT } from './builder/builderConstants';
+import { GroundManager } from './shared/GroundManager';
+import { SCENE_KEYS } from '../constants/sceneKeys';
 
 /**
  * BuilderScene - Interactive map builder with visual editor
@@ -33,7 +35,7 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   constructor() {
-    super({ key: 'BuilderScene' });
+    super({ key: SCENE_KEYS.BUILDER });
   }
 
   init(data: { config: MapConfig }): void {
@@ -110,18 +112,11 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   private createGroundReference(): void {
-    const groundY = this.config.worldHeight - GROUND_HEIGHT;
-    
-    const ground = this.add.rectangle(
-      0,
-      groundY,
-      this.config.worldWidth,
-      GROUND_HEIGHT,
-      GROUND_COLOR,
-      GROUND_ALPHA
-    );
-    ground.setOrigin(0, 0);
-    ground.setDepth(-1);
+    GroundManager.createVisualGround(this, {
+      worldWidth: this.config.worldWidth,
+      worldHeight: this.config.worldHeight,
+      height: GROUND_HEIGHT,
+    });
   }
 
   update(): void {

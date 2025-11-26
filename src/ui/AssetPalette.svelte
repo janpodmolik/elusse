@@ -1,6 +1,7 @@
 <script lang="ts">
   import PixelButton from './PixelButton.svelte';
   import { ASSETS } from '../data/assets';
+  import { EventBus, EVENTS, type AssetDroppedEvent } from '../events/EventBus';
   
   const assets = ASSETS;
   
@@ -110,11 +111,12 @@
         const canvasX = x - rect.left;
         const canvasY = y - rect.top;
         
-        // Dispatch drop event
-        const dropEvent = new CustomEvent('assetDropped', {
-          detail: { assetKey: draggedAsset, canvasX, canvasY }
+        // Emit drop event via EventBus
+        EventBus.emit<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, {
+          assetKey: draggedAsset,
+          canvasX,
+          canvasY
         });
-        window.dispatchEvent(dropEvent);
       }
     }
     
@@ -150,12 +152,12 @@
       const canvasX = e.clientX - rect.left;
       const canvasY = e.clientY - rect.top;
       
-      // Dispatch custom event for BuilderScene
-      const dropEvent = new CustomEvent('assetDropped', {
-        detail: { assetKey, canvasX, canvasY }
+      // Emit drop event via EventBus
+      EventBus.emit<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, {
+        assetKey,
+        canvasX,
+        canvasY
       });
-      
-      window.dispatchEvent(dropEvent);
     };
     
     canvas.addEventListener('dragover', handleDragOver);

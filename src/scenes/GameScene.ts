@@ -7,6 +7,9 @@ import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } f
 import { PlacedItemManager } from './PlacedItemManager';
 import { loadMapConfig, MapConfig } from '../data/mapConfig';
 import { getBuilderConfig } from '../stores/builderStores';
+import { GroundManager } from './shared/GroundManager';
+import { SCENE_KEYS } from '../constants/sceneKeys';
+import { isLoading } from '../stores';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -23,23 +26,17 @@ export class GameScene extends Phaser.Scene {
 
   // Store unsubscribe functions
   private unsubscribers: Array<() => void> = [];
+  
+  // Init data stored for async loading
+  private initData?: { useBuilderConfig?: boolean };
 
   constructor() {
-    super({ key: 'GameScene' });
+    super({ key: SCENE_KEYS.GAME });
   }
 
-  async init(data?: { useBuilderConfig?: boolean }): Promise<void> {
-    // Load map configuration from builder or JSON
-    if (data?.useBuilderConfig) {
-      const config = getBuilderConfig();
-      this.mapConfig = config || await loadMapConfig();
-    } else {
-      this.mapConfig = await loadMapConfig();
-    }
-    
-    // Load default background assets
-    const defaultConfig = backgroundManager.getCurrentConfig();
-    await this.loadBackgroundIfNeeded(defaultConfig);
+  init(data?: { useBuilderConfig?: boolean }): void {
+    // Store init data for async processing in create()
+    this.initData = data;
   }
 
   preload(): void {
@@ -60,44 +57,87 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Create parallax background layers
-    this.createParallaxBackground();
+    // Start async initialization
+    this.initializeScene();
+  }
 
-    const groundHeight = 40;
-    const groundY = this.mapConfig.worldHeight - groundHeight;
+  /**
+   * Async scene initialization
+   * Separated from create() because Phaser doesn't await async create
+   */
+  private async initializeScene(): Promise<void> {
+    // Show loading indicator
+    isLoading.set(true);
     
-    const ground = this.add.rectangle(
-      0, 
-      groundY, 
-      this.mapConfig.worldWidth, 
-      groundHeight, 
-      0x000000, 
-      0 // Alpha 0 for invisible
-    ).setOrigin(0, 0);
-    
-    this.physics.add.existing(ground, true); // true = static body
+    try {
+      // Load map configuration asynchronously
+      await this.loadMapConfiguration();
+      
+      // Load background assets
+      const bgConfig = backgroundManager.getCurrentConfig();
+      await this.loadBackgroundIfNeeded(bgConfig);
+      
+      // Create parallax background layers
+      this.createParallaxBackground();
 
-    // Create player
-    this.player = new Player(this, this.mapConfig.playerStartX, this.mapConfig.playerStartY);
+      // Create ground with physics
+      const { ground, groundY } = GroundManager.createPhysicsGround(this, {
+        worldWidth: this.mapConfig.worldWidth,
+        worldHeight: this.mapConfig.worldHeight,
+      });
 
-    // Add collision between player and ground
-    this.physics.add.collider(this.player, ground);
+      // Create player
+      this.player = new Player(this, this.mapConfig.playerStartX, this.mapConfig.playerStartY);
 
-    // Initialize placed items system (read-only mode for game scene)
-    this.itemManager = new PlacedItemManager(this, groundY, false);
-    
-    // Load placed items from config
-    if (this.mapConfig.placedItems && this.mapConfig.placedItems.length > 0) {
-      this.itemManager.createItems(this.mapConfig.placedItems);
+      // Add collision between player and ground
+      GroundManager.addPlayerCollision(this, this.player, ground);
+
+      // Initialize placed items system (read-only mode for game scene)
+      this.itemManager = new PlacedItemManager(this, groundY, false);
+      
+      // Load placed items from config
+      if (this.mapConfig.placedItems && this.mapConfig.placedItems.length > 0) {
+        this.itemManager.createItems(this.mapConfig.placedItems);
+      }
+      
+      // TODO: Setup collision detection for items with dialogConfig
+      // For now, items are just visual decorations
+
+      // Setup camera to follow player
+      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+      this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+      this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+    } catch (error) {
+      console.error('[GameScene] Failed to initialize scene:', error);
+      // Show error state to user - could emit event or set error store
+    } finally {
+      // Hide loading indicator
+      isLoading.set(false);
     }
-    
-    // TODO: Setup collision detection for items with dialogConfig
-    // For now, items are just visual decorations
+  }
 
-    // Setup camera to follow player
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
-    this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+  /**
+   * Load map configuration from builder or JSON file
+   */
+  private async loadMapConfiguration(): Promise<void> {
+    try {
+      if (this.initData?.useBuilderConfig) {
+        const config = getBuilderConfig();
+        this.mapConfig = config || await loadMapConfig();
+      } else {
+        this.mapConfig = await loadMapConfig();
+      }
+    } catch (error) {
+      console.error('[GameScene] Failed to load map configuration:', error);
+      // Fallback to default config
+      this.mapConfig = {
+        worldWidth: 3200,
+        worldHeight: 600,
+        playerStartX: 400,
+        playerStartY: 300,
+        placedItems: [],
+      };
+    }
   }
 
   private createParallaxBackground(): void {
@@ -136,6 +176,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(): void {
+    // Guard against update being called before async initialization completes
+    if (!this.player) return;
+    
     this.player.update();
 
     // Update base layer tiling for infinite scrolling effect
