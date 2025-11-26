@@ -104,7 +104,7 @@
   
   .item-controls {
     position: fixed;
-    top: 20px;
+    top: calc(10px + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -133,15 +133,25 @@
       border-width: 2px;
     }
     
+    /* On narrow screens, move item controls below top buttons */
     .item-controls {
-      top: 10px;
-      gap: 8px;
+      top: calc(55px + env(safe-area-inset-top));
+      left: calc(5px + env(safe-area-inset-left));
+      transform: none;
+      gap: 6px;
     }
     
     .item-controls :global(.pixel-btn) {
       font-size: 10px;
-      padding: 10px 16px;
+      padding: 10px 12px;
       border-width: 2px;
+    }
+  }
+  
+  @media (max-width: 400px) {
+    /* On very narrow screens, stack vertically if needed */
+    .item-controls {
+      top: calc(50px + env(safe-area-inset-top));
     }
   }
 </style>
