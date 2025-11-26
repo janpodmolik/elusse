@@ -1,12 +1,11 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
-import { AVAILABLE_SKINS, CatSkin } from '../data/catSkin';
+import { AVAILABLE_SKINS } from '../data/catSkin';
 import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
-import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
+import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
 import { PlacedItemManager } from './PlacedItemManager';
 import { loadMapConfig, MapConfig } from '../data/mapConfig';
-import { currentSkin, currentBackground, isLoading, backgroundChangeCounter } from '../stores';
 import { getBuilderConfig } from '../stores/builderStores';
 
 export class GameScene extends Phaser.Scene {
@@ -99,23 +98,6 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
     this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
-
-    // Subscribe to store changes to react to UI updates
-    const skinUnsubscribe = currentSkin.subscribe((skin: string) => {
-      const catSkin = skin as CatSkin;
-      if (this.player && AVAILABLE_SKINS.includes(catSkin)) {
-        this.player.changeSkin(catSkin);
-      }
-    });
-
-    // Subscribe to background change requests from UI
-    const backgroundUnsubscribe = backgroundChangeCounter.subscribe(async () => {
-      // Trigger background reload when counter changes
-      await this.reloadBackground();
-    });
-
-    // Store unsubscribe functions for cleanup
-    this.unsubscribers.push(skinUnsubscribe, backgroundUnsubscribe);
   }
 
   private createParallaxBackground(): void {
@@ -140,43 +122,6 @@ export class GameScene extends Phaser.Scene {
       this.loadedBackgrounds.add(config.folder);
     }
     return success;
-  }
-
-  private async reloadBackground(): Promise<void> {
-    let config = backgroundManager.getCurrentConfig();
-    
-    // Show loader
-    isLoading.set(true);
-
-    // Load background if needed
-    let success = await this.loadBackgroundIfNeeded(config);
-    
-    // Fallback to forest on error
-    if (!success) {
-      console.error(`Failed to load background: ${config.folder}, falling back to forest`);
-      backgroundManager.setBackground('forest');
-      config = backgroundManager.getCurrentConfig();
-      success = await this.loadBackgroundIfNeeded(config);
-      
-      if (!success) {
-        console.error('Failed to load fallback background');
-        isLoading.set(false);
-        return;
-      }
-    }
-
-    // Destroy old layers
-    if (this.parallaxLayers) {
-      destroyParallaxLayers(this.parallaxLayers);
-      this.parallaxLayers = null;
-    }
-
-    // Create new layers
-    this.createParallaxBackground();
-
-    // Hide loader and update UI
-    isLoading.set(false);
-    currentBackground.set(config.name);
   }
 
   shutdown(): void {

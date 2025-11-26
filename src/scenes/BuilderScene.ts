@@ -41,8 +41,8 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load player sprites (orange skin for preview)
-    this.load.spritesheet('cat-idle-orange', 'assets/sprites/orange/Idle.png', {
+    // Load player sprites (white skin)
+    this.load.spritesheet('cat-idle-white', 'assets/sprites/white/Idle.png', {
       frameWidth: 48,
       frameHeight: 48,
     });

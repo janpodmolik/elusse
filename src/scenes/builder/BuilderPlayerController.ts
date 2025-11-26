@@ -32,7 +32,7 @@ export class BuilderPlayerController {
    * Create and setup player sprite
    */
   create(startX: number, startY: number): Phaser.GameObjects.Sprite {
-    this.player = this.scene.add.sprite(startX, startY, 'cat-idle-orange', 0);
+    this.player = this.scene.add.sprite(startX, startY, 'cat-idle-white', 0);
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(PLAYER_DEPTH);
     this.player.setInteractive({ draggable: true, cursor: 'grab' });

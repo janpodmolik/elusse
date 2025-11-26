@@ -43,8 +43,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   };
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    // Get current skin from manager
-    const initialSkin = catSkinManager.getSkin();
+    // Use default white skin
+    const initialSkin = 'white';
     super(scene, x, y, `cat-idle-${initialSkin}`);
     
     this.currentSkin = initialSkin;

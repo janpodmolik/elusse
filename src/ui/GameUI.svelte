@@ -1,18 +1,13 @@
 <script lang="ts">
   import { 
     currentLanguage, 
-    currentSkin, 
-    currentBackground, 
     isLoading, 
     showControlsDialog, 
     isTouchDevice,
-    hasPlayerMoved,
-    backgroundChangeCounter
+    hasPlayerMoved
   } from '../stores';
   import { isBuilderMode } from '../stores/builderStores';
   import { localization } from '../data/localization';
-  import { catSkinManager } from '../data/catSkin';
-  import { backgroundManager } from '../data/background';
   import BuilderUI from './BuilderUI.svelte';
   import PixelButton from './PixelButton.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../utils/sceneManager';
@@ -36,18 +31,6 @@
   function handleLanguageToggle() {
     const newLang = localization.toggleLanguage();
     currentLanguage.set(newLang);
-  }
-
-  function handleSkinToggle() {
-    const newSkin = catSkinManager.toggleSkin();
-    currentSkin.set(newSkin);
-  }
-
-  function handleBackgroundToggle() {
-    backgroundManager.toggleBackground();
-    currentBackground.set(backgroundManager.getCurrentConfig().name);
-    // Trigger background reload in GameScene by incrementing counter
-    backgroundChangeCounter.update(n => n + 1);
   }
 
   // Listen to document pointerdown for dialog closing
@@ -96,7 +79,7 @@
     </PixelButton>
   {/if}
 
-  <!-- Language & Skin & Background Buttons (only in play mode) -->
+  <!-- Language Button (only in play mode) -->
   {#if !$isBuilderMode}
     <PixelButton 
       position="top-right"
@@ -106,26 +89,6 @@
       title="Toggle Language (L)"
     >
       {$currentLanguage.toUpperCase()}
-    </PixelButton>
-
-    <PixelButton 
-      position="stack-2"
-      variant="default"
-      width="100px"
-      onclick={handleSkinToggle}
-      title="Toggle Skin (C)"
-    >
-      {$currentSkin.toUpperCase()}
-    </PixelButton>
-
-    <PixelButton 
-      position="stack-3"
-      variant="default"
-      width="120px"
-      onclick={handleBackgroundToggle}
-      title="Toggle Background (B)"
-    >
-      {$currentBackground}
     </PixelButton>
   {/if}
 
