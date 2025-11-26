@@ -4,9 +4,9 @@ import { AVAILABLE_SKINS, CatSkin } from '../data/catSkin';
 import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
-import { DialogTriggerManager } from './DialogTriggerManager';
+import { PlacedItemManager } from './PlacedItemManager';
 import { loadMapConfig, MapConfig } from '../data/mapConfig';
-import { currentSkin, currentBackground, isLoading, backgroundChangeCounter, activeDialogId } from '../stores';
+import { currentSkin, currentBackground, isLoading, backgroundChangeCounter } from '../stores';
 import { getBuilderConfig } from '../stores/builderStores';
 
 export class GameScene extends Phaser.Scene {
@@ -19,8 +19,8 @@ export class GameScene extends Phaser.Scene {
   private parallaxLayers: ParallaxLayers | null = null;
   private loadedBackgrounds: Set<string> = new Set();
 
-  // Dialog trigger system
-  private triggerManager!: DialogTriggerManager;
+  // Placed items system (replaces dialog trigger system)
+  private itemManager!: PlacedItemManager;
 
   // Store unsubscribe functions
   private unsubscribers: Array<() => void> = [];
@@ -56,8 +56,8 @@ export class GameScene extends Phaser.Scene {
       });
     });
 
-    // Load dialog trigger sprites
-    DialogTriggerManager.preloadAssets(this);
+    // Load UI assets for placed items
+    PlacedItemManager.preloadAssets(this);
   }
 
   create(): void {
@@ -84,22 +84,16 @@ export class GameScene extends Phaser.Scene {
     // Add collision between player and ground
     this.physics.add.collider(this.player, ground);
 
-    // Initialize dialog trigger system
-    this.triggerManager = new DialogTriggerManager(this, groundY);
-    this.triggerManager.createTriggers(this.mapConfig.dialogs);
-    this.triggerManager.setupCollisionDetection(
-      this.player,
-      (dialogId: string) => {
-        // Player entered trigger zone
-        console.log(`Entered trigger: ${dialogId}`);
-        activeDialogId.set(dialogId);
-      },
-      () => {
-        // Player exited trigger zone
-        console.log('Exited trigger');
-        activeDialogId.set(null);
-      }
-    );
+    // Initialize placed items system (read-only mode for game scene)
+    this.itemManager = new PlacedItemManager(this, groundY, false);
+    
+    // Load placed items from config
+    if (this.mapConfig.placedItems && this.mapConfig.placedItems.length > 0) {
+      this.itemManager.createItems(this.mapConfig.placedItems);
+    }
+    
+    // TODO: Setup collision detection for items with dialogConfig
+    // For now, items are just visual decorations
 
     // Setup camera to follow player
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -190,9 +184,9 @@ export class GameScene extends Phaser.Scene {
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
     this.unsubscribers = [];
     
-    // Clean up dialog triggers
-    if (this.triggerManager) {
-      this.triggerManager.destroy();
+    // Clean up placed items
+    if (this.itemManager) {
+      this.itemManager.destroy();
     }
   }
 

@@ -1,9 +1,32 @@
 import Phaser from 'phaser';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
-import { updatePlayerPosition } from '../stores/builderStores';
+import { updatePlayerPosition, selectedItemId, deletePlacedItem, addPlacedItem, itemDepthLayer, builderConfig } from '../stores/builderStores';
 import { backgroundManager } from '../data/background';
-import type { MapConfig } from '../data/mapConfig';
+import type { MapConfig, PlacedItem } from '../data/mapConfig';
+import { PlacedItemManager } from './PlacedItemManager';
+
+/**
+ * Default scale factors for different asset types
+ */
+const ASSET_SCALES: Record<string, number> = {
+  'tent': 6,
+  'lamp': 8,
+  'sign_left': 7,
+  'sign_right': 7,
+  'stone_0': 4,
+  'stone_1': 5,
+  'stone_2': 4,
+};
+
+/**
+ * Depth values for item placement relative to player
+ * Player has depth: 10
+ */
+const DEPTH_VALUES = {
+  BEHIND: 5,   // Items behind player
+  FRONT: 15    // Items in front of player
+} as const;
 
 /**
  * BuilderScene - Interactive map builder with visual editor
@@ -13,9 +36,13 @@ export class BuilderScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Sprite;
   private parallaxLayers: ParallaxLayers | null = null;
   private gridGraphics!: Phaser.GameObjects.Graphics;
+  public itemManager!: PlacedItemManager; // Public for UI access
   
   // Current builder configuration
   private config!: MapConfig;
+  
+  // Store subscriptions cleanup
+  private unsubscribers: Array<() => void> = [];
   
   // Camera pan state
   private isPanningCamera: boolean = false;
@@ -36,6 +63,9 @@ export class BuilderScene extends Phaser.Scene {
       frameWidth: 48,
       frameHeight: 48,
     });
+    
+    // Load UI assets for placed items
+    PlacedItemManager.preloadAssets(this);
   }
 
   create(): void {
@@ -53,6 +83,9 @@ export class BuilderScene extends Phaser.Scene {
 
     // Create player sprite (non-physics, just visual)
     this.createPlayerSprite();
+    
+    // Create placed items manager
+    this.createPlacedItems();
 
     // Setup camera
     this.setupCamera();
@@ -157,19 +190,34 @@ export class BuilderScene extends Phaser.Scene {
     this.player.setDepth(10);
     this.player.setInteractive({ draggable: true, cursor: 'grab' });
 
-    // Add visual indicator that player is draggable
-    const circle = this.add.circle(0, 0, 8, 0x00ff00, 0.8);
-    circle.setDepth(11);
-    
-    // Update circle position with player
-    this.events.on('update', () => {
-      circle.setPosition(this.player.x, this.player.y - 140);
-    });
-
-    // Drag events
+    // Player drag handlers
     this.player.on('dragstart', this.onPlayerDragStart, this);
     this.player.on('drag', this.onPlayerDrag, this);
     this.player.on('dragend', this.onPlayerDragEnd, this);
+    
+    // Palette state listener - disable player drag when palette is open
+    const handlePaletteState = (event: CustomEvent) => {
+      const { isOpen } = event.detail;
+      
+      if (isOpen) {
+        // Disable player dragging
+        this.input.setDraggable(this.player, false);
+        this.player.input!.cursor = 'not-allowed';
+        this.player.setAlpha(0.5);
+      } else {
+        // Re-enable player dragging
+        this.input.setDraggable(this.player, true);
+        this.player.input!.cursor = 'grab';
+        this.player.setAlpha(1);
+      }
+    };
+    
+    window.addEventListener('paletteStateChanged', handlePaletteState as EventListener);
+    
+    // Cleanup listener on shutdown
+    this.events.once('shutdown', () => {
+      window.removeEventListener('paletteStateChanged', handlePaletteState as EventListener);
+    });
   }
 
   private onPlayerDragStart(): void {
@@ -195,6 +243,96 @@ export class BuilderScene extends Phaser.Scene {
       Math.round(this.player.x),
       Math.round(this.player.y)
     );
+  }
+
+  private createPlacedItems(): void {
+    const groundY = this.config.worldHeight - 40;
+    
+    // Create item manager in builder mode
+    this.itemManager = new PlacedItemManager(this, groundY, true);
+    
+    // Load existing items from config
+    if (this.config.placedItems && this.config.placedItems.length > 0) {
+      this.itemManager.createItems(this.config.placedItems);
+    }
+    
+    // Setup background click for deselection
+    this.itemManager.setupBackgroundDeselect();
+    
+    // Subscribe to selection changes to update visuals
+    const selectedUnsubscribe = selectedItemId.subscribe(id => {
+      this.data.set('selectedItemId', id);
+      this.itemManager.updateSelectionVisuals();
+    });
+    this.unsubscribers.push(selectedUnsubscribe);
+    
+    // Subscribe to config changes to sync item updates and deletions
+    let previousItems: PlacedItem[] = [];
+    const configUnsubscribe = builderConfig.subscribe(config => {
+      if (!config?.placedItems) return;
+      
+      const currentItems = config.placedItems;
+      
+      // Check for deleted items
+      previousItems.forEach(oldItem => {
+        const stillExists = currentItems.find(item => item.id === oldItem.id);
+        if (!stillExists) {
+          // Item was deleted from store, remove sprite
+          this.itemManager.removeItem(oldItem.id);
+        }
+      });
+      
+      // Check for updated items
+      currentItems.forEach(newItemData => {
+        const oldItemData = previousItems.find(item => item.id === newItemData.id);
+        if (oldItemData && JSON.stringify(oldItemData) !== JSON.stringify(newItemData)) {
+          // Item was updated, sync with sprite
+          this.itemManager.updateItem(newItemData.id, newItemData);
+        }
+      });
+      
+      previousItems = currentItems.map(item => ({ ...item }));
+    });
+    this.unsubscribers.push(configUnsubscribe);
+    
+    // Listen for asset drop events from AssetPalette
+    const handleAssetDrop = (event: CustomEvent) => {
+      const { assetKey, canvasX, canvasY } = event.detail;
+      
+      // Convert canvas coordinates to world coordinates
+      const camera = this.cameras.main;
+      const worldX = camera.scrollX + canvasX / camera.zoom;
+      const worldY = camera.scrollY + canvasY / camera.zoom;
+      
+      // Get current depth layer preference
+      let currentDepthLayer: 'behind' | 'front' = 'behind';
+      const unsubscribe = itemDepthLayer.subscribe(layer => {
+        currentDepthLayer = layer;
+      });
+      unsubscribe();
+      
+      // Create new item at drop position with appropriate scale and depth
+      const newItem = {
+        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        assetKey,
+        x: Math.round(worldX),
+        y: 0,
+        scale: ASSET_SCALES[assetKey] || 1,
+        depth: currentDepthLayer === 'behind' ? DEPTH_VALUES.BEHIND : DEPTH_VALUES.FRONT,
+        yOffset: Math.round(worldY - groundY),
+      };
+      
+      // Add to store and create sprite
+      addPlacedItem(newItem);
+      this.itemManager.createItem(newItem);
+    };
+    
+    window.addEventListener('assetDropped', handleAssetDrop as EventListener);
+    
+    // Clean up listener when scene shuts down
+    this.events.once('shutdown', () => {
+      window.removeEventListener('assetDropped', handleAssetDrop as EventListener);
+    });
   }
 
   private setupCamera(): void {
@@ -272,12 +410,38 @@ export class BuilderScene extends Phaser.Scene {
         );
       }
     });
+    
+    // Delete key to remove selected item
+    const deleteKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE);
+    const backspaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE);
+    
+    const handleDelete = () => {
+      const selectedId = this.data.get('selectedItemId');
+      if (selectedId) {
+        deletePlacedItem(selectedId);
+        // Sprite removal is now handled automatically by builderConfig subscriber
+      }
+    };
+    
+    deleteKey.on('down', handleDelete);
+    backspaceKey.on('down', handleDelete);
   }
 
   update(): void {
     // Update base layer tiling for infinite scrolling effect
     if (this.parallaxLayers) {
       updateParallaxTiling(this.parallaxLayers.baseLayer, this.cameras.main);
+    }
+  }
+
+  shutdown(): void {
+    // Clean up store subscriptions
+    this.unsubscribers.forEach(unsubscribe => unsubscribe());
+    this.unsubscribers = [];
+    
+    // Clean up item manager
+    if (this.itemManager) {
+      this.itemManager.destroy();
     }
   }
 }

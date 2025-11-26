@@ -61,6 +61,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setSize(40, 40);
     this.setOffset(4, 8);
     this.setScale(5);
+    this.setDepth(10); // Match PLAYER_DEPTH constant for proper item layering
 
     // Start with idle animation
     this.play(`cat-idle-${this.currentSkin}`);
