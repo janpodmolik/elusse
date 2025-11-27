@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../PlacedItemManager';
-import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig } from '../../stores/builderStores';
+import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
 import type { PlacedItem } from '../../data/mapConfig';
 import { PlacedItemFactory } from '../../data/mapConfig';
 import { EventBus, EVENTS, type AssetDroppedEvent } from '../../events/EventBus';
+import { isTypingInTextField } from '../../utils/inputUtils';
 
 /**
  * BuilderItemsController - Manages placed items and their interactions
@@ -49,6 +50,19 @@ export class BuilderItemsController {
       this.itemManager.updateSelectionVisuals();
     });
     this.unsubscribers.push(selectedUnsubscribe);
+    
+    // Subscribe to edit mode changes to enable/disable item interactions
+    const editModeUnsubscribe = builderEditMode.subscribe(mode => {
+      if (mode === 'dialogs') {
+        // Disable item interactions and clear selection
+        clearSelection();
+        this.itemManager.setInteractiveEnabled(false);
+      } else {
+        // Re-enable in items mode
+        this.itemManager.setInteractiveEnabled(true);
+      }
+    });
+    this.unsubscribers.push(editModeUnsubscribe);
     
     // Subscribe to config changes for sync
     let previousItems: PlacedItem[] = [];
@@ -117,10 +131,14 @@ export class BuilderItemsController {
   }
 
   private setupDeleteKeys(): void {
-    const deleteKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE);
-    const backspaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE);
+    // Note: enableCapture=false allows keys to reach input fields
+    const deleteKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE, false);
+    const backspaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE, false);
     
     const handleDelete = () => {
+      // Ignore when typing in input fields
+      if (isTypingInTextField()) return;
+      
       const selectedId = this.scene.data.get('selectedItemId');
       if (selectedId) {
         deletePlacedItem(selectedId);

@@ -8,16 +8,22 @@
 
 import { writable, derived, get } from 'svelte/store';
 import type { MapConfig, PlacedItem } from '../data/mapConfig';
+import type { DialogZone, LocalizedText } from '../types/DialogTypes';
 
 // ==================== Types ====================
 
 export type ItemDepthLayer = 'behind' | 'front';
+
+/** Builder edit mode */
+export type BuilderEditMode = 'items' | 'dialogs';
 
 interface BuilderState {
   isActive: boolean;
   config: MapConfig | null;
   selectedItemId: string | null;
   itemDepthLayer: ItemDepthLayer;
+  editMode: BuilderEditMode;
+  selectedDialogZoneId: string | null;
 }
 
 // ==================== Main State Store ====================
@@ -27,6 +33,8 @@ const initialState: BuilderState = {
   config: null,
   selectedItemId: null,
   itemDepthLayer: 'behind',
+  editMode: 'items',
+  selectedDialogZoneId: null,
 };
 
 const builderState = writable<BuilderState>(initialState);
@@ -44,6 +52,15 @@ export const selectedItemId = derived(builderState, $state => $state.selectedIte
 
 /** Current depth layer preference for new items */
 export const itemDepthLayer = derived(builderState, $state => $state.itemDepthLayer);
+
+/** Current edit mode (items or dialogs) */
+export const builderEditMode = derived(builderState, $state => $state.editMode);
+
+/** Currently selected dialog zone ID */
+export const selectedDialogZoneId = derived(builderState, $state => $state.selectedDialogZoneId);
+
+/** All dialog zones from config */
+export const dialogZones = derived(builderState, $state => $state.config?.dialogZones || []);
 
 // ==================== Actions - Player ====================
 
@@ -148,9 +165,15 @@ export function updateItemDepth(id: string, depth: number): void {
 export function enterBuilderMode(config: MapConfig): void {
   builderState.set({
     isActive: true,
-    config: { ...config, placedItems: config.placedItems || [] },
+    config: { 
+      ...config, 
+      placedItems: config.placedItems || [],
+      dialogZones: config.dialogZones || []
+    },
     selectedItemId: null,
-    itemDepthLayer: 'behind'
+    itemDepthLayer: 'behind',
+    editMode: 'items',
+    selectedDialogZoneId: null,
   });
   // Reset zoom state when entering builder
   isBuilderZoomedOut.set(false);
@@ -216,4 +239,150 @@ export const builderCameraInfo = writable<CameraInfo>({
 /** Update camera info (called from BuilderScene on each frame) */
 export function updateCameraInfo(info: Partial<CameraInfo>): void {
   builderCameraInfo.update(state => ({ ...state, ...info }));
+}
+
+// ==================== Actions - Edit Mode ====================
+
+/** Set builder edit mode (items or dialogs) */
+export function setBuilderEditMode(mode: BuilderEditMode): void {
+  builderState.update(state => ({
+    ...state,
+    editMode: mode,
+    // Clear selections when switching modes
+    selectedItemId: mode === 'items' ? state.selectedItemId : null,
+    selectedDialogZoneId: mode === 'dialogs' ? state.selectedDialogZoneId : null,
+  }));
+}
+
+/** Toggle between edit modes */
+export function toggleBuilderEditMode(): void {
+  builderState.update(state => ({
+    ...state,
+    editMode: state.editMode === 'items' ? 'dialogs' : 'items',
+    selectedItemId: null,
+    selectedDialogZoneId: null,
+  }));
+}
+
+// ==================== Actions - Dialog Zones ====================
+
+/** Add a new dialog zone */
+export function addDialogZone(zone: DialogZone): void {
+  builderState.update(state => {
+    if (!state.config) return state;
+    
+    const dialogZones = state.config.dialogZones || [];
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        dialogZones: [...dialogZones, zone]
+      }
+    };
+  });
+}
+
+/** Update an existing dialog zone by ID */
+export function updateDialogZone(id: string, updates: Partial<DialogZone>): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.dialogZones) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        dialogZones: state.config.dialogZones.map(zone =>
+          zone.id === id ? { ...zone, ...updates } : zone
+        )
+      }
+    };
+  });
+}
+
+/** Delete a dialog zone by ID */
+export function deleteDialogZone(id: string): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.dialogZones) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        dialogZones: state.config.dialogZones.filter(zone => zone.id !== id)
+      },
+      selectedDialogZoneId: state.selectedDialogZoneId === id ? null : state.selectedDialogZoneId
+    };
+  });
+}
+
+/** Select a dialog zone by ID */
+export function selectDialogZone(id: string | null): void {
+  builderState.update(state => ({
+    ...state,
+    selectedDialogZoneId: id
+  }));
+}
+
+/** Get a dialog zone by ID */
+export function getDialogZone(id: string): DialogZone | undefined {
+  const state = get(builderState);
+  return state.config?.dialogZones?.find(zone => zone.id === id);
+}
+
+/** Update localized text for a dialog zone */
+export function updateDialogZoneText(zoneId: string, language: string, updates: Partial<LocalizedText>): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.dialogZones) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        dialogZones: state.config.dialogZones.map(zone => {
+          if (zone.id !== zoneId) return zone;
+          
+          const existingIndex = zone.texts.findIndex(t => t.language === language);
+          let newTexts: LocalizedText[];
+          
+          if (existingIndex >= 0) {
+            // Update existing
+            newTexts = zone.texts.map((t, i) => 
+              i === existingIndex ? { ...t, ...updates } : t
+            );
+          } else {
+            // Add new language
+            newTexts = [...zone.texts, { language, title: '', content: '', ...updates }];
+          }
+          
+          return { ...zone, texts: newTexts };
+        })
+      }
+    };
+  });
+}
+
+/** Add a new language to a dialog zone */
+export function addDialogZoneLanguage(zoneId: string, language: string): void {
+  updateDialogZoneText(zoneId, language, { language, title: '', content: '' });
+}
+
+/** Remove a language from a dialog zone */
+export function removeDialogZoneLanguage(zoneId: string, language: string): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.dialogZones) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        dialogZones: state.config.dialogZones.map(zone => {
+          if (zone.id !== zoneId) return zone;
+          return {
+            ...zone,
+            texts: zone.texts.filter(t => t.language !== language)
+          };
+        })
+      }
+    };
+  });
 }

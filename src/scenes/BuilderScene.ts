@@ -7,6 +7,7 @@ import { BuilderCameraController } from './builder/BuilderCameraController';
 import { BuilderPlayerController } from './builder/BuilderPlayerController';
 import { BuilderGridOverlay } from './builder/BuilderGridOverlay';
 import { BuilderItemsController } from './builder/BuilderItemsController';
+import { DialogZoneRenderer } from './builder/DialogZoneRenderer';
 import { PlacedItemManager } from './PlacedItemManager';
 import { GROUND_HEIGHT } from './builder/builderConstants';
 import { GroundManager } from './shared/GroundManager';
@@ -27,6 +28,7 @@ export class BuilderScene extends Phaser.Scene {
   private playerController!: BuilderPlayerController;
   private gridOverlay!: BuilderGridOverlay;
   private itemsController!: BuilderItemsController;
+  private dialogZoneRenderer!: DialogZoneRenderer;
   
   // Configuration
   private config!: MapConfig;
@@ -80,6 +82,7 @@ export class BuilderScene extends Phaser.Scene {
     this.playerController = new BuilderPlayerController(this, this.config.worldWidth, this.config.worldHeight);
     this.gridOverlay = new BuilderGridOverlay(this, this.config.worldWidth, this.config.worldHeight);
     this.itemsController = new BuilderItemsController(this, groundY);
+    this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
     // Load and create background
     this.createBackground();
@@ -95,6 +98,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Create placed items manager
     this.itemsController.create(this.config.placedItems || []);
+    
+    // Create dialog zone renderer
+    this.dialogZoneRenderer.create();
 
     // Setup camera and controls
     this.cameraController.setup();
@@ -223,6 +229,9 @@ export class BuilderScene extends Phaser.Scene {
     }
     if (this.itemsController) {
       this.itemsController.destroy();
+    }
+    if (this.dialogZoneRenderer) {
+      this.dialogZoneRenderer.destroy();
     }
   }
 }

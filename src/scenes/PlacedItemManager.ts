@@ -158,6 +158,40 @@ export class PlacedItemManager {
   getAllItems(): PlacedItem[] {
     return Array.from(this.items.values()).map(item => item.data);
   }
+  
+  /**
+   * Enable or disable all item interactions
+   * Used to disable items when in dialogs edit mode
+   */
+  setInteractiveEnabled(enabled: boolean): void {
+    if (!this.isBuilderMode || !this.dragController) return;
+    
+    this.items.forEach(({ sprite, data }) => {
+      if (enabled) {
+        // Re-enable interaction and restore opacity
+        this.dragController!.makeInteractive(sprite, data.id);
+        sprite.setAlpha(1);
+        
+        // Re-add pointerdown for selection sync
+        sprite.on('pointerdown', () => {
+          if (!this.dragController?.getIsDragging()) {
+            selectItem(data.id);
+            this.updateSelectionVisuals();
+          }
+        });
+      } else {
+        // Disable interaction and make semi-transparent
+        sprite.disableInteractive();
+        sprite.off('pointerdown');
+        sprite.setAlpha(0.6);
+      }
+    });
+    
+    // Clear selection visuals when disabling
+    if (!enabled && this.selectionManager) {
+      this.selectionManager.clearVisuals();
+    }
+  }
 
   /**
    * Destroy manager and cleanup

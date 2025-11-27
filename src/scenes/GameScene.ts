@@ -9,7 +9,8 @@ import { loadMapConfig, MapConfig } from '../data/mapConfig';
 import { getBuilderConfig } from '../stores/builderStores';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { isLoading } from '../stores';
+import { isLoading, setActiveDialogZone } from '../stores';
+import type { DialogZone } from '../types/DialogTypes';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -23,6 +24,12 @@ export class GameScene extends Phaser.Scene {
 
   // Placed items system (replaces dialog trigger system)
   private itemManager!: PlacedItemManager;
+  
+  // Dialog zones loaded from config
+  private dialogZones: DialogZone[] = [];
+  
+  // Currently active dialog zone (for detecting zone exit)
+  private currentDialogZone: DialogZone | null = null;
 
   // Store unsubscribe functions
   private unsubscribers: Array<() => void> = [];
@@ -100,8 +107,8 @@ export class GameScene extends Phaser.Scene {
         this.itemManager.createItems(this.mapConfig.placedItems);
       }
       
-      // TODO: Setup collision detection for items with dialogConfig
-      // For now, items are just visual decorations
+      // Load dialog zones from config
+      this.dialogZones = this.mapConfig.dialogZones || [];
 
       // Setup camera to follow player
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -188,6 +195,10 @@ export class GameScene extends Phaser.Scene {
     // Remove resize listener
     this.scale.off('resize', this.handleResize, this);
     
+    // Clear active dialog zone
+    setActiveDialogZone(null);
+    this.currentDialogZone = null;
+    
     // Clean up store subscriptions to prevent memory leaks
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
     this.unsubscribers = [];
@@ -203,10 +214,35 @@ export class GameScene extends Phaser.Scene {
     if (!this.player) return;
     
     this.player.update();
+    
+    // Check dialog zone collisions
+    this.checkDialogZones();
 
     // Update base layer tiling for infinite scrolling effect
     if (this.parallaxLayers) {
       updateParallaxTiling(this.parallaxLayers.baseLayer, this.cameras.main);
+    }
+  }
+  
+  /**
+   * Check if player is inside any dialog zone and update active dialog
+   */
+  private checkDialogZones(): void {
+    const playerX = this.player.x;
+    
+    // Find zone player is currently in (if any)
+    let activeZone: DialogZone | null = null;
+    for (const zone of this.dialogZones) {
+      if (playerX >= zone.x && playerX <= zone.x + zone.width) {
+        activeZone = zone;
+        break;
+      }
+    }
+    
+    // Only update if zone changed
+    if (activeZone?.id !== this.currentDialogZone?.id) {
+      this.currentDialogZone = activeZone;
+      setActiveDialogZone(activeZone);
     }
   }
 }

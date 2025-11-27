@@ -1,7 +1,7 @@
 <script lang="ts">
   interface Props {
     onclick?: (event: MouseEvent) => void;
-    position?: 'top-left' | 'top-right' | 'stack-2' | 'stack-3';
+    position?: 'top-left' | 'top-right' | 'stack-2' | 'stack-3' | 'inline';
     variant?: 'default' | 'green' | 'blue' | 'orange' | 'red';
     disabled?: boolean;
     title?: string;
@@ -11,11 +11,11 @@
   
   let {
     onclick,
-    position = 'top-right',
+    position = 'inline',
     variant = 'default',
     disabled = false,
     title = '',
-    width = '100px',
+    width,
     children
   }: Props = $props();
   
@@ -30,12 +30,15 @@
   
   // Use $derived for reactive color computation when variant changes
   const currentColor = $derived(colors[variant]);
+  
+  // Compute width style - only set if explicitly provided
+  const widthStyle = $derived(width ? `--btn-width: ${width};` : '');
 </script>
 
 <button
   class="pixel-btn pixel-btn--{position}"
   class:disabled
-  style="--btn-width: {width}; --color-base: {currentColor.base}; --color-hover: {currentColor.hover}; --color-active: {currentColor.active}"
+  style="{widthStyle} --color-base: {currentColor.base}; --color-hover: {currentColor.hover}; --color-active: {currentColor.active}"
   {onclick}
   {disabled}
   {title}
@@ -45,10 +48,9 @@
 
 <style>
   .pixel-btn {
-    position: fixed;
-    width: var(--btn-width, 100px);
+    width: var(--btn-width, auto);
     height: 40px;
-    padding: 0;
+    padding: 12px 16px;
     background: var(--color-base);
     border: 3px solid #333;
     color: white;
@@ -65,6 +67,19 @@
     justify-content: center;
     gap: 8px;
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Fixed position variants */
+  .pixel-btn--top-left,
+  .pixel-btn--top-right,
+  .pixel-btn--stack-2,
+  .pixel-btn--stack-3 {
+    position: fixed;
+  }
+  
+  /* Inline variant - flows with document */
+  .pixel-btn--inline {
+    position: relative;
   }
 
   .pixel-btn:hover:not(.disabled) {
@@ -107,9 +122,9 @@
   /* Mobile optimization */
   @media (max-width: 600px) {
     .pixel-btn {
-      width: calc(var(--btn-width, 100px) * 0.8);
       height: 35px;
       font-size: 10px;
+      padding: 10px 12px;
       border-width: 2px;
     }
 

@@ -10,6 +10,7 @@
   import { localization } from '../data/localization';
   import BuilderUI from './BuilderUI.svelte';
   import PixelButton from './PixelButton.svelte';
+  import DialogBubble from './DialogBubble.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../utils/sceneManager';
 
   let dialogElement: HTMLDialogElement;
@@ -64,6 +65,9 @@
   <!-- Builder Mode UI -->
   {#if $isBuilderMode}
     <BuilderUI />
+  {:else}
+    <!-- Game Mode: Dialog Bubble -->
+    <DialogBubble />
   {/if}
 
   <!-- Builder Mode Toggle Button (only in play mode) -->

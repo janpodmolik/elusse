@@ -13,7 +13,11 @@
 
 /* Re-enable pointer events on interactive elements */
 #game-ui button,
-#game-ui dialog {
+#game-ui dialog,
+#game-ui .dialog-panel,
+#game-ui input,
+#game-ui textarea,
+#game-ui select {
   pointer-events: auto;
 }
 

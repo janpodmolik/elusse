@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut } from '../stores/builderStores';
+  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, toggleBuilderEditMode } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { getItemDepth } from '../constants/depthLayers';
   import AssetPalette from './AssetPalette.svelte';
   import PixelButton from './PixelButton.svelte';
   import BuilderMinimap from './BuilderMinimap.svelte';
   import LandscapeHint from './LandscapeHint.svelte';
+  import DialogZonePanel from './DialogZonePanel.svelte';
 
   function handleSave() {
     switchToGame();
@@ -35,9 +36,17 @@
     deletePlacedItem($selectedItemId);
     clearSelection();
   }
+  
+  function handleToggleEditMode() {
+    toggleBuilderEditMode();
+  }
 </script>
 
-<AssetPalette />
+{#if $builderEditMode === 'items'}
+  <AssetPalette />
+{:else}
+  <DialogZonePanel />
+{/if}
 <BuilderMinimap />
 <LandscapeHint />
 
@@ -63,8 +72,18 @@
   </PixelButton>
 </div>
 
-<!-- Item controls - top center (when item selected) -->
-{#if $selectedItemId}
+<!-- DIALOGS button positioned below ASSETS button -->
+<PixelButton 
+  position="stack-2"
+  variant={$builderEditMode === 'dialogs' ? 'orange' : 'blue'}
+  onclick={handleToggleEditMode}
+  title="Toggle edit mode: items or dialog zones"
+>
+  DIALOGS
+</PixelButton>
+
+<!-- Item controls - top center (when item selected in items mode) -->
+{#if $builderEditMode === 'items' && $selectedItemId}
   <div class="item-controls">
     <PixelButton
       variant={$itemDepthLayer === 'behind' ? 'blue' : 'orange'}

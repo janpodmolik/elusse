@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { updatePlayerPosition } from '../../stores/builderStores';
+import { updatePlayerPosition, builderEditMode } from '../../stores/builderStores';
 import {
   GROUND_HEIGHT,
   PLAYER_SPRITE_FRAME_HEIGHT,
@@ -20,6 +20,7 @@ export class BuilderPlayerController {
   private worldWidth: number;
   private worldHeight: number;
   private groundY: number;
+  private unsubscribers: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -50,8 +51,33 @@ export class BuilderPlayerController {
     this.scene.data.set('playerSprite', this.player);
 
     this.setupDragHandlers();
+    this.setupEditModeSubscription();
 
     return this.player;
+  }
+  
+  /**
+   * Subscribe to edit mode changes to enable/disable player interaction
+   */
+  private setupEditModeSubscription(): void {
+    const unsubscribe = builderEditMode.subscribe(mode => {
+      if (mode === 'dialogs') {
+        // Disable player interaction and make semi-transparent
+        this.player.disableInteractive();
+        this.player.setAlpha(0.6);
+      } else {
+        // Re-enable in items mode and restore opacity
+        const hitArea = new Phaser.Geom.Rectangle(8, 4, 32, 40);
+        this.player.setInteractive({
+          hitArea,
+          hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+          draggable: true,
+          cursor: 'grab'
+        });
+        this.player.setAlpha(1);
+      }
+    });
+    this.unsubscribers.push(unsubscribe);
   }
 
   private setupDragHandlers(): void {
@@ -105,6 +131,10 @@ export class BuilderPlayerController {
    * Cleanup
    */
   destroy(): void {
+    // Unsubscribe from stores
+    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers = [];
+    
     if (this.player) {
       this.player.destroy();
     }

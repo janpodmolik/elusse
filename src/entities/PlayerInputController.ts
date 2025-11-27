@@ -42,8 +42,11 @@ export class PlayerInputController {
   private scene: Phaser.Scene;
   private getPlayerPosition: () => { x: number; y: number };
   
-  // Keyboard controls
-  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  // Keyboard controls - arrow keys (no down key needed for platformer)
+  private keyUp?: Phaser.Input.Keyboard.Key;
+  private keyLeft?: Phaser.Input.Keyboard.Key;
+  private keyRight?: Phaser.Input.Keyboard.Key;
+  // WASD + Space
   private keyA?: Phaser.Input.Keyboard.Key;
   private keyD?: Phaser.Input.Keyboard.Key;
   private keyW?: Phaser.Input.Keyboard.Key;
@@ -74,11 +77,16 @@ export class PlayerInputController {
    */
   private setupKeyboardControls(): void {
     if (this.scene.input.keyboard) {
-      this.cursors = this.scene.input.keyboard.createCursorKeys();
-      this.keyA = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-      this.keyD = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-      this.keyW = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-      this.keySpace = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      // Note: enableCapture=false allows keys to reach input fields in UI
+      // Arrow keys (no down key needed for platformer)
+      this.keyUp = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP, false);
+      this.keyLeft = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT, false);
+      this.keyRight = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT, false);
+      // WASD + Space
+      this.keyA = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A, false);
+      this.keyD = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D, false);
+      this.keyW = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W, false);
+      this.keySpace = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE, false);
     }
   }
 
@@ -161,11 +169,10 @@ export class PlayerInputController {
    * Get current input state
    */
   getInputState(): InputState {
-    const left = this.keyA?.isDown || this.cursors?.left?.isDown || this.touchLeft || false;
-    const right = this.keyD?.isDown || this.cursors?.right?.isDown || this.touchRight || false;
+    const left = this.keyA?.isDown || this.keyLeft?.isDown || this.touchLeft || false;
+    const right = this.keyD?.isDown || this.keyRight?.isDown || this.touchRight || false;
     const jump = this.keySpace?.isDown || this.keyW?.isDown || 
-                 this.cursors?.space?.isDown || this.cursors?.up?.isDown || 
-                 this.touchJump || false;
+                 this.keyUp?.isDown || this.touchJump || false;
     
     return { left, right, jump };
   }

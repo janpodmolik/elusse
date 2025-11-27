@@ -172,6 +172,9 @@ export const EVENTS = {
   
   // Minimap events
   MINIMAP_NAVIGATE: 'minimap:navigate',
+  
+  // Dialog zone events
+  DIALOG_ZONE_CREATE: 'dialogZone:create',
 } as const;
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS];

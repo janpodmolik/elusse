@@ -8,7 +8,9 @@
  * In Svelte 5 components, use: $storeName (auto-subscribed)
  * In Phaser/JS: storeName.set(value) or storeName.subscribe(callback)
  */
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
+import type { DialogZone } from './types/DialogTypes';
+import { getZoneText } from './types/DialogTypes';
 
 // ==================== UI State Stores ====================
 
@@ -35,6 +37,25 @@ export const hasPlayerMoved = writable<boolean>(false);
 
 /** Background change trigger (increment to trigger reload in GameScene) */
 export const backgroundChangeCounter = writable<number>(0);
+
+// ==================== Dialog System Stores ====================
+
+/** Currently active dialog zone (player is inside) */
+export const activeDialogZone = writable<DialogZone | null>(null);
+
+/** Active dialog text based on current language */
+export const activeDialogText = derived(
+  [activeDialogZone, currentLanguage],
+  ([$zone, $lang]) => {
+    if (!$zone) return null;
+    return getZoneText($zone, $lang);
+  }
+);
+
+/** Set active dialog zone (called from GameScene) */
+export function setActiveDialogZone(zone: DialogZone | null): void {
+  activeDialogZone.set(zone);
+}
 
 // ==================== Store Utilities ====================
 

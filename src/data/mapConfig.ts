@@ -5,6 +5,7 @@
 
 import { getAssetScale } from './assets';
 import { getItemDepth } from '../constants/depthLayers';
+import type { DialogZone } from '../types/DialogTypes';
 
 /**
  * Placed item in the game world
@@ -26,6 +27,7 @@ export interface MapConfig {
   playerStartX: number;
   playerStartY: number;
   placedItems?: PlacedItem[];
+  dialogZones?: DialogZone[];
 }
 
 /**

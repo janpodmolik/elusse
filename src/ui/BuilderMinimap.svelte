@@ -10,7 +10,7 @@
   
   // Drag state
   let isDragging = $state(false);
-  let containerRef: HTMLDivElement | null = null;
+  let containerRef = $state<HTMLDivElement | null>(null);
   
   // Current dimensions based on drag state
   let currentWidth = $derived(isDragging ? ENLARGED_WIDTH : MINIMAP_WIDTH);

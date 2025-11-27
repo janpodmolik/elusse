@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { setBuilderZoom } from '../../stores/builderStores';
+import { isTypingInTextField } from '../../utils/inputUtils';
 
 // Zoom constants
 const MIN_ZOOM = 0.3;  // Minimum zoom (zoomed out) - keeps text readable
@@ -154,25 +155,36 @@ export class BuilderCameraController {
   }
 
   private setupKeyboardControls(): void {
-    // Arrow keys and WASD
-    const cursors = this.scene.input.keyboard!.createCursorKeys();
+    // Note: enableCapture=false allows keys to reach input fields
+    // Arrow keys
+    const arrowKeys = {
+      up: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP, false),
+      down: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN, false),
+      left: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT, false),
+      right: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT, false),
+    };
+    // WASD
     const wasdKeys = {
-      w: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      a: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      s: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      d: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      w: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W, false),
+      a: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A, false),
+      s: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S, false),
+      d: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D, false),
     };
     
     // Spacebar to center on player (disabled when zoomed out)
-    const spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    const spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE, false);
     spaceKey.on('down', () => {
+      // Ignore when typing in input fields
+      if (isTypingInTextField()) return;
       if (this.isZoomedOut) return;
       this.centerOnPlayer();
     });
     
     // F key to toggle zoom-to-fit
-    const fKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    const fKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F, false);
     fKey.on('down', () => {
+      // Ignore when typing in input fields
+      if (isTypingInTextField()) return;
       this.toggleZoomToFit();
     });
     
@@ -180,12 +192,15 @@ export class BuilderCameraController {
       // Disable keyboard panning when zoomed out
       if (this.isZoomedOut) return;
       
+      // Ignore when typing in input fields
+      if (isTypingInTextField()) return;
+      
       const panSpeed = 10;
 
       // Horizontal movement (A/D or Left/Right arrows)
-      if (cursors.left!.isDown || wasdKeys.a.isDown) {
+      if (arrowKeys.left.isDown || wasdKeys.a.isDown) {
         this.camera.scrollX = Math.max(0, this.camera.scrollX - panSpeed);
-      } else if (cursors.right!.isDown || wasdKeys.d.isDown) {
+      } else if (arrowKeys.right.isDown || wasdKeys.d.isDown) {
         this.camera.scrollX = Math.min(
           this.worldWidth - this.camera.width,
           this.camera.scrollX + panSpeed
@@ -193,9 +208,9 @@ export class BuilderCameraController {
       }
 
       // Vertical movement (W/S or Up/Down arrows)
-      if (cursors.up!.isDown || wasdKeys.w.isDown) {
+      if (arrowKeys.up.isDown || wasdKeys.w.isDown) {
         this.camera.scrollY = Math.max(0, this.camera.scrollY - panSpeed);
-      } else if (cursors.down!.isDown || wasdKeys.s.isDown) {
+      } else if (arrowKeys.down.isDown || wasdKeys.s.isDown) {
         this.camera.scrollY = Math.min(
           this.worldHeight - this.camera.height,
           this.camera.scrollY + panSpeed
