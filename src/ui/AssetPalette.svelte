@@ -1,20 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import PixelButton from './PixelButton.svelte';
+  import DraggablePanel from './DraggablePanel.svelte';
   import { ASSETS } from '../data/assets';
   import { EventBus, EVENTS, type AssetDroppedEvent } from '../events/EventBus';
   
   const assets = ASSETS;
   
-  let isOpen = $state(false);
+  let isOpen = $state(true);
   let draggedAsset = $state<string | null>(null);
   
   // Touch drag state
   let touchDragElement = $state<HTMLElement | null>(null);
   
-  function togglePalette(event: MouseEvent) {
-    event.stopPropagation();
-    event.preventDefault();
+  function togglePalette() {
     isOpen = !isOpen;
   }
   
@@ -128,7 +127,6 @@
   
   function stopMouseDown(event: PointerEvent) {
     // Prevent mousedown from reaching canvas to avoid dragging sprites underneath
-    // Drag events (ondragstart, ondrag, ondrop) continue to work normally
     event.stopPropagation();
   }
   
@@ -188,29 +186,35 @@
   });
 </script>
 
-<div class="palette-container">
-  <!-- ASSETS button - always top-right -->
-  <PixelButton 
-    onclick={togglePalette}
-    position="top-right"
-    variant="blue"
-    width="140px"
-    title="Asset Palette"
-  >
-    {isOpen ? '▼' : '◀'} ASSETS
-  </PixelButton>
+<!-- ASSETS button - always top-right -->
+<PixelButton 
+  onclick={togglePalette}
+  position="top-right"
+  variant={isOpen ? 'orange' : 'blue'}
+  width="120px"
+  title="Toggle Asset Palette"
+>
+  ASSETS
+</PixelButton>
 
-  {#if isOpen}
+{#if isOpen}
+  <DraggablePanel 
+    panelId="asset-palette"
+    title="Assets"
+    initialRight={10}
+    initialTop={60}
+    width={280}
+  >
+    {#snippet headerExtra()}
+      <span class="palette-hint">Drag to place</span>
+    {/snippet}
+    
     <div
-      class="palette-dropdown"
+      class="palette-content"
       role="toolbar"
       tabindex="-1"
       onpointerdown={stopMouseDown}
     >
-      <div class="palette-header">
-        <span class="palette-title">Assets</span>
-        <span class="palette-hint">Drag to place</span>
-      </div>
       <div class="palette-grid">
         {#each assets as asset}
           <div 
@@ -234,86 +238,20 @@
         {/each}
       </div>
     </div>
-  {/if}
-</div>
+  </DraggablePanel>
+{/if}
 
 <style>
-  .palette-container {
-    pointer-events: none; /* Allow clicks through */
-  }
-  
-  .palette-container :global(.pixel-btn) {
-    pointer-events: auto; /* Re-enable for button */
-  }
-  
-  .palette-dropdown {
-    position: fixed;
-    top: calc(60px + env(safe-area-inset-top));
-    right: calc(10px + env(safe-area-inset-right));
-    width: clamp(240px, 30vw, 320px);
-    min-height: 200px;
-    max-height: min(calc(100vh - 150px), 500px);
-    background: #1a1a2e;
-    border: 3px solid #333;
-    box-shadow: 
-      6px 6px 0 rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-    overflow-y: auto;
-    overflow-x: hidden;
-    image-rendering: pixelated;
-    pointer-events: auto;
-    user-select: none;
-    -webkit-user-select: none;
-    
-    /* Pixel art scrollbar */
-    scrollbar-width: thin;
-    scrollbar-color: #4a90e2 #0f0f1a;
-  }
-  
-  /* Webkit scrollbar styling */
-  .palette-dropdown::-webkit-scrollbar {
-    width: 12px;
-  }
-  
-  .palette-dropdown::-webkit-scrollbar-track {
-    background: #0f0f1a;
-    border-left: 2px solid #333;
-  }
-  
-  .palette-dropdown::-webkit-scrollbar-thumb {
-    background: #4a90e2;
-    border: 2px solid #333;
-  }
-  
-  .palette-dropdown::-webkit-scrollbar-thumb:hover {
-    background: #5da0f2;
-  }
-  
-  .palette-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    background: #252540;
-    border-bottom: 2px solid #333;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-  
-  .palette-title {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  
   .palette-hint {
     font-family: 'Press Start 2P', monospace;
     font-size: 7px;
     color: #888;
     text-transform: uppercase;
+  }
+  
+  .palette-content {
+    user-select: none;
+    -webkit-user-select: none;
   }
   
   .palette-grid {
@@ -385,21 +323,6 @@
   
   /* Mobile optimization */
   @media (max-width: 600px) {
-    .palette-dropdown {
-      top: calc(50px + env(safe-area-inset-top));
-      right: calc(5px + env(safe-area-inset-right));
-      width: clamp(200px, 90vw, 280px);
-      max-height: min(calc(100vh - 120px), 400px);
-    }
-    
-    .palette-header {
-      padding: 8px 10px;
-    }
-    
-    .palette-title {
-      font-size: 8px;
-    }
-    
     .palette-hint {
       font-size: 6px;
     }

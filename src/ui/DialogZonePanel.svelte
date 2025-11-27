@@ -3,6 +3,7 @@
   import type { DialogZone, LocalizedText } from '../types/DialogTypes';
   import { ZONE_COLORS } from '../types/DialogTypes';
   import PixelButton from './PixelButton.svelte';
+  import DraggablePanel from './DraggablePanel.svelte';
   import { EventBus, EVENTS } from '../events/EventBus';
   
   // Available languages
@@ -13,9 +14,6 @@
   
   // Currently selected language tab
   let selectedLanguage = $state('cs');
-  
-  // Panel minimized state
-  let isMinimized = $state(false);
   
   // Color picker open state
   let isColorPickerOpen = $state(false);
@@ -49,15 +47,10 @@
   
   function handleClose() {
     selectDialogZone(null);
-    isMinimized = false;
   }
   
   function handleCreateZone() {
     EventBus.emit(EVENTS.DIALOG_ZONE_CREATE);
-  }
-  
-  function toggleMinimize() {
-    isMinimized = !isMinimized;
   }
   
   function handleColorSelect(color: string) {
@@ -68,11 +61,6 @@
   
   function toggleColorPicker() {
     isColorPickerOpen = !isColorPickerOpen;
-  }
-  
-  /** Stop all pointer events from propagating to canvas */
-  function stopPropagation(event: Event) {
-    event.stopPropagation();
   }
 </script>
 
@@ -87,178 +75,95 @@
 </PixelButton>
 
 {#if selectedZone}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div 
-    class="dialog-panel" 
-    class:minimized={isMinimized}
-    onpointerdown={stopPropagation}
-    onclick={stopPropagation}
+  <DraggablePanel
+    panelId="dialog-zone-panel"
+    title="Dialog Zone"
+    initialRight={10}
+    initialTop={160}
+    width={280}
+    showClose={true}
+    onclose={handleClose}
   >
-    <div class="panel-header">
-      <span class="panel-title">Dialog Zone</span>
-      <div class="header-buttons">
-        <button class="minimize-btn" onclick={toggleMinimize} title={isMinimized ? 'Expand panel' : 'Minimize panel'}>
-          {isMinimized ? '▲' : '▼'}
-        </button>
-        <button class="close-btn" onclick={handleClose}>×</button>
-      </div>
-    </div>
-    
-    {#if !isMinimized}
-    <div class="language-tabs">
-      {#each LANGUAGES as lang}
-        <button 
-          class="lang-tab" 
-          class:active={selectedLanguage === lang.code}
-          onclick={() => selectedLanguage = lang.code}
-        >
-          {lang.label}
-        </button>
-      {/each}
-    </div>
-    
-    <!-- Content form -->
     <div class="panel-content">
-      <div class="form-group">
-        <label for="dialog-title">Title</label>
-        <input 
-          id="dialog-title"
-          type="text" 
-          value={currentText?.title ?? ''}
-          oninput={handleTitleChange}
-          placeholder="Enter title..."
-        />
+      <!-- Language tabs -->
+      <div class="language-tabs">
+        {#each LANGUAGES as lang}
+          <button 
+            class="lang-tab" 
+            class:active={selectedLanguage === lang.code}
+            onclick={() => selectedLanguage = lang.code}
+          >
+            {lang.label}
+          </button>
+        {/each}
       </div>
       
-      <div class="form-group">
-        <label for="dialog-content">Content</label>
-        <textarea 
-          id="dialog-content"
-          value={currentText?.content ?? ''}
-          oninput={handleContentChange}
-          placeholder="Enter dialog text..."
-          rows="6"
-        ></textarea>
-      </div>
-      
-      <!-- Color picker -->
-      <div class="color-section">
-        <span class="color-label-title">Color</span>
-        <button 
-          class="color-button"
-          onclick={toggleColorPicker}
-          title="Change zone color"
-        >
-          <span class="zone-color" style="background: {selectedZone.color}"></span>
-          <span class="color-label">Change</span>
-        </button>
+      <!-- Content form -->
+      <div class="form-section">
+        <div class="form-group">
+          <label for="dialog-title">Title</label>
+          <input 
+            id="dialog-title"
+            type="text" 
+            value={currentText?.title ?? ''}
+            oninput={handleTitleChange}
+            placeholder="Enter title..."
+          />
+        </div>
         
-        {#if isColorPickerOpen}
-          <div class="color-picker">
-            {#each ZONE_COLORS as color}
-              <button
-                class="color-swatch"
-                class:selected={selectedZone.color === color}
-                style="background: {color}"
-                onclick={() => handleColorSelect(color)}
-                title={color}
-              ></button>
-            {/each}
-          </div>
-        {/if}
+        <div class="form-group">
+          <label for="dialog-content">Content</label>
+          <textarea 
+            id="dialog-content"
+            value={currentText?.content ?? ''}
+            oninput={handleContentChange}
+            placeholder="Enter dialog text..."
+            rows="6"
+          ></textarea>
+        </div>
+        
+        <!-- Color picker -->
+        <div class="color-section">
+          <span class="color-label-title">Color</span>
+          <button 
+            class="color-button"
+            onclick={toggleColorPicker}
+            title="Change zone color"
+          >
+            <span class="zone-color" style="background: {selectedZone.color}"></span>
+            <span class="color-label">Change</span>
+          </button>
+          
+          {#if isColorPickerOpen}
+            <div class="color-picker">
+              {#each ZONE_COLORS as color}
+                <button
+                  class="color-swatch"
+                  class:selected={selectedZone.color === color}
+                  style="background: {color}"
+                  onclick={() => handleColorSelect(color)}
+                  title={color}
+                ></button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+      
+      <!-- Delete button -->
+      <div class="panel-footer">
+        <PixelButton variant="red" onclick={handleDelete}>
+          DELETE ZONE
+        </PixelButton>
       </div>
     </div>
-    
-    <!-- Delete button -->
-    <div class="panel-footer">
-      <PixelButton variant="red" onclick={handleDelete}>
-        DELETE ZONE
-      </PixelButton>
-    </div>
-    {/if}
-  </div>
+  </DraggablePanel>
 {/if}
 
 <style>
-  .dialog-panel {
-    position: fixed;
-    top: calc(60px + env(safe-area-inset-top));
-    right: calc(10px + env(safe-area-inset-right));
-    width: 280px;
-    background: rgba(30, 30, 40, 0.95);
-    border: 3px solid #4a4a5a;
-    border-radius: 8px;
-    color: white;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    z-index: 1000;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  
-  /* Allow text selection in input fields */
-  .dialog-panel input,
-  .dialog-panel textarea {
-    user-select: text;
-    -webkit-user-select: text;
-  }
-  
-  .dialog-panel.minimized {
-    width: auto;
-  }
-  
-  .panel-header {
+  .panel-content {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border-bottom: 2px solid #4a4a5a;
-    background: rgba(50, 50, 60, 0.5);
-  }
-  
-  .minimized .panel-header {
-    border-bottom: none;
-  }
-  
-  .header-buttons {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .panel-title {
-    font-size: 11px;
-    color: #88ddff;
-  }
-  
-  .minimize-btn {
-    background: none;
-    border: none;
-    color: #88ddff;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-  }
-  
-  .minimize-btn:hover {
-    color: #aaeeff;
-  }
-  
-  .close-btn {
-    background: none;
-    border: none;
-    color: #ff6666;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-  }
-  
-  .close-btn:hover {
-    color: #ff8888;
+    flex-direction: column;
   }
   
   .language-tabs {
@@ -290,7 +195,7 @@
     margin-bottom: -2px;
   }
   
-  .panel-content {
+  .form-section {
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -413,16 +318,5 @@
     border-top: 2px solid #4a4a5a;
     display: flex;
     justify-content: center;
-  }
-  
-  @media (max-width: 500px) {
-    .dialog-panel {
-      width: calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
-      right: calc(10px + env(safe-area-inset-right));
-      top: auto;
-      bottom: calc(10px + env(safe-area-inset-bottom));
-      max-height: 50vh;
-      overflow-y: auto;
-    }
   }
 </style>
