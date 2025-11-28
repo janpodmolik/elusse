@@ -57,6 +57,16 @@ export function setActiveDialogZone(zone: DialogZone | null): void {
   activeDialogZone.set(zone);
 }
 
+// ==================== Player Screen Position ====================
+
+/** Player's screen position (for UI positioning like dialog bubbles) */
+export const playerScreenPosition = writable<{ x: number; y: number }>({ x: 0, y: 0 });
+
+/** Update player screen position (called from GameScene update) */
+export function setPlayerScreenPosition(x: number, y: number): void {
+  playerScreenPosition.set({ x, y });
+}
+
 // ==================== Store Utilities ====================
 
 /**

@@ -6,10 +6,10 @@ import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
 import { PlacedItemManager } from './PlacedItemManager';
 import { loadMapConfig, MapConfig } from '../data/mapConfig';
-import { getBuilderConfig } from '../stores/builderStores';
+import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { isLoading, setActiveDialogZone } from '../stores';
+import { isLoading, setActiveDialogZone, setPlayerScreenPosition } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
 
 export class GameScene extends Phaser.Scene {
@@ -107,8 +107,16 @@ export class GameScene extends Phaser.Scene {
         this.itemManager.createItems(this.mapConfig.placedItems);
       }
       
-      // Load dialog zones from config
+      // Load dialog zones from config (initial load)
       this.dialogZones = this.mapConfig.dialogZones || [];
+      
+      // Subscribe to dialog zones store for live updates from builder
+      const unsubDialogZones = dialogZonesStore.subscribe(zones => {
+        this.dialogZones = zones;
+        // Re-check current zone to update dialog text immediately
+        this.recheckCurrentZone();
+      });
+      this.unsubscribers.push(unsubDialogZones);
 
       // Setup camera to follow player
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -215,6 +223,12 @@ export class GameScene extends Phaser.Scene {
     
     this.player.update();
     
+    // Update player screen position for UI (dialog bubbles)
+    const camera = this.cameras.main;
+    const screenX = this.player.x - camera.scrollX;
+    const screenY = this.player.y - camera.scrollY;
+    setPlayerScreenPosition(screenX, screenY);
+    
     // Check dialog zone collisions
     this.checkDialogZones();
 
@@ -243,6 +257,20 @@ export class GameScene extends Phaser.Scene {
     if (activeZone?.id !== this.currentDialogZone?.id) {
       this.currentDialogZone = activeZone;
       setActiveDialogZone(activeZone);
+    }
+  }
+  
+  /**
+   * Re-check current zone and update dialog (called when zone content changes)
+   */
+  private recheckCurrentZone(): void {
+    if (!this.currentDialogZone) return;
+    
+    // Find updated zone data
+    const updatedZone = this.dialogZones.find(z => z.id === this.currentDialogZone?.id);
+    if (updatedZone) {
+      this.currentDialogZone = updatedZone;
+      setActiveDialogZone(updatedZone);
     }
   }
 }
