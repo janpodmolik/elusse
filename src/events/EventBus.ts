@@ -106,6 +106,13 @@ export interface AssetDroppedEvent {
   canvasY: number;
 }
 
+/** Frame dropped from palette to canvas */
+export interface FrameDroppedEvent {
+  frameKey: string;
+  canvasX: number;
+  canvasY: number;
+}
+
 /** Item selected in builder */
 export interface ItemSelectedEvent {
   itemId: string | null;
@@ -143,6 +150,9 @@ export interface MinimapNavigateEvent {
 export const EVENTS = {
   // Asset events
   ASSET_DROPPED: 'asset:dropped',
+  
+  // Frame events
+  FRAME_DROPPED: 'frame:dropped',
   
   // Item events
   ITEM_SELECTED: 'item:selected',

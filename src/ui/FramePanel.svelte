@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { selectedDialogZoneId, dialogZones, updateDialogZoneText, deleteDialogZone, selectDialogZone, updateDialogZone } from '../stores/builderStores';
-  import type { DialogZone, LocalizedText } from '../types/DialogTypes';
-  import { ZONE_COLORS } from '../types/DialogTypes';
+  import { selectedFrameId, selectedFrame, updateFrameText, deletePlacedFrame, selectFrame, updateFrameColor } from '../stores/builderStores';
+  import type { PlacedFrame } from '../types/FrameTypes';
+  import type { LocalizedText } from '../types/DialogTypes';
+  import { FRAME_COLORS } from '../types/FrameTypes';
   import { LANGUAGES, DEFAULT_LANGUAGE } from '../types/Language';
   import PixelButton from './PixelButton.svelte';
   import DraggablePanel from './DraggablePanel.svelte';
-  import { EventBus, EVENTS } from '../events/EventBus';
   import { MAX_DIALOG_TITLE_LENGTH, MAX_DIALOG_CONTENT_LENGTH } from '../constants/uiConstants';
   
   // Use shared constants for consistency
@@ -18,44 +18,38 @@
   // Color picker open state
   let isColorPickerOpen = $state(false);
   
-  // Get the selected zone
-  let selectedZone = $derived<DialogZone | null>(
-    $dialogZones.find(z => z.id === $selectedDialogZoneId) ?? null
-  );
+  // Get the selected frame
+  let currentFrame = $derived<PlacedFrame | null>($selectedFrame);
   
   // Get text for current language
   let currentText = $derived<LocalizedText | null>(
-    selectedZone?.texts.find(t => t.language === selectedLanguage) ?? null
+    currentFrame?.texts.find(t => t.language === selectedLanguage) ?? null
   );
   
   function handleTitleChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    if (!$selectedDialogZoneId) return;
-    updateDialogZoneText($selectedDialogZoneId, selectedLanguage, { title: target.value });
+    if (!$selectedFrameId) return;
+    updateFrameText($selectedFrameId, selectedLanguage, { title: target.value });
   }
   
   function handleContentChange(event: Event) {
     const target = event.target as HTMLTextAreaElement;
-    if (!$selectedDialogZoneId) return;
-    updateDialogZoneText($selectedDialogZoneId, selectedLanguage, { content: target.value });
+    if (!$selectedFrameId) return;
+    updateFrameText($selectedFrameId, selectedLanguage, { content: target.value });
   }
   
   function handleDelete() {
-    if (!$selectedDialogZoneId) return;
-    deleteDialogZone($selectedDialogZoneId);
+    if (!$selectedFrameId) return;
+    deletePlacedFrame($selectedFrameId);
   }
   
   function handleClose() {
-    selectDialogZone(null);
-  }
-  
-  function handleCreateZone() {
-    EventBus.emit(EVENTS.DIALOG_ZONE_CREATE);
+    selectFrame(null);
   }
   
   function handleColorSelect(color: string) {
-    if (!$selectedDialogZoneId) return;
-    updateDialogZone($selectedDialogZoneId, { color });
+    if (!$selectedFrameId) return;
+    updateFrameColor($selectedFrameId, color);
     isColorPickerOpen = false;
   }
   
@@ -64,21 +58,10 @@
   }
 </script>
 
-<!-- Create zone button - positioned left of DIALOGS button -->
-<PixelButton 
-  position="stack-2-left"
-  variant="green"
-  width="100px"
-  onclick={handleCreateZone}
-  title="Create new dialog zone at center of view"
->
-  + ZONE
-</PixelButton>
-
-{#if selectedZone}
+{#if currentFrame}
   <DraggablePanel
-    panelId="dialog-zone-panel"
-    title="Dialog Zone"
+    panelId="frame-panel"
+    title="Edit Frame"
     initialRight={10}
     initialTop={160}
     width={280}
@@ -108,9 +91,9 @@
       <!-- Content form -->
       <div class="form-section">
         <div class="form-group">
-          <label for="dialog-title">Title (max {MAX_TITLE_LENGTH} chars)</label>
+          <label for="frame-title">Title (max {MAX_TITLE_LENGTH} chars)</label>
           <input 
-            id="dialog-title"
+            id="frame-title"
             type="text" 
             value={currentText?.title ?? ''}
             oninput={handleTitleChange}
@@ -120,12 +103,12 @@
         </div>
         
         <div class="form-group">
-          <label for="dialog-content">Content (max {MAX_CONTENT_LENGTH} chars)</label>
+          <label for="frame-content">Content (max {MAX_CONTENT_LENGTH} chars)</label>
           <textarea 
-            id="dialog-content"
+            id="frame-content"
             value={currentText?.content ?? ''}
             oninput={handleContentChange}
-            placeholder="Enter dialog text..."
+            placeholder="Enter frame text..."
             rows="6"
             maxlength={MAX_CONTENT_LENGTH}
           ></textarea>
@@ -133,22 +116,22 @@
         
         <!-- Color picker -->
         <div class="color-section">
-          <span class="color-label-title">Color</span>
+          <span class="color-label-title">Background Color</span>
           <button 
             class="color-button"
             onclick={toggleColorPicker}
-            title="Change zone color"
+            title="Change frame background color"
           >
-            <span class="zone-color" style="background: {selectedZone.color}"></span>
+            <span class="frame-color" style="background: {currentFrame.backgroundColor}"></span>
             <span class="color-label">Change</span>
           </button>
           
           {#if isColorPickerOpen}
             <div class="color-picker">
-              {#each ZONE_COLORS as color}
+              {#each FRAME_COLORS as color}
                 <button
                   class="color-swatch"
-                  class:selected={selectedZone.color === color}
+                  class:selected={currentFrame.backgroundColor === color}
                   style="background: {color}"
                   onclick={() => handleColorSelect(color)}
                   title={color}
@@ -162,7 +145,7 @@
       <!-- Delete button -->
       <div class="panel-footer">
         <PixelButton variant="red" onclick={handleDelete}>
-          DELETE ZONE
+          DELETE FRAME
         </PixelButton>
       </div>
     </div>
@@ -201,8 +184,8 @@
   
   .lang-tab.active {
     background: rgba(80, 80, 100, 0.8);
-    color: #88ddff;
-    border-bottom: 2px solid #88ddff;
+    color: #c9a0dc;
+    border-bottom: 2px solid #9b59b6;
     margin-bottom: -2px;
   }
   
@@ -244,7 +227,7 @@
   .form-group input:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: #88ddff;
+    border-color: #9b59b6;
   }
   
   .form-group textarea {
@@ -288,14 +271,14 @@
   }
   
   .color-button:hover {
-    border-color: #88ddff;
+    border-color: #9b59b6;
   }
   
-  .zone-color {
+  .frame-color {
     width: 20px;
     height: 20px;
     border-radius: 4px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(0, 0, 0, 0.3);
     flex-shrink: 0;
   }
   
@@ -328,12 +311,12 @@
   
   .color-swatch:hover {
     transform: scale(1.1);
-    border-color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.3);
   }
   
   .color-swatch.selected {
-    border-color: white;
-    box-shadow: 0 0 0 2px rgba(136, 221, 255, 0.5);
+    border-color: #9b59b6;
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.5);
   }
   
   .panel-footer {

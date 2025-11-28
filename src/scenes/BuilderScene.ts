@@ -7,6 +7,7 @@ import { BuilderCameraController } from './builder/BuilderCameraController';
 import { BuilderPlayerController } from './builder/BuilderPlayerController';
 import { BuilderGridOverlay } from './builder/BuilderGridOverlay';
 import { BuilderItemsController } from './builder/BuilderItemsController';
+import { BuilderFramesController } from './builder/BuilderFramesController';
 import { DialogZoneRenderer } from './builder/DialogZoneRenderer';
 import { PlacedItemManager } from './PlacedItemManager';
 import { GROUND_HEIGHT } from './builder/builderConstants';
@@ -28,6 +29,7 @@ export class BuilderScene extends Phaser.Scene {
   private playerController!: BuilderPlayerController;
   private gridOverlay!: BuilderGridOverlay;
   private itemsController!: BuilderItemsController;
+  private framesController!: BuilderFramesController;
   private dialogZoneRenderer!: DialogZoneRenderer;
   
   // Configuration
@@ -66,6 +68,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
+    
+    // Load frame assets
+    BuilderFramesController.preloadAssets(this);
   }
 
   create(): void {
@@ -82,6 +87,7 @@ export class BuilderScene extends Phaser.Scene {
     this.playerController = new BuilderPlayerController(this, this.config.worldWidth, this.config.worldHeight);
     this.gridOverlay = new BuilderGridOverlay(this, this.config.worldWidth, this.config.worldHeight);
     this.itemsController = new BuilderItemsController(this, groundY);
+    this.framesController = new BuilderFramesController(this);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
     // Load and create background
@@ -98,6 +104,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Create placed items manager
     this.itemsController.create(this.config.placedItems || []);
+    
+    // Create frames manager
+    this.framesController.create(this.config.placedFrames || []);
     
     // Create dialog zone renderer
     this.dialogZoneRenderer.create();
@@ -229,6 +238,9 @@ export class BuilderScene extends Phaser.Scene {
     }
     if (this.itemsController) {
       this.itemsController.destroy();
+    }
+    if (this.framesController) {
+      this.framesController.destroy();
     }
     if (this.dialogZoneRenderer) {
       this.dialogZoneRenderer.destroy();

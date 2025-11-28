@@ -9,6 +9,7 @@
 import { writable, derived, get } from 'svelte/store';
 import type { MapConfig, PlacedItem } from '../data/mapConfig';
 import type { DialogZone, LocalizedText } from '../types/DialogTypes';
+import type { PlacedFrame } from '../types/FrameTypes';
 import { getItemDepth } from '../constants/depthLayers';
 
 // ==================== Types ====================
@@ -16,7 +17,7 @@ import { getItemDepth } from '../constants/depthLayers';
 export type ItemDepthLayer = 'behind' | 'front';
 
 /** Builder edit mode */
-export type BuilderEditMode = 'items' | 'dialogs';
+export type BuilderEditMode = 'items' | 'dialogs' | 'frames';
 
 interface BuilderState {
   isActive: boolean;
@@ -25,6 +26,7 @@ interface BuilderState {
   itemDepthLayer: ItemDepthLayer;
   editMode: BuilderEditMode;
   selectedDialogZoneId: string | null;
+  selectedFrameId: string | null;
 }
 
 // ==================== Main State Store ====================
@@ -36,6 +38,7 @@ const initialState: BuilderState = {
   itemDepthLayer: 'behind',
   editMode: 'items',
   selectedDialogZoneId: null,
+  selectedFrameId: null,
 };
 
 const builderState = writable<BuilderState>(initialState);
@@ -58,6 +61,24 @@ export function toggleGridSnapping(): void {
   gridSnappingEnabled.update(enabled => !enabled);
 }
 
+// ==================== Palette Open State ====================
+
+/** Whether asset palette is open */
+export const isAssetPaletteOpen = writable<boolean>(false);
+
+/** Whether frame palette is open */
+export const isFramePaletteOpen = writable<boolean>(false);
+
+/** Toggle asset palette */
+export function toggleAssetPalette(): void {
+  isAssetPaletteOpen.update(open => !open);
+}
+
+/** Toggle frame palette */
+export function toggleFramePalette(): void {
+  isFramePaletteOpen.update(open => !open);
+}
+
 /** Currently selected item ID (null if none) */
 export const selectedItemId = derived(builderState, $state => $state.selectedItemId);
 
@@ -72,6 +93,18 @@ export const selectedDialogZoneId = derived(builderState, $state => $state.selec
 
 /** All dialog zones from config */
 export const dialogZones = derived(builderState, $state => $state.config?.dialogZones || []);
+
+/** Currently selected frame ID */
+export const selectedFrameId = derived(builderState, $state => $state.selectedFrameId);
+
+/** All placed frames from config */
+export const placedFrames = derived(builderState, $state => $state.config?.placedFrames || []);
+
+/** Get selected frame data */
+export const selectedFrame = derived(builderState, $state => {
+  if (!$state.selectedFrameId || !$state.config?.placedFrames) return null;
+  return $state.config.placedFrames.find(frame => frame.id === $state.selectedFrameId) ?? null;
+});
 
 /** Get selected item data */
 export const selectedItem = derived(builderState, $state => {
@@ -203,12 +236,14 @@ export function enterBuilderMode(config: MapConfig): void {
     config: { 
       ...config, 
       placedItems: config.placedItems || [],
-      dialogZones: config.dialogZones || []
+      dialogZones: config.dialogZones || [],
+      placedFrames: config.placedFrames || []
     },
     selectedItemId: null,
     itemDepthLayer: 'behind',
     editMode: 'items',
     selectedDialogZoneId: null,
+    selectedFrameId: null,
   });
   // Reset zoom state when entering builder
   isBuilderZoomedOut.set(false);
@@ -298,17 +333,24 @@ export function setBuilderEditMode(mode: BuilderEditMode): void {
     // Clear selections when switching modes
     selectedItemId: mode === 'items' ? state.selectedItemId : null,
     selectedDialogZoneId: mode === 'dialogs' ? state.selectedDialogZoneId : null,
+    selectedFrameId: mode === 'frames' ? state.selectedFrameId : null,
   }));
 }
 
 /** Toggle between edit modes */
 export function toggleBuilderEditMode(): void {
-  builderState.update(state => ({
-    ...state,
-    editMode: state.editMode === 'items' ? 'dialogs' : 'items',
-    selectedItemId: null,
-    selectedDialogZoneId: null,
-  }));
+  builderState.update(state => {
+    const modes: BuilderEditMode[] = ['items', 'dialogs', 'frames'];
+    const currentIndex = modes.indexOf(state.editMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    return {
+      ...state,
+      editMode: nextMode,
+      selectedItemId: null,
+      selectedDialogZoneId: null,
+      selectedFrameId: null,
+    };
+  });
 }
 
 // ==================== Actions - Dialog Zones ====================
@@ -432,4 +474,100 @@ export function removeDialogZoneLanguage(zoneId: string, language: string): void
       }
     };
   });
+}
+
+// ==================== Actions - Frames ====================
+
+/** Add a new placed frame */
+export function addPlacedFrame(frame: PlacedFrame): void {
+  builderState.update(state => {
+    if (!state.config) return state;
+    
+    const placedFrames = state.config.placedFrames || [];
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedFrames: [...placedFrames, frame]
+      }
+    };
+  });
+}
+
+/** Update an existing placed frame by ID */
+export function updatePlacedFrame(id: string, updates: Partial<PlacedFrame>): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.placedFrames) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedFrames: state.config.placedFrames.map(frame =>
+          frame.id === id ? { ...frame, ...updates } : frame
+        )
+      }
+    };
+  });
+}
+
+/** Delete a placed frame by ID */
+export function deletePlacedFrame(id: string): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.placedFrames) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedFrames: state.config.placedFrames.filter(frame => frame.id !== id)
+      },
+      selectedFrameId: state.selectedFrameId === id ? null : state.selectedFrameId
+    };
+  });
+}
+
+/** Select a frame by ID */
+export function selectFrame(id: string | null): void {
+  builderState.update(state => ({
+    ...state,
+    selectedFrameId: id
+  }));
+}
+
+/** Update localized text for a frame */
+export function updateFrameText(frameId: string, language: string, updates: Partial<LocalizedText>): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.placedFrames) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedFrames: state.config.placedFrames.map(frame => {
+          if (frame.id !== frameId) return frame;
+          
+          const existingIndex = frame.texts.findIndex(t => t.language === language);
+          let newTexts: LocalizedText[];
+          
+          if (existingIndex >= 0) {
+            // Update existing
+            newTexts = frame.texts.map((t, i) => 
+              i === existingIndex ? { ...t, ...updates } : t
+            );
+          } else {
+            // Add new language
+            newTexts = [...frame.texts, { language, title: '', content: '', ...updates }];
+          }
+          
+          return { ...frame, texts: newTexts };
+        })
+      }
+    };
+  });
+}
+
+/** Update frame background color */
+export function updateFrameColor(frameId: string, backgroundColor: string): void {
+  updatePlacedFrame(frameId, { backgroundColor });
 }

@@ -1,13 +1,15 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, toggleBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics, gridSnappingEnabled, toggleGridSnapping } from '../stores/builderStores';
+  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, setBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { getItemDepth } from '../constants/depthLayers';
   import { assetSupportsPhysics } from '../data/assets';
   import AssetPalette from './AssetPalette.svelte';
+  import FramePalette from './FramePalette.svelte';
   import PixelButton from './PixelButton.svelte';
   import BuilderMinimap from './BuilderMinimap.svelte';
   import LandscapeHint from './LandscapeHint.svelte';
   import DialogZonePanel from './DialogZonePanel.svelte';
+  import FramePanel from './FramePanel.svelte';
 
   // Check if selected item supports physics
   let canHavePhysics = $derived($selectedItem ? assetSupportsPhysics($selectedItem.assetKey) : false);
@@ -46,10 +48,6 @@
     clearSelection();
   }
   
-  function handleToggleEditMode() {
-    toggleBuilderEditMode();
-  }
-  
   function handleToggleGridSnapping() {
     toggleGridSnapping();
   }
@@ -57,8 +55,11 @@
 
 {#if $builderEditMode === 'items'}
   <AssetPalette />
-{:else}
+{:else if $builderEditMode === 'dialogs'}
   <DialogZonePanel />
+{:else if $builderEditMode === 'frames'}
+  <FramePalette />
+  <FramePanel />
 {/if}
 <BuilderMinimap />
 <LandscapeHint />
@@ -95,14 +96,52 @@
   </PixelButton>
 </div>
 
-<!-- DIALOGS button positioned below ASSETS button -->
+<!-- Mode selection buttons on right side -->
+<PixelButton 
+  position="top-right"
+  variant={$builderEditMode === 'items' && $isAssetPaletteOpen ? 'orange' : 'blue'}
+  onclick={() => {
+    if ($builderEditMode === 'items') {
+      toggleAssetPalette();
+    } else {
+      setBuilderEditMode('items');
+      isAssetPaletteOpen.set(true);
+    }
+  }}
+  title="Edit assets/items"
+>
+  ASSETS
+</PixelButton>
+
 <PixelButton 
   position="stack-2"
   variant={$builderEditMode === 'dialogs' ? 'orange' : 'blue'}
-  onclick={handleToggleEditMode}
-  title="Toggle edit mode: items or dialog zones"
+  onclick={() => {
+    if ($builderEditMode === 'dialogs') {
+      setBuilderEditMode('items');
+    } else {
+      setBuilderEditMode('dialogs');
+    }
+  }}
+  title="Edit dialog zones"
 >
   DIALOGS
+</PixelButton>
+
+<PixelButton 
+  position="stack-3"
+  variant={$builderEditMode === 'frames' && $isFramePaletteOpen ? 'orange' : 'purple'}
+  onclick={() => {
+    if ($builderEditMode === 'frames') {
+      toggleFramePalette();
+    } else {
+      setBuilderEditMode('frames');
+      isFramePaletteOpen.set(true);
+    }
+  }}
+  title="Edit text frames"
+>
+  FRAMES
 </PixelButton>
 
 <!-- Item controls - top center (when item selected in items mode) -->

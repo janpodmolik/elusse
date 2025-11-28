@@ -1,24 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import DraggablePanel from './DraggablePanel.svelte';
-  import { ASSETS } from '../data/assets';
-  import { EventBus, EVENTS, type AssetDroppedEvent } from '../events/EventBus';
-  import { builderEditMode, isAssetPaletteOpen } from '../stores/builderStores';
+  import { FRAMES } from '../data/frames';
+  import { EventBus, EVENTS, type FrameDroppedEvent } from '../events/EventBus';
+  import { builderEditMode, isFramePaletteOpen } from '../stores/builderStores';
   
-  const assets = ASSETS;
+  const frames = FRAMES;
   
-  let draggedAsset = $state<string | null>(null);
+  let draggedFrame = $state<string | null>(null);
   
   // Touch drag state
   let touchDragElement = $state<HTMLElement | null>(null);
   
   // Desktop drag & drop handlers
-  function onDragStart(event: DragEvent, assetKey: string) {
+  function onDragStart(event: DragEvent, frameKey: string) {
     if (!event.dataTransfer) return;
     
-    draggedAsset = assetKey;
+    draggedFrame = frameKey;
     event.dataTransfer.effectAllowed = 'copy';
-    event.dataTransfer.setData('assetKey', assetKey);
+    event.dataTransfer.setData('frameKey', frameKey);
     
     // Create drag image
     const img = event.target as HTMLElement;
@@ -27,21 +27,21 @@
       dragImg.style.position = 'absolute';
       dragImg.style.top = '-1000px';
       document.body.appendChild(dragImg);
-      event.dataTransfer.setDragImage(dragImg, 24, 24);
+      event.dataTransfer.setDragImage(dragImg, 32, 32);
       setTimeout(() => dragImg.remove(), 0);
     }
   }
   
   function onDragEnd() {
-    draggedAsset = null;
+    draggedFrame = null;
   }
   
   // Touch drag handlers for mobile
-  function onTouchStart(event: TouchEvent, assetKey: string) {
+  function onTouchStart(event: TouchEvent, frameKey: string) {
     if (event.touches.length !== 1) return;
     
     const touch = event.touches[0];
-    draggedAsset = assetKey;
+    draggedFrame = frameKey;
     
     // Create floating drag element
     const target = event.currentTarget as HTMLElement;
@@ -52,16 +52,16 @@
       dragEl.innerHTML = `<img src="${img.src}" alt="" />`;
       dragEl.style.cssText = `
         position: fixed;
-        top: ${touch.clientY - 24}px;
-        left: ${touch.clientX - 24}px;
-        width: 48px;
-        height: 48px;
+        top: ${touch.clientY - 32}px;
+        left: ${touch.clientX - 32}px;
+        width: 64px;
+        height: 64px;
         pointer-events: none;
         z-index: 10000;
         opacity: 0.9;
         image-rendering: pixelated;
         filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.5));
-        border: 2px solid #4a90e2;
+        border: 2px solid #9b59b6;
         background: rgba(26, 26, 46, 0.9);
       `;
       dragEl.querySelector('img')!.style.cssText = `
@@ -76,17 +76,17 @@
   }
   
   function onTouchMove(event: TouchEvent) {
-    if (!draggedAsset || !touchDragElement) return;
+    if (!draggedFrame || !touchDragElement) return;
     
     const touch = event.touches[0];
-    touchDragElement.style.top = `${touch.clientY - 24}px`;
-    touchDragElement.style.left = `${touch.clientX - 24}px`;
+    touchDragElement.style.top = `${touch.clientY - 32}px`;
+    touchDragElement.style.left = `${touch.clientX - 32}px`;
     
     event.preventDefault();
   }
   
   function onTouchEnd(event: TouchEvent) {
-    if (!draggedAsset) return;
+    if (!draggedFrame) return;
     
     const touch = event.changedTouches[0];
     const canvas = document.querySelector('canvas');
@@ -109,15 +109,15 @@
         const canvasY = y - rect.top;
         
         // Emit drop event via EventBus
-        EventBus.emit<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, {
-          assetKey: draggedAsset,
+        EventBus.emit<FrameDroppedEvent>(EVENTS.FRAME_DROPPED, {
+          frameKey: draggedFrame,
           canvasX,
           canvasY
         });
       }
     }
     
-    draggedAsset = null;
+    draggedFrame = null;
   }
   
   function stopMouseDown(event: PointerEvent) {
@@ -136,8 +136,8 @@
   function handleDrop(e: DragEvent) {
     e.preventDefault();
     
-    const assetKey = e.dataTransfer?.getData('assetKey');
-    if (!assetKey) return;
+    const frameKey = e.dataTransfer?.getData('frameKey');
+    if (!frameKey) return;
     
     // Get canvas-relative coordinates
     const canvas = e.target as HTMLCanvasElement;
@@ -146,8 +146,8 @@
     const canvasY = e.clientY - rect.top;
     
     // Emit drop event via EventBus
-    EventBus.emit<AssetDroppedEvent>(EVENTS.ASSET_DROPPED, {
-      assetKey,
+    EventBus.emit<FrameDroppedEvent>(EVENTS.FRAME_DROPPED, {
+      frameKey,
       canvasX,
       canvasY
     });
@@ -179,23 +179,22 @@
       document.removeEventListener('touchcancel', onTouchEnd);
     };
   });
-
   function closePalette() {
-    isAssetPaletteOpen.set(false);
+    isFramePaletteOpen.set(false);
   }
 </script>
 
-{#if $isAssetPaletteOpen && $builderEditMode === 'items'}
+{#if $isFramePaletteOpen && $builderEditMode === 'frames'}
   <DraggablePanel 
-    panelId="asset-palette"
-    title="Assets"
+    panelId="frame-palette"
+    title="Frames"
     initialRight={10}
     initialTop={60}
-    width={280}
+    width={320}
     height={400}
-    minWidth={200}
-    minHeight={160}
-    maxWidth={500}
+    minWidth={220}
+    minHeight={200}
+    maxWidth={600}
     maxHeight={600}
     resizable={true}
     showClose={true}
@@ -212,24 +211,24 @@
       onpointerdown={stopMouseDown}
     >
       <div class="palette-grid">
-        {#each assets as asset}
+        {#each frames as frame}
           <div 
-            class="asset-item"
-            class:dragging={draggedAsset === asset.key}
+            class="frame-item"
+            class:dragging={draggedFrame === frame.key}
             draggable="true"
-            ondragstart={(e) => onDragStart(e, asset.key)}
+            ondragstart={(e) => onDragStart(e, frame.key)}
             ondragend={onDragEnd}
-            ontouchstart={(e) => onTouchStart(e, asset.key)}
-            title={asset.name}
+            ontouchstart={(e) => onTouchStart(e, frame.key)}
+            title={frame.name}
             role="button"
             tabindex="0"
           >
             <img 
-              src={asset.path} 
-              alt={asset.name}
-              class="asset-preview"
+              src={frame.path} 
+              alt={frame.name}
+              class="frame-preview"
             />
-            <span class="asset-name">{asset.name}</span>
+            <span class="frame-name">{frame.name}</span>
           </div>
         {/each}
       </div>
@@ -254,13 +253,13 @@
   
   .palette-grid {
     display: grid;
-    /* Auto-fit columns based on available width, min 100px per item */
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    /* Auto-fit columns based on available width, wider for frames */
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 8px;
     padding: 12px;
   }
   
-  .asset-item {
+  .frame-item {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -271,38 +270,38 @@
     border: 2px solid #333;
     cursor: grab;
     transition: all 0.1s ease-out;
-    min-height: 100px;
+    min-height: 90px;
     user-select: none;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
   }
   
-  .asset-item:active {
+  .frame-item:active {
     cursor: grabbing;
     transform: translate(2px, 2px);
     box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   }
   
-  .asset-item.dragging {
+  .frame-item.dragging {
     opacity: 0.5;
-    border-color: #4a90e2;
+    border-color: #9b59b6;
   }
   
-  .asset-item:hover {
+  .frame-item:hover {
     background: #2d2d50;
-    border-color: #4a90e2;
+    border-color: #9b59b6;
     transform: translate(-1px, -1px);
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
   }
   
-  .asset-preview {
-    width: 48px;
+  .frame-preview {
+    width: 64px;
     height: 48px;
     object-fit: contain;
     image-rendering: pixelated;
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
   }
   
-  .asset-name {
+  .frame-name {
     font-family: 'Press Start 2P', monospace;
     font-size: 8px;
     color: #aaa;
@@ -311,13 +310,13 @@
     letter-spacing: 0.5px;
   }
   
-  .asset-item:hover .asset-name {
+  .frame-item:hover .frame-name {
     color: #fff;
   }
   
-  .asset-item:hover .asset-preview {
+  .frame-item:hover .frame-preview {
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5))
-            drop-shadow(0 0 4px rgba(74, 144, 226, 0.4));
+            drop-shadow(0 0 4px rgba(155, 89, 182, 0.4));
   }
   
   /* Mobile optimization */
@@ -329,22 +328,23 @@
     .palette-grid {
       gap: 6px;
       padding: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     }
     
-    .asset-item {
+    .frame-item {
       padding: 8px;
-      min-height: 80px;
+      min-height: 70px;
       gap: 6px;
       border-width: 2px;
       box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
     }
     
-    .asset-preview {
-      width: 40px;
-      height: 40px;
+    .frame-preview {
+      width: 48px;
+      height: 36px;
     }
     
-    .asset-name {
+    .frame-name {
       font-size: 7px;
       letter-spacing: 0;
     }
