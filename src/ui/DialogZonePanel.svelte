@@ -64,10 +64,11 @@
   }
 </script>
 
-<!-- Create zone button - always visible in dialogs mode -->
+<!-- Create zone button - replaces ASSETS button in dialogs mode -->
 <PixelButton 
-  position="stack-3"
+  position="top-right"
   variant="green"
+  width="120px"
   onclick={handleCreateZone}
   title="Create new dialog zone at center of view"
 >
@@ -81,6 +82,12 @@
     initialRight={10}
     initialTop={160}
     width={280}
+    height={450}
+    minWidth={250}
+    minHeight={370}
+    maxWidth={500}
+    maxHeight={700}
+    resizable={true}
     showClose={true}
     onclose={handleClose}
   >
@@ -164,6 +171,8 @@
   .panel-content {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    min-height: 0;
   }
   
   .language-tabs {
@@ -200,6 +209,9 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
   
   .form-group {
@@ -234,8 +246,17 @@
   }
   
   .form-group textarea {
-    resize: vertical;
+    resize: none;
     min-height: 80px;
+    flex: 1;
+  }
+  
+  /* Content textarea group should grow */
+  .form-group:has(textarea) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   
   /* Color picker section */

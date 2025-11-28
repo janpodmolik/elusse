@@ -4,6 +4,7 @@
   import DraggablePanel from './DraggablePanel.svelte';
   import { ASSETS } from '../data/assets';
   import { EventBus, EVENTS, type AssetDroppedEvent } from '../events/EventBus';
+  import { builderEditMode } from '../stores/builderStores';
   
   const assets = ASSETS;
   
@@ -186,24 +187,32 @@
   });
 </script>
 
-<!-- ASSETS button - always top-right -->
-<PixelButton 
-  onclick={togglePalette}
-  position="top-right"
-  variant={isOpen ? 'orange' : 'blue'}
-  width="120px"
-  title="Toggle Asset Palette"
->
-  ASSETS
-</PixelButton>
+<!-- ASSETS button - only in items mode -->
+{#if $builderEditMode === 'items'}
+  <PixelButton 
+    onclick={togglePalette}
+    position="top-right"
+    variant={isOpen ? 'orange' : 'blue'}
+    width="120px"
+    title="Toggle Asset Palette"
+  >
+    ASSETS
+  </PixelButton>
+{/if}
 
-{#if isOpen}
+{#if isOpen && $builderEditMode === 'items'}
   <DraggablePanel 
     panelId="asset-palette"
     title="Assets"
     initialRight={10}
     initialTop={60}
     width={280}
+    height={400}
+    minWidth={200}
+    minHeight={160}
+    maxWidth={500}
+    maxHeight={600}
+    resizable={true}
   >
     {#snippet headerExtra()}
       <span class="palette-hint">Drag to place</span>
@@ -252,11 +261,14 @@
   .palette-content {
     user-select: none;
     -webkit-user-select: none;
+    height: 100%;
+    overflow-y: auto;
   }
   
   .palette-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* Auto-fit columns based on available width, min 100px per item */
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 8px;
     padding: 12px;
   }
