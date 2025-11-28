@@ -3,7 +3,7 @@ import { setBuilderZoom } from '../../stores/builderStores';
 import { isTypingInTextField } from '../../utils/inputUtils';
 
 // Zoom constants
-const MIN_ZOOM = 0.3;  // Minimum zoom (zoomed out) - keeps text readable
+const MIN_ZOOM = 0.05;  // Minimum zoom (zoomed out) - allow very small zoom to fit any screen
 const DEFAULT_ZOOM = 1; // Normal zoom level
 const ZOOM_DURATION = 400; // Animation duration in ms
 

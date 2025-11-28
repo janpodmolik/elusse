@@ -8,7 +8,7 @@
   
   const assets = ASSETS;
   
-  let isOpen = $state(true);
+  let isOpen = $state(false);
   let draggedAsset = $state<string | null>(null);
   
   // Touch drag state

@@ -1,12 +1,34 @@
 <script lang="ts">
-  let dismissed = $state(false);
+  import { onMount } from 'svelte';
+  
+  let dismissed = $state(true); // Start hidden, show only if conditions met
+  let isMobileDevice = $state(false);
+  
+  const SESSION_KEY = 'landscapeHintDismissed';
+  
+  onMount(() => {
+    // Check if already dismissed in this session
+    if (sessionStorage.getItem(SESSION_KEY)) {
+      return;
+    }
+    
+    // Detect actual mobile device (not just narrow browser)
+    isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      // Also check for touch capability + small screen as fallback
+      ('ontouchstart' in window && window.innerWidth <= 768);
+    
+    if (isMobileDevice) {
+      dismissed = false;
+    }
+  });
   
   function dismiss() {
     dismissed = true;
+    sessionStorage.setItem(SESSION_KEY, 'true');
   }
 </script>
 
-{#if !dismissed}
+{#if !dismissed && isMobileDevice}
   <div class="landscape-hint">
     <div class="hint-content">
       <div class="rotate-icon">📱↻</div>
