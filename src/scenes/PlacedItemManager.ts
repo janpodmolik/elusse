@@ -13,8 +13,11 @@ import { ItemRenderer, ItemDragController, ItemSelectionManager } from '../items
  */
 export class PlacedItemManager {
   private scene: Phaser.Scene;
-  private items: Map<string, { sprite: Phaser.GameObjects.Sprite; data: PlacedItem }> = new Map();
+  private items: Map<string, { sprite: Phaser.GameObjects.Sprite; data: PlacedItem; physicsBody?: Phaser.GameObjects.Rectangle }> = new Map();
   private isBuilderMode: boolean = false;
+  
+  // Physics group for collision detection
+  private physicsGroup: Phaser.Physics.Arcade.StaticGroup | null = null;
   
   // Composed modules
   private renderer: ItemRenderer;
@@ -32,6 +35,11 @@ export class PlacedItemManager {
     
     // Initialize renderer (always needed)
     this.renderer = new ItemRenderer(scene, groundY);
+    
+    // Initialize physics group for item collisions (game mode only)
+    if (!builderMode) {
+      this.physicsGroup = scene.physics.add.staticGroup();
+    }
     
     // Initialize builder-specific modules
     if (this.isBuilderMode) {
@@ -66,7 +74,15 @@ export class PlacedItemManager {
     const sprite = this.renderer.createSprite(itemData);
     
     // Store item reference
-    this.items.set(itemData.id, { sprite, data: itemData });
+    const itemEntry: { sprite: Phaser.GameObjects.Sprite; data: PlacedItem; physicsBody?: Phaser.GameObjects.Rectangle } = { sprite, data: itemData };
+    
+    // Create physics body if enabled (game mode only)
+    if (!this.isBuilderMode && itemData.physicsEnabled && this.physicsGroup) {
+      const physicsBody = this.createPhysicsBody(sprite, itemData);
+      itemEntry.physicsBody = physicsBody;
+    }
+    
+    this.items.set(itemData.id, itemEntry);
     
     // Add builder interactivity if in builder mode
     if (this.isBuilderMode && this.dragController) {
@@ -80,6 +96,32 @@ export class PlacedItemManager {
         }
       });
     }
+  }
+  
+  /**
+   * Create physics body for an item based on sprite bounds
+   */
+  private createPhysicsBody(sprite: Phaser.GameObjects.Sprite, itemData: PlacedItem): Phaser.GameObjects.Rectangle {
+    // Get sprite bounds
+    const bounds = sprite.getBounds();
+    
+    // Create invisible rectangle for physics collision
+    // Make it slightly smaller than visual for better feel
+    const bodyWidth = bounds.width * 0.5;
+    const bodyHeight = bounds.height * 0.8;
+    const bodyX = sprite.x;
+    const bodyY = sprite.y
+    
+    const physicsBody = this.scene.add.rectangle(bodyX, bodyY, bodyWidth, bodyHeight);
+    physicsBody.setVisible(false);
+    
+    // Add to physics group
+    this.physicsGroup!.add(physicsBody);
+    
+    // Store reference to item
+    physicsBody.setData('itemId', itemData.id);
+    
+    return physicsBody;
   }
 
   /**
@@ -124,6 +166,10 @@ export class PlacedItemManager {
       if (this.dragController) {
         this.dragController.removeInteractivity(item.sprite);
       }
+      // Destroy physics body if exists
+      if (item.physicsBody) {
+        item.physicsBody.destroy();
+      }
       item.sprite.destroy();
       this.items.delete(id);
     }
@@ -139,6 +185,10 @@ export class PlacedItemManager {
       
       if (this.dragController) {
         this.dragController.removeInteractivity(item.sprite);
+      }
+      // Destroy physics body if exists
+      if (item.physicsBody) {
+        item.physicsBody.destroy();
       }
       item.sprite.destroy();
     });
@@ -157,6 +207,14 @@ export class PlacedItemManager {
    */
   getAllItems(): PlacedItem[] {
     return Array.from(this.items.values()).map(item => item.data);
+  }
+  
+  /**
+   * Get physics group for collision setup
+   * Only available in game mode (non-builder)
+   */
+  getPhysicsGroup(): Phaser.Physics.Arcade.StaticGroup | null {
+    return this.physicsGroup;
   }
   
   /**

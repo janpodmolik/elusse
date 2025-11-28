@@ -38,8 +38,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Setup physics
     this.setCollideWorldBounds(true);
     this.setBounce(0);
-    this.setSize(40, 40);
-    this.setOffset(4, 8);
+    // Physics body size (before scale) - small hitbox at feet
+    // Cat sprite is 48x48, we want a small body at the bottom center
+    this.setSize(16, 12);
+    this.setOffset(16, 36); // Center horizontally, bottom of sprite
     this.setScale(5);
     this.setDepth(DEPTH_LAYERS.PLAYER);
 

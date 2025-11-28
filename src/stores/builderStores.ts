@@ -9,6 +9,7 @@
 import { writable, derived, get } from 'svelte/store';
 import type { MapConfig, PlacedItem } from '../data/mapConfig';
 import type { DialogZone, LocalizedText } from '../types/DialogTypes';
+import { getItemDepth } from '../constants/depthLayers';
 
 // ==================== Types ====================
 
@@ -61,6 +62,15 @@ export const selectedDialogZoneId = derived(builderState, $state => $state.selec
 
 /** All dialog zones from config */
 export const dialogZones = derived(builderState, $state => $state.config?.dialogZones || []);
+
+/** Get selected item data */
+export const selectedItem = derived(builderState, $state => {
+  if (!$state.selectedItemId || !$state.config?.placedItems) return null;
+  return $state.config.placedItems.find(item => item.id === $state.selectedItemId) ?? null;
+});
+
+/** Whether selected item has physics enabled */
+export const selectedItemPhysicsEnabled = derived(selectedItem, $item => $item?.physicsEnabled ?? false);
 
 // ==================== Actions - Player ====================
 
@@ -157,6 +167,21 @@ export function toggleItemDepthLayer(): void {
 /** Update depth of an existing item */
 export function updateItemDepth(id: string, depth: number): void {
   updatePlacedItem(id, { depth });
+}
+
+/** Update physics enabled state of an existing item */
+export function updateItemPhysics(id: string, physicsEnabled: boolean): void {
+  if (physicsEnabled) {
+    // When enabling physics, force depth to 'behind' layer
+    updatePlacedItem(id, { physicsEnabled, depth: getItemDepth('behind') });
+    // Also update the UI state
+    builderState.update(state => ({
+      ...state,
+      itemDepthLayer: 'behind'
+    }));
+  } else {
+    updatePlacedItem(id, { physicsEnabled });
+  }
 }
 
 // ==================== Actions - Builder Mode ====================

@@ -1,12 +1,16 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, toggleBuilderEditMode } from '../stores/builderStores';
+  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, toggleBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { getItemDepth } from '../constants/depthLayers';
+  import { assetSupportsPhysics } from '../data/assets';
   import AssetPalette from './AssetPalette.svelte';
   import PixelButton from './PixelButton.svelte';
   import BuilderMinimap from './BuilderMinimap.svelte';
   import LandscapeHint from './LandscapeHint.svelte';
   import DialogZonePanel from './DialogZonePanel.svelte';
+
+  // Check if selected item supports physics
+  let canHavePhysics = $derived($selectedItem ? assetSupportsPhysics($selectedItem.assetKey) : false);
 
   function handleSave() {
     switchToGame();
@@ -29,6 +33,11 @@
     
     // Update selected item with new depth
     updateItemDepth($selectedItemId, newDepth);
+  }
+  
+  function handleTogglePhysics() {
+    if (!$selectedItemId) return;
+    updateItemPhysics($selectedItemId, !$selectedItemPhysicsEnabled);
   }
   
   function handleDelete() {
@@ -87,11 +96,22 @@
   <div class="item-controls">
     <PixelButton
       variant={$itemDepthLayer === 'behind' ? 'blue' : 'orange'}
-      title="Toggle item depth: behind or in front of player"
+      title={$selectedItemPhysicsEnabled ? "Solid items must be behind player" : "Toggle item depth: behind or in front of player"}
       onclick={handleToggleDepth}
+      disabled={$selectedItemPhysicsEnabled}
     >
       {$itemDepthLayer === 'behind' ? 'Behind' : 'Front'}
     </PixelButton>
+    
+    {#if canHavePhysics}
+      <PixelButton
+        variant={$selectedItemPhysicsEnabled ? 'orange' : 'blue'}
+        title="Toggle physics: item will block player movement"
+        onclick={handleTogglePhysics}
+      >
+        {$selectedItemPhysicsEnabled ? 'Solid' : 'Ghost'}
+      </PixelButton>
+    {/if}
     
     <PixelButton
       variant="red"

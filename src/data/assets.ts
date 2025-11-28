@@ -12,6 +12,8 @@ export interface AssetDefinition {
   scale: number;
   /** Optional category for grouping in UI */
   category?: string;
+  /** Whether this asset supports physics body (can block player) */
+  supportsPhysics?: boolean;
 }
 
 /**
@@ -51,21 +53,24 @@ export const ASSETS: AssetDefinition[] = [
     name: 'Stone 0',
     path: 'assets/ui/stone_0.png',
     scale: 4,
-    category: 'nature'
+    category: 'nature',
+    supportsPhysics: true
   },
   {
     key: 'stone_1',
     name: 'Stone 1',
     path: 'assets/ui/stone_1.png',
     scale: 5,
-    category: 'nature'
+    category: 'nature',
+    supportsPhysics: true
   },
   {
     key: 'stone_2',
     name: 'Stone 2',
     path: 'assets/ui/stone_2.png',
     scale: 4,
-    category: 'nature'
+    category: 'nature',
+    supportsPhysics: true
   },
 ];
 
@@ -88,4 +93,11 @@ export function getAssetScale(key: string): number {
  */
 export function getAssetsByCategory(category: string): AssetDefinition[] {
   return ASSETS.filter(asset => asset.category === category);
+}
+
+/**
+ * Check if an asset supports physics body
+ */
+export function assetSupportsPhysics(key: string): boolean {
+  return getAsset(key)?.supportsPhysics ?? false;
 }

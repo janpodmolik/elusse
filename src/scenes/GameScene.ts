@@ -107,6 +107,12 @@ export class GameScene extends Phaser.Scene {
         this.itemManager.createItems(this.mapConfig.placedItems);
       }
       
+      // Add collision between player and physics-enabled items
+      const itemPhysicsGroup = this.itemManager.getPhysicsGroup();
+      if (itemPhysicsGroup) {
+        this.physics.add.collider(this.player, itemPhysicsGroup);
+      }
+      
       // Load dialog zones from config (initial load)
       this.dialogZones = this.mapConfig.dialogZones || [];
       

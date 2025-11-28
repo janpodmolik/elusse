@@ -19,6 +19,7 @@ export interface PlacedItem {
   scale?: number; // Default: 1
   depth?: number; // Default: 0
   yOffset?: number; // Additional Y offset (for fine-tuning vertical position)
+  physicsEnabled?: boolean; // Whether this item has physics body that blocks player (default: false)
 }
 
 export interface MapConfig {
