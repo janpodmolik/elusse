@@ -3,12 +3,21 @@
  */
 
 import Phaser from 'phaser';
-import { updatePlacedItem, selectItem } from '../stores/builderStores';
+import { updatePlacedItem, selectItem, gridSnappingEnabled } from '../stores/builderStores';
+import { GRID_SIZE } from '../scenes/builder/builderConstants';
+import { get } from 'svelte/store';
 
 export interface ItemDragCallbacks {
   onDragStart?: (id: string) => void;
   onDrag?: (id: string, x: number, y: number) => void;
   onDragEnd?: (id: string, x: number, yOffset: number) => void;
+}
+
+/**
+ * Snap coordinate to grid
+ */
+function snapToGrid(value: number, gridSize: number): number {
+  return Math.round(value / gridSize) * gridSize;
 }
 
 /**
@@ -60,9 +69,15 @@ export class ItemDragController {
 
     sprite.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
       this.isDragging = true;
-      sprite.setPosition(dragX, dragY);
       
-      this.callbacks.onDrag?.(id, dragX, dragY);
+      // Apply grid snapping if enabled
+      const isSnapEnabled = get(gridSnappingEnabled);
+      const finalX = isSnapEnabled ? snapToGrid(dragX, GRID_SIZE) : dragX;
+      const finalY = isSnapEnabled ? snapToGrid(dragY, GRID_SIZE) : dragY;
+      
+      sprite.setPosition(finalX, finalY);
+      
+      this.callbacks.onDrag?.(id, finalX, finalY);
     });
 
     sprite.on('dragend', () => {

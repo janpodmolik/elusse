@@ -48,6 +48,16 @@ export const isBuilderMode = derived(builderState, $state => $state.isActive);
 /** Current builder map configuration */
 export const builderConfig = derived(builderState, $state => $state.config);
 
+// ==================== Grid Snapping ====================
+
+/** Whether grid snapping is enabled (default: true) */
+export const gridSnappingEnabled = writable<boolean>(true);
+
+/** Toggle grid snapping on/off */
+export function toggleGridSnapping(): void {
+  gridSnappingEnabled.update(enabled => !enabled);
+}
+
 /** Currently selected item ID (null if none) */
 export const selectedItemId = derived(builderState, $state => $state.selectedItemId);
 
@@ -206,11 +216,23 @@ export function enterBuilderMode(config: MapConfig): void {
 
 /** Exit builder mode (preserves config for potential return) */
 export function exitBuilderMode(): void {
-  builderState.update(state => ({
-    ...state,
-    isActive: false,
-    selectedItemId: null
-  }));
+  builderState.update(state => {
+    // Clean up empty dialog zones before exiting
+    const cleanedConfig = state.config ? {
+      ...state.config,
+      dialogZones: (state.config.dialogZones || []).filter(zone => {
+        // Keep zone if it has at least one text with title OR content
+        return zone.texts.some(text => text.title.trim() !== '' || text.content.trim() !== '');
+      })
+    } : state.config;
+    
+    return {
+      ...state,
+      isActive: false,
+      selectedItemId: null,
+      config: cleanedConfig
+    };
+  });
   // Reset zoom state when exiting builder
   isBuilderZoomedOut.set(false);
 }

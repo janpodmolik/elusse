@@ -1,24 +1,31 @@
 <script lang="ts">
   import { activeDialogText, playerScreenPosition } from '../stores';
-  
-  // Max dimensions for the bubble
-  const MAX_WIDTH = 300;
-  const MAX_HEIGHT = 200;
-  
-  // Offset above player sprite (just above the cat's head)
-  const VERTICAL_OFFSET = 70;
+  import { 
+    NARROW_SCREEN_BREAKPOINT, 
+    DIALOG_BUBBLE_VERTICAL_OFFSET
+  } from '../constants/uiConstants';
   
   // Check if we have both title and content (for divider)
   let hasBoth = $derived($activeDialogText?.title && $activeDialogText?.content);
   
   // Calculate bubble bottom position (bubble sits above player)
   // Using bottom anchor so bubble grows upward
-  let bubbleBottom = $derived(Math.max(10, window.innerHeight - $playerScreenPosition.y + VERTICAL_OFFSET));
-  let bubbleLeft = $derived($playerScreenPosition.x);
+  let bubbleBottom = $derived(Math.max(10, window.innerHeight - $playerScreenPosition.y + DIALOG_BUBBLE_VERTICAL_OFFSET));
+  
+  // Check if we're on a narrow screen
+  let isNarrowScreen = $derived(window.innerWidth <= NARROW_SCREEN_BREAKPOINT);
+  
+  // On narrow screens, center the bubble; on wide screens, follow player
+  let bubbleLeft = $derived(isNarrowScreen ? 50 : $playerScreenPosition.x);
+  let bubbleStyle = $derived(isNarrowScreen ? 'percent' : 'px');
 </script>
 
 {#if $activeDialogText}
-  <div class="dialog-bubble" style="max-width: {MAX_WIDTH}px; max-height: {MAX_HEIGHT}px; bottom: {bubbleBottom}px; left: {bubbleLeft}px;">
+  <div 
+    class="dialog-bubble" 
+    class:narrow={isNarrowScreen}
+    style="bottom: {bubbleBottom}px; left: {bubbleLeft}{bubbleStyle};"
+  >
     {#if $activeDialogText.title}
       <div class="dialog-title" class:has-divider={hasBoth}>{$activeDialogText.title}</div>
     {/if}
@@ -32,6 +39,10 @@
   .dialog-bubble {
     position: fixed;
     transform: translateX(-50%);
+    
+    /* Size constraints - match constants in uiConstants.ts */
+    max-width: 500px;  /* DIALOG_BUBBLE_MAX_WIDTH */
+    max-height: 400px; /* DIALOG_BUBBLE_MAX_HEIGHT */
     
     background: #f8f8f8;
     border: 4px solid #333;
@@ -91,6 +102,8 @@
     font-weight: bold;
     color: #1a1a2e;
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
   
   .dialog-title.has-divider {
@@ -104,7 +117,9 @@
     line-height: 1.8;
     color: #444;
     overflow-y: auto;
-    max-height: 150px;
+    max-height: 320px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
   
   @keyframes bubbleIn {
@@ -118,17 +133,15 @@
     }
   }
   
-  @media (max-width: 400px) {
-    .dialog-bubble {
-      left: 10px;
-      right: 10px;
-      transform: none;
-      max-width: calc(100% - 20px);
-    }
-    
-    .dialog-bubble::after,
-    .dialog-bubble::before {
-      left: 50%;
-    }
+  /* Narrow screen adjustments */
+  .dialog-bubble.narrow {
+    transform: translateX(-50%);
+    max-width: calc(100% - 20px);
+    left: 50% !important;
+  }
+  
+  .dialog-bubble.narrow::after,
+  .dialog-bubble.narrow::before {
+    left: 50%;
   }
 </style>

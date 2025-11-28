@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, toggleBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics } from '../stores/builderStores';
+  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, toggleBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics, gridSnappingEnabled, toggleGridSnapping } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { getItemDepth } from '../constants/depthLayers';
   import { assetSupportsPhysics } from '../data/assets';
@@ -49,6 +49,10 @@
   function handleToggleEditMode() {
     toggleBuilderEditMode();
   }
+  
+  function handleToggleGridSnapping() {
+    toggleGridSnapping();
+  }
 </script>
 
 {#if $builderEditMode === 'items'}
@@ -78,6 +82,16 @@
     title="Toggle zoom (F)"
   >
     {$isBuilderZoomedOut ? '1:1' : 'FIT'}
+  </PixelButton>
+  
+  <!-- Grid snap toggle button -->
+  <PixelButton 
+    variant={$gridSnappingEnabled ? 'orange' : 'blue'}
+    width="80px"
+    onclick={handleToggleGridSnapping}
+    title="Toggle grid snapping"
+  >
+    {$gridSnappingEnabled ? 'SNAP' : 'FREE'}
   </PixelButton>
 </div>
 
@@ -163,6 +177,7 @@
     .top-left-buttons {
       top: calc(5px + env(safe-area-inset-top));
       left: calc(5px + env(safe-area-inset-left));
+      flex-direction: column;
       gap: 6px;
     }
     
@@ -174,7 +189,7 @@
     
     /* On narrow screens, move item controls below top buttons */
     .item-controls {
-      top: calc(55px + env(safe-area-inset-top));
+      top: calc(155px + env(safe-area-inset-top));
       left: calc(5px + env(safe-area-inset-left));
       transform: none;
       gap: 6px;
@@ -190,7 +205,7 @@
   @media (max-width: 400px) {
     /* On very narrow screens, stack vertically if needed */
     .item-controls {
-      top: calc(50px + env(safe-area-inset-top));
+      top: calc(155px + env(safe-area-inset-top));
     }
   }
 </style>

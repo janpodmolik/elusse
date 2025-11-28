@@ -104,6 +104,59 @@
     localStorage.setItem(`panel-state-${panelId}`, JSON.stringify(state));
   });
   
+  // Handle window resize - ensure panel stays visible
+  $effect(() => {
+    if (!initialized) return;
+    
+    function handleWindowResize() {
+      if (!panelRef) return;
+      
+      const panelWidth = resizable ? size.width : width;
+      
+      // Check if panel is off-screen and adjust position
+      let newX = position.x;
+      let newY = position.y;
+      let needsUpdate = false;
+      
+      // Ensure panel doesn't go off the right edge
+      const maxX = window.innerWidth - panelWidth;
+      if (position.x > maxX) {
+        newX = Math.max(10, maxX);
+        needsUpdate = true;
+      }
+      
+      // Ensure panel doesn't go off the bottom
+      const maxY = window.innerHeight - 40; // At least header visible
+      if (position.y > maxY) {
+        newY = Math.max(10, maxY);
+        needsUpdate = true;
+      }
+      
+      // Ensure panel is not off-screen to the left or top
+      if (position.x < 0) {
+        newX = 10;
+        needsUpdate = true;
+      }
+      if (position.y < 0) {
+        newY = 10;
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+        position = { x: newX, y: newY };
+      }
+    }
+    
+    window.addEventListener('resize', handleWindowResize);
+    
+    // Also check on mount and when panel becomes visible
+    handleWindowResize();
+    
+    return () => {
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  });
+  
   function toggleMinimize() {
     isMinimized = !isMinimized;
   }

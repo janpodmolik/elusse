@@ -5,6 +5,11 @@
   import PixelButton from './PixelButton.svelte';
   import DraggablePanel from './DraggablePanel.svelte';
   import { EventBus, EVENTS } from '../events/EventBus';
+  import { MAX_DIALOG_TITLE_LENGTH, MAX_DIALOG_CONTENT_LENGTH } from '../constants/uiConstants';
+  
+  // Use shared constants for consistency
+  const MAX_TITLE_LENGTH = MAX_DIALOG_TITLE_LENGTH;
+  const MAX_CONTENT_LENGTH = MAX_DIALOG_CONTENT_LENGTH;
   
   // Available languages
   const LANGUAGES = [
@@ -108,24 +113,26 @@
       <!-- Content form -->
       <div class="form-section">
         <div class="form-group">
-          <label for="dialog-title">Title</label>
+          <label for="dialog-title">Title (max {MAX_TITLE_LENGTH} chars)</label>
           <input 
             id="dialog-title"
             type="text" 
             value={currentText?.title ?? ''}
             oninput={handleTitleChange}
             placeholder="Enter title..."
+            maxlength={MAX_TITLE_LENGTH}
           />
         </div>
         
         <div class="form-group">
-          <label for="dialog-content">Content</label>
+          <label for="dialog-content">Content (max {MAX_CONTENT_LENGTH} chars)</label>
           <textarea 
             id="dialog-content"
             value={currentText?.content ?? ''}
             oninput={handleContentChange}
             placeholder="Enter dialog text..."
             rows="6"
+            maxlength={MAX_CONTENT_LENGTH}
           ></textarea>
         </div>
         
