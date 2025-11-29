@@ -2,9 +2,10 @@
   import { onMount } from 'svelte';
   import DraggablePanel from './DraggablePanel.svelte';
   import { FRAMES } from '../data/frames';
-  import { EVENTS } from '../events/EventBus';
-  import { builderEditMode, isFramePaletteOpen } from '../stores/builderStores';
+  import { EventBus, EVENTS } from '../events/EventBus';
+  import { builderEditMode, isFramePaletteOpen, builderCameraInfo, openFramePanel } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
+  import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#9b59b6'; // Purple for frames
   
@@ -21,6 +22,7 @@
       borderColor: ACCENT_COLOR,
       dataKey: 'frameKey',
       eventName: EVENTS.FRAME_DROPPED,
+      onDrop: () => isFramePaletteOpen.set(false),
     },
     () => ({ draggedKey: draggedFrame, touchDragElement }),
     (updates) => {
@@ -35,6 +37,17 @@
   
   function closePalette() {
     isFramePaletteOpen.set(false);
+  }
+  
+  /** Double-click to place frame in center of screen */
+  function handleDoubleClick(frameKey: string) {
+    const cam = get(builderCameraInfo);
+    const centerX = cam.scrollX + cam.viewWidth / 2;
+    const centerY = cam.scrollY + cam.viewHeight / 2;
+    EventBus.emit(EVENTS.FRAME_DROPPED, { frameKey, canvasX: centerX, canvasY: centerY });
+    // Close palette and open frame panel for the newly placed frame
+    isFramePaletteOpen.set(false);
+    openFramePanel();
   }
   
   // Setup canvas listeners on mount
@@ -83,7 +96,8 @@
             ondragstart={(e) => dragHandlers.onDragStart(e, frame.key)}
             ondragend={dragHandlers.onDragEnd}
             ontouchstart={(e) => dragHandlers.onTouchStart(e, frame.key)}
-            title={frame.name}
+            ondblclick={() => handleDoubleClick(frame.key)}
+            title="{frame.name} (double-click to place)"
             role="button"
             tabindex="0"
             style:--accent-color={ACCENT_COLOR}

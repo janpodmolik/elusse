@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { get } from 'svelte/store';
 import type { PlacedFrame } from '../../types/FrameTypes';
 import { generateFrameId, DEFAULT_FRAME_COLOR, DEFAULT_FRAME_SCALE } from '../../types/FrameTypes';
-import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, setBuilderEditMode, placedFrames, updatePlacedFrame, updateDraggingFramePosition, clearDraggingFramePosition, gridSnappingEnabled } from '../../stores/builderStores';
+import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, placedFrames, updatePlacedFrame, updateDraggingFramePosition, clearDraggingFramePosition, gridSnappingEnabled, openFramePanel, setDraggingInBuilder, updateSelectedFrameScreenPosition } from '../../stores/builderStores';
 import { EventBus, EVENTS, type FrameDroppedEvent } from '../../events/EventBus';
 import { isTypingInTextField } from '../../utils/inputUtils';
 import { getFrameScale, getFrameDimensions } from '../../data/frames';
@@ -164,14 +164,15 @@ export class BuilderFramesController {
       
       // Check for double-click using shared detector
       if (this.doubleClickDetector.check(frameId)) {
-        // Double-click: switch to frames mode (panel opens automatically when frame is selected)
-        setBuilderEditMode('frames');
+        // Double-click: open the frame panel for editing
+        openFramePanel();
         return; // Don't start drag on double-click
       }
       
       // Start drag
       this.isDragging = true;
       this.scene.data.set('isDraggingItem', true);
+      setDraggingInBuilder(true);
       this.dragStartX = sprite.x - pointer.worldX;
       this.dragStartY = sprite.y - pointer.worldY;
     });
@@ -204,6 +205,7 @@ export class BuilderFramesController {
       if (!this.isDragging) return;
       this.isDragging = false;
       this.scene.data.set('isDraggingItem', false);
+      setDraggingInBuilder(false);
       
       // Clear dragging position
       clearDraggingFramePosition(frameId);
@@ -220,11 +222,11 @@ export class BuilderFramesController {
    */
   private setupBackgroundDeselect(): void {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Only in frames mode
+      // Only in frames or items mode (frames are interactive in both)
       let currentMode = 'items';
       const unsub = builderEditMode.subscribe(m => currentMode = m);
       unsub();
-      if (currentMode !== 'frames') return;
+      if (currentMode !== 'frames' && currentMode !== 'items') return;
       
       // Skip if clicking on a frame
       const clickedObjects = this.scene.input.hitTestPointer(pointer);
@@ -337,6 +339,8 @@ export class BuilderFramesController {
       addPlacedFrame(newFrame);
       this.createFrame(newFrame);
       selectFrame(newFrame.id);
+      // Open frame panel for the newly placed frame
+      openFramePanel();
     });
     
     this.unsubscribers.push(() => subscription.unsubscribe());
@@ -375,13 +379,30 @@ export class BuilderFramesController {
     this.selectionGraphics.clear();
     
     const selectedId = this.scene.data.get('selectedFrameId') as string | null;
-    if (!selectedId) return;
+    if (!selectedId) {
+      // Clear screen position when no frame is selected
+      updateSelectedFrameScreenPosition(null);
+      return;
+    }
     
     const frame = this.frames.get(selectedId);
-    if (!frame) return;
+    if (!frame) {
+      updateSelectedFrameScreenPosition(null);
+      return;
+    }
     
     const sprite = frame.sprite;
     const bounds = sprite.getBounds();
+    
+    // Update screen position for UI overlay
+    const camera = this.scene.cameras.main;
+    const screenX = (sprite.x - camera.scrollX) * camera.zoom;
+    const screenY = (sprite.y - camera.scrollY) * camera.zoom;
+    updateSelectedFrameScreenPosition({
+      screenX,
+      screenY,
+      frameHeight: bounds.height * camera.zoom
+    });
     
     // Draw selection rectangle
     this.selectionGraphics.lineStyle(3, 0x9b59b6, 1); // Purple color for frames

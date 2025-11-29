@@ -3,7 +3,7 @@
  */
 
 import Phaser from 'phaser';
-import { updatePlacedItem, selectItem, gridSnappingEnabled } from '../stores/builderStores';
+import { updatePlacedItem, selectItem, gridSnappingEnabled, setDraggingInBuilder } from '../stores/builderStores';
 import { GRID_SIZE } from '../scenes/builder/builderConstants';
 import { get } from 'svelte/store';
 
@@ -61,8 +61,9 @@ export class ItemDragController {
       this.isDragging = false; // Will be set to true on actual drag
       sprite.setTint(0x4a90e2);
       
-      // Notify scene that we're dragging an item
+      // Notify scene and UI that we're dragging an item
       this.scene.data?.set('isDraggingItem', true);
+      setDraggingInBuilder(true);
       
       this.callbacks.onDragStart?.(id);
     });
@@ -83,8 +84,9 @@ export class ItemDragController {
     sprite.on('dragend', () => {
       sprite.clearTint();
       
-      // Notify scene that dragging ended
+      // Notify scene and UI that dragging ended
       this.scene.data?.set('isDraggingItem', false);
+      setDraggingInBuilder(false);
       
       // Update store with new position
       const worldX = Math.round(sprite.x);

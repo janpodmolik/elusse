@@ -2,9 +2,10 @@
   import { onMount } from 'svelte';
   import DraggablePanel from './DraggablePanel.svelte';
   import { ASSETS } from '../data/assets';
-  import { EVENTS } from '../events/EventBus';
-  import { builderEditMode, isAssetPaletteOpen } from '../stores/builderStores';
+  import { EventBus, EVENTS } from '../events/EventBus';
+  import { builderEditMode, isAssetPaletteOpen, builderCameraInfo } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
+  import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#4a90e2'; // Blue for assets
   
@@ -35,6 +36,14 @@
   
   function closePalette() {
     isAssetPaletteOpen.set(false);
+  }
+  
+  /** Double-click to place asset in center of screen */
+  function handleDoubleClick(assetKey: string) {
+    const cam = get(builderCameraInfo);
+    const centerX = cam.scrollX + cam.viewWidth / 2;
+    const centerY = cam.scrollY + cam.viewHeight / 2;
+    EventBus.emit(EVENTS.ASSET_DROPPED, { assetKey, canvasX: centerX, canvasY: centerY });
   }
   
   // Setup canvas listeners on mount
@@ -83,7 +92,8 @@
             ondragstart={(e) => dragHandlers.onDragStart(e, asset.key)}
             ondragend={dragHandlers.onDragEnd}
             ontouchstart={(e) => dragHandlers.onTouchStart(e, asset.key)}
-            title={asset.name}
+            ondblclick={() => handleDoubleClick(asset.key)}
+            title="{asset.name} (double-click to place)"
             role="button"
             tabindex="0"
             style:--accent-color={ACCENT_COLOR}

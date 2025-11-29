@@ -1,5 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { isDraggingInBuilder } from '../stores/builderStores';
+  
+  // Global z-index counter for panel stacking order
+  let globalZIndex = 1000;
   
   interface Props {
     /** Unique ID for storing position in localStorage */
@@ -65,6 +69,13 @@
   let dragOffset = $state({ x: 0, y: 0 });
   let panelRef = $state<HTMLDivElement | null>(null);
   let initialized = $state(false);
+  let zIndex = $state(globalZIndex);
+  
+  /** Bring this panel to front by incrementing global z-index */
+  function bringToFront() {
+    globalZIndex++;
+    zIndex = globalZIndex;
+  }
   
   // Load saved position and size or calculate initial values
   $effect(() => {
@@ -283,9 +294,9 @@
   class:dragging={isDragging}
   class:resizing={isResizing}
   class:resizable
-  style="left: {position.x}px; top: {position.y}px; width: {isMinimized ? 'auto' : `${resizable ? size.width : width}px`}; {resizable && size.height > 0 && !isMinimized ? `height: ${size.height}px;` : ''}"
+  style="left: {position.x}px; top: {position.y}px; width: {isMinimized ? 'auto' : `${resizable ? size.width : width}px`}; {resizable && size.height > 0 && !isMinimized ? `height: ${size.height}px;` : ''}{$isDraggingInBuilder ? ' pointer-events: none;' : ''} z-index: {zIndex};"
   bind:this={panelRef}
-  onpointerdown={stopPropagation}
+  onpointerdown={(e) => { bringToFront(); stopPropagation(e); }}
   onclick={stopPropagation}
 >
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -357,7 +368,7 @@
     color: white;
     font-family: 'Press Start 2P', monospace;
     font-size: 10px;
-    z-index: 1000;
+    /* z-index is set dynamically via inline style for panel stacking */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     user-select: none;
     -webkit-user-select: none;
@@ -419,35 +430,49 @@
   .header-buttons {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     margin-left: auto;
   }
   
   .minimize-btn {
-    background: none;
-    border: none;
+    background: rgba(136, 221, 255, 0.15);
+    border: 2px solid #88ddff;
+    border-radius: 4px;
     color: #88ddff;
-    font-size: 12px;
+    font-size: 14px;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 4px 8px;
     line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .minimize-btn:hover {
+    background: rgba(136, 221, 255, 0.25);
     color: #aaeeff;
   }
   
   .close-btn {
-    background: none;
-    border: none;
+    background: rgba(255, 102, 102, 0.15);
+    border: 2px solid #ff6666;
+    border-radius: 4px;
     color: #ff6666;
     font-size: 18px;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 4px 8px;
     line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .close-btn:hover {
+    background: rgba(255, 102, 102, 0.25);
     color: #ff8888;
   }
   

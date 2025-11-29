@@ -102,7 +102,7 @@
           CONFIRM
         </PixelButton>
         <PixelButton variant="red" onclick={handleDelete}>
-          DELETE ZONE
+          DELETE
         </PixelButton>
       </div>
     </div>
@@ -125,6 +125,7 @@
     padding: 12px;
     border-top: 2px solid #4a4a5a;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
   }

@@ -3,6 +3,8 @@
    * FixedPosition - Positions content at fixed screen location
    * Use for UI overlays that should stay in place
    */
+  import { isDraggingInBuilder } from '../../stores/builderStores';
+  
   interface Props {
     position: 'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center';
     padding?: string;
@@ -16,7 +18,7 @@
   }: Props = $props();
 </script>
 
-<div class="fixed fixed--{position}" style="--padding: {padding};">
+<div class="fixed fixed--{position}" class:dragging-in-builder={$isDraggingInBuilder} style="--padding: {padding};">
   {@render children?.()}
 </div>
 
@@ -29,6 +31,10 @@
   
   .fixed > :global(*) {
     pointer-events: auto;
+  }
+  
+  .fixed.dragging-in-builder > :global(*) {
+    pointer-events: none;
   }
   
   /* Top positions */

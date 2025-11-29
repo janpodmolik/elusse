@@ -185,6 +185,11 @@ export const EVENTS = {
   
   // Dialog zone events
   DIALOG_ZONE_CREATE: 'dialogZone:create',
+  DIALOG_ZONE_CREATE_AT: 'dialogZone:createAt',
+  
+  // Temp zone button events
+  TEMP_ZONE_BUTTON_SHOW: 'tempZoneButton:show',
+  TEMP_ZONE_BUTTON_HIDE: 'tempZoneButton:hide',
 } as const;
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS];

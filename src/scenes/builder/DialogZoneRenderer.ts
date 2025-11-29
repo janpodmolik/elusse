@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { DialogZone } from '../../types/DialogTypes';
 import { createDialogZone } from '../../types/DialogTypes';
-import { builderEditMode, dialogZones, selectedDialogZoneId, selectDialogZone, addDialogZone, updateDialogZone } from '../../stores/builderStores';
+import { builderEditMode, dialogZones, selectedDialogZoneId, selectDialogZone, addDialogZone, updateDialogZone, setDraggingInBuilder } from '../../stores/builderStores';
 import { OVERLAY_DEPTH } from './builderConstants';
 import { EventBus, EVENTS } from '../../events/EventBus';
 
@@ -79,6 +79,26 @@ export class DialogZoneRenderer {
   
   /** Currently selected zone ID */
   private currentSelectedId: string | null = null;
+  
+  /** Double-click detection */
+  private lastClickTime: number = 0;
+  private lastClickX: number = 0;
+  private readonly DOUBLE_CLICK_THRESHOLD = 300; // ms
+  private readonly DOUBLE_CLICK_DISTANCE = 20; // pixels
+  
+  /** Pending tap state - to show button only on tap, not drag */
+  private pendingTap: { worldX: number; worldY: number; startTime: number } | null = null;
+  private readonly TAP_MAX_DURATION = 300; // ms - max time for tap gesture
+  private readonly TAP_MAX_DISTANCE = 15; // pixels - max movement for tap
+
+  /** Event subscription for create zone at position */
+  private createZoneAtSubscription?: { unsubscribe: () => void };
+
+  /** Bound handler for window pointerup */
+  private boundWindowPointerUp: () => void = () => {};
+
+  /** Bound handler for window pointermove */
+  private boundWindowPointerMove: (e: PointerEvent) => void = () => {};
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -119,12 +139,23 @@ export class DialogZoneRenderer {
     this.scene.input.on('pointermove', this.handlePointerMove, this);
     this.scene.input.on('pointerup', this.handlePointerUp, this);
     
+    // Also listen for window pointer events to catch moves/releases outside canvas
+    this.boundWindowPointerUp = this.handlePointerUp.bind(this);
+    this.boundWindowPointerMove = this.handleWindowPointerMove.bind(this);
+    window.addEventListener('pointerup', this.boundWindowPointerUp);
+    window.addEventListener('pointermove', this.boundWindowPointerMove);
+    
     // Setup click on empty area to deselect zone
     this.scene.input.on('pointerdown', this.handlePointerDown, this);
     
     // Listen for create zone event from UI
     this.createZoneSubscription = EventBus.on(EVENTS.DIALOG_ZONE_CREATE, () => {
       this.createNewZone();
+    });
+    
+    // Listen for create zone at specific position event (from temp button)
+    this.createZoneAtSubscription = EventBus.on<{ worldX: number }>(EVENTS.DIALOG_ZONE_CREATE_AT, (data) => {
+      this.createZoneAtPosition(data.worldX);
     });
     
     // Initial render
@@ -206,6 +237,7 @@ export class DialogZoneRenderer {
     zoneArea.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       // Set flag to prevent camera drag
       this.scene.data.set('isDraggingItem', true);
+      setDraggingInBuilder(true);
       
       if (this.currentSelectedId === zone.id) {
         // Already selected, start moving
@@ -215,6 +247,7 @@ export class DialogZoneRenderer {
         selectDialogZone(zone.id);
         // Reset flag since we're not actually dragging yet
         this.scene.data.set('isDraggingItem', false);
+        setDraggingInBuilder(false);
       }
     });
     
@@ -325,6 +358,7 @@ export class DialogZoneRenderer {
     
     // Set flag to disable camera scrolling
     this.scene.data.set('isDraggingItem', true);
+    setDraggingInBuilder(true);
     
     this.dragging = {
       zoneId,
@@ -385,15 +419,62 @@ export class DialogZoneRenderer {
   }
 
   /**
-   * Handle pointer move for dragging
+   * Convert screen coordinates to world coordinates
+   */
+  private screenToWorld(screenX: number, screenY: number): { worldX: number; worldY: number } {
+    const camera = this.scene.cameras.main;
+    const worldX = screenX / camera.zoom + camera.scrollX;
+    const worldY = screenY / camera.zoom + camera.scrollY;
+    return { worldX, worldY };
+  }
+
+  /**
+   * Handle window pointer move for dragging (works even over UI)
+   */
+  private handleWindowPointerMove(event: PointerEvent): void {
+    // Cancel pending tap if pointer is moving (it's a drag, not a tap)
+    if (this.pendingTap) {
+      const { worldX } = this.screenToWorld(event.clientX, event.clientY);
+      const distance = Math.abs(worldX - this.pendingTap.worldX);
+      if (distance > this.TAP_MAX_DISTANCE) {
+        this.pendingTap = null;
+      }
+    }
+    
+    if (!this.dragging) return;
+    
+    // Convert screen coordinates to world coordinates
+    const { worldX } = this.screenToWorld(event.clientX, event.clientY);
+    this.updateDrag(worldX);
+  }
+
+  /**
+   * Handle pointer move for dragging (Phaser input)
    */
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
+    // Cancel pending tap if pointer is moving (it's a drag, not a tap)
+    if (this.pendingTap) {
+      const distance = Math.abs(pointer.worldX - this.pendingTap.worldX);
+      if (distance > this.TAP_MAX_DISTANCE) {
+        this.pendingTap = null;
+      }
+    }
+    
     if (!this.dragging) return;
     
     // Stop camera from moving while dragging
     pointer.event?.stopPropagation?.();
     
-    const deltaX = pointer.worldX - this.dragging.startX;
+    this.updateDrag(pointer.worldX);
+  }
+
+  /**
+   * Update drag position with world X coordinate
+   */
+  private updateDrag(worldX: number): void {
+    if (!this.dragging) return;
+    
+    const deltaX = worldX - this.dragging.startX;
     const zone = this.currentZones.find(z => z.id === this.dragging?.zoneId);
     if (!zone) return;
     
@@ -550,18 +631,42 @@ export class DialogZoneRenderer {
   }
 
   /**
-   * Handle pointer up to stop dragging
+   * Handle pointer up to stop dragging and detect taps
    */
-  private handlePointerUp(): void {
+  private handlePointerUp(pointer?: Phaser.Input.Pointer): void {
+    // Handle zone drag end
     if (this.dragging) {
       // Clear flag to re-enable camera scrolling
       this.scene.data.set('isDraggingItem', false);
+      setDraggingInBuilder(false);
+      this.dragging = null;
     }
-    this.dragging = null;
+    
+    // Check for tap gesture to show temp button
+    if (this.pendingTap && this.currentEditMode === 'dialogs') {
+      const now = Date.now();
+      const duration = now - this.pendingTap.startTime;
+      
+      // Check if this was a quick tap (not a drag)
+      if (duration < this.TAP_MAX_DURATION) {
+        // Check distance - if pointer is available, use it; otherwise assume tap is valid
+        let isValidTap = true;
+        if (pointer && pointer.worldX !== undefined) {
+          const distance = Math.abs(pointer.worldX - this.pendingTap.worldX);
+          isValidTap = distance < this.TAP_MAX_DISTANCE;
+        }
+        
+        if (isValidTap) {
+          this.showTempAddButton(this.pendingTap.worldX, this.pendingTap.worldY);
+        }
+      }
+      
+      this.pendingTap = null;
+    }
   }
 
   /**
-   * Handle pointer down - deselect zone when clicking on empty area
+   * Handle pointer down - show temp add button or create zone on double-click
    */
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     // Only in dialog edit mode
@@ -591,10 +696,80 @@ export class DialogZoneRenderer {
       }
     }
     
-    // Clicked on empty area - deselect any selected zone
+    // Clicked on empty area - check for double-click
+    const now = Date.now();
+    const timeDiff = now - this.lastClickTime;
+    const distDiff = Math.abs(worldX - this.lastClickX);
+    
+    if (timeDiff < this.DOUBLE_CLICK_THRESHOLD && distDiff < this.DOUBLE_CLICK_DISTANCE) {
+      // Double-click - create zone at this position
+      this.createZoneAtPosition(worldX);
+      this.lastClickTime = 0; // Reset to prevent triple-click
+      this.hideTempAddButton();
+      return;
+    }
+    
+    // Single click - update last click info
+    this.lastClickTime = now;
+    this.lastClickX = worldX;
+    
+    // Record potential tap start (button will be shown on pointerup if it was a tap)
+    this.pendingTap = { worldX, worldY: pointer.worldY, startTime: now };
+    
+    // Deselect any selected zone
     if (this.currentSelectedId) {
       selectDialogZone(null);
     }
+  }
+  
+  /**
+   * Show temporary "+Zone" button at click position via Svelte UI
+   */
+  private showTempAddButton(worldX: number, worldY: number): void {
+    // Convert world coordinates to screen coordinates
+    const camera = this.scene.cameras.main;
+    const screenX = (worldX - camera.scrollX) * camera.zoom;
+    const screenY = (worldY - camera.scrollY) * camera.zoom;
+    
+    // Emit event for Svelte component to show button
+    EventBus.emit(EVENTS.TEMP_ZONE_BUTTON_SHOW, { screenX, screenY, worldX });
+  }
+  
+  /**
+   * Hide temporary add button via event
+   */
+  private hideTempAddButton(): void {
+    EventBus.emit(EVENTS.TEMP_ZONE_BUTTON_HIDE, {});
+  }
+  
+  /**
+   * Create a new zone centered at the given X position
+   */
+  private createZoneAtPosition(worldX: number): void {
+    let newX = worldX - DEFAULT_ZONE_WIDTH / 2;
+    const newWidth = DEFAULT_ZONE_WIDTH;
+    
+    // Clamp x to world bounds
+    newX = Math.max(0, Math.min(this.worldWidth - newWidth, newX));
+    
+    // Check for overlap
+    if (this.wouldOverlap('', newX, newWidth)) {
+      // Try to find a non-overlapping position nearby
+      const validX = this.findNonOverlappingPosition('', newX, newWidth);
+      if (validX === null) {
+        // No room for a new zone - could show a message
+        console.warn('No room for a new dialog zone');
+        return;
+      }
+      newX = validX;
+    }
+    
+    // Create new zone
+    const newZone = createDialogZone(newX, newWidth);
+    newZone.x = newX;
+    
+    addDialogZone(newZone);
+    selectDialogZone(newZone.id);
   }
   
   /**
@@ -635,6 +810,9 @@ export class DialogZoneRenderer {
    * Destroy renderer and clean up
    */
   destroy(): void {
+    // Hide temp button
+    this.hideTempAddButton();
+    
     // Unsubscribe from stores
     for (const unsub of this.unsubscribers) {
       unsub();
@@ -645,11 +823,18 @@ export class DialogZoneRenderer {
     if (this.createZoneSubscription) {
       this.createZoneSubscription.unsubscribe();
     }
+    if (this.createZoneAtSubscription) {
+      this.createZoneAtSubscription.unsubscribe();
+    }
     
     // Remove input listeners
     this.scene.input.off('pointerdown', this.handlePointerDown, this);
     this.scene.input.off('pointermove', this.handlePointerMove, this);
     this.scene.input.off('pointerup', this.handlePointerUp, this);
+    
+    // Remove window listeners
+    window.removeEventListener('pointerup', this.boundWindowPointerUp);
+    window.removeEventListener('pointermove', this.boundWindowPointerMove);
     
     // Clear visuals
     this.clearVisuals();

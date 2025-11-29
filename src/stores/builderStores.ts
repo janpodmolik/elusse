@@ -62,6 +62,16 @@ export function toggleGridSnapping(): void {
   gridSnappingEnabled.update(enabled => !enabled);
 }
 
+// ==================== Drag State ====================
+
+/** Whether any item/frame/zone is currently being dragged */
+export const isDraggingInBuilder = writable<boolean>(false);
+
+/** Set dragging state (called from Phaser scene) */
+export function setDraggingInBuilder(isDragging: boolean): void {
+  isDraggingInBuilder.set(isDragging);
+}
+
 // ==================== Palette Open State ====================
 
 /** Whether asset palette is open */
@@ -69,6 +79,9 @@ export const isAssetPaletteOpen = writable<boolean>(false);
 
 /** Whether frame palette is open */
 export const isFramePaletteOpen = writable<boolean>(false);
+
+/** Whether frame panel is explicitly open (set by double-click, not single click) */
+export const isFramePanelOpen = writable<boolean>(false);
 
 /** Toggle asset palette */
 export function toggleAssetPalette(): void {
@@ -78,6 +91,16 @@ export function toggleAssetPalette(): void {
 /** Toggle frame palette */
 export function toggleFramePalette(): void {
   isFramePaletteOpen.update(open => !open);
+}
+
+/** Open frame panel (called on double-click) */
+export function openFramePanel(): void {
+  isFramePanelOpen.set(true);
+}
+
+/** Close frame panel */
+export function closeFramePanel(): void {
+  isFramePanelOpen.set(false);
 }
 
 // ==================== Builder Preview Language ====================
@@ -136,11 +159,33 @@ export function clearDraggingFramePosition(id: string): void {
   });
 }
 
+/**
+ * Screen position of selected item (updated from Phaser scene)
+ * Used for positioning item controls overlay
+ */
+export const selectedItemScreenPosition = writable<{ screenX: number; screenY: number; itemHeight: number } | null>(null);
+
+/** Update selected item screen position (called from BuilderScene/ItemSelectionManager) */
+export function updateSelectedItemScreenPosition(pos: { screenX: number; screenY: number; itemHeight: number } | null): void {
+  selectedItemScreenPosition.set(pos);
+}
+
 /** Get selected frame data */
 export const selectedFrame = derived(builderState, $state => {
   if (!$state.selectedFrameId || !$state.config?.placedFrames) return null;
   return $state.config.placedFrames.find(frame => frame.id === $state.selectedFrameId) ?? null;
 });
+
+/**
+ * Screen position of selected frame (updated from Phaser scene)
+ * Used for positioning frame controls overlay
+ */
+export const selectedFrameScreenPosition = writable<{ screenX: number; screenY: number; frameHeight: number } | null>(null);
+
+/** Update selected frame screen position (called from BuilderFramesController) */
+export function updateSelectedFrameScreenPosition(pos: { screenX: number; screenY: number; frameHeight: number } | null): void {
+  selectedFrameScreenPosition.set(pos);
+}
 
 /** Get selected item data */
 export const selectedItem = derived(builderState, $state => {
@@ -369,15 +414,15 @@ export function updateCameraInfo(info: Partial<CameraInfo>): void {
 
 // ==================== Actions - Edit Mode ====================
 
-/** Set builder edit mode (items or dialogs) */
+/** Set builder edit mode (items, dialogs, or frames) */
 export function setBuilderEditMode(mode: BuilderEditMode): void {
   builderState.update(state => ({
     ...state,
     editMode: mode,
-    // Clear selections when switching modes
-    selectedItemId: mode === 'items' ? state.selectedItemId : null,
-    selectedDialogZoneId: mode === 'dialogs' ? state.selectedDialogZoneId : null,
-    selectedFrameId: mode === 'frames' ? state.selectedFrameId : null,
+    // Clear item and dialog selections when switching modes
+    // Keep selectedFrameId - FramePanel can be open in any mode
+    selectedItemId: null,
+    selectedDialogZoneId: null,
   }));
 }
 

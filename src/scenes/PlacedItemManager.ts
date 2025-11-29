@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
-import { selectItem } from '../stores/builderStores';
+import { selectItem, updateSelectedItemScreenPosition } from '../stores/builderStores';
 import { ItemRenderer, ItemDragController, ItemSelectionManager } from '../items';
 
 /**
@@ -136,11 +136,24 @@ export class PlacedItemManager {
     
     if (!selectedId) {
       this.selectionManager.clearVisuals();
+      updateSelectedItemScreenPosition(null);
       return;
     }
     
     const item = this.items.get(selectedId);
     this.selectionManager.updateVisuals(item?.sprite ?? null);
+    
+    // Update screen position for UI overlay
+    if (item?.sprite) {
+      const camera = this.scene.cameras.main;
+      const bounds = item.sprite.getBounds();
+      const screenX = (bounds.centerX - camera.scrollX) * camera.zoom;
+      const screenY = (bounds.centerY - camera.scrollY) * camera.zoom;
+      const itemHeight = bounds.height * camera.zoom;
+      updateSelectedItemScreenPosition({ screenX, screenY, itemHeight });
+    } else {
+      updateSelectedItemScreenPosition(null);
+    }
   }
 
   /**

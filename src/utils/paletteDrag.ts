@@ -15,6 +15,8 @@ export interface PaletteDragConfig {
   dataKey: string;
   /** Event name to emit on drop */
   eventName: string;
+  /** Optional callback after successful drop */
+  onDrop?: () => void;
 }
 
 export interface PaletteDragState {
@@ -30,7 +32,7 @@ export function createPaletteDragHandlers(
   getState: () => PaletteDragState,
   setState: (updates: Partial<PaletteDragState>) => void
 ) {
-  const { previewSize, borderColor, dataKey, eventName } = config;
+  const { previewSize, borderColor, dataKey, eventName, onDrop } = config;
   const halfSize = previewSize / 2;
 
   // Desktop drag handlers
@@ -138,6 +140,8 @@ export function createPaletteDragHandlers(
           canvasX,
           canvasY
         });
+        
+        onDrop?.();
       }
     }
     
@@ -169,6 +173,8 @@ export function createPaletteDragHandlers(
       canvasX,
       canvasY
     });
+    
+    onDrop?.();
   }
 
   // Setup functions

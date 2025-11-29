@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, setBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics, selectedItemFlipX, updateItemFlipX, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette } from '../stores/builderStores';
+  import { isBuilderZoomedOut, builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
-  import { getItemDepth } from '../constants/depthLayers';
-  import { assetSupportsPhysics } from '../data/assets';
   import { EventBus, EVENTS } from '../events/EventBus';
   import AssetPalette from './AssetPalette.svelte';
   import FramePalette from './FramePalette.svelte';
@@ -12,10 +10,11 @@
   import DialogZonePanel from './DialogZonePanel.svelte';
   import FramePanel from './FramePanel.svelte';
   import FrameContent from './FrameContent.svelte';
+  import TempZoneButton from './TempZoneButton.svelte';
+  import DialogModeHint from './DialogModeHint.svelte';
+  import ItemControlsOverlay from './ItemControlsOverlay.svelte';
+  import FrameControlsOverlay from './FrameControlsOverlay.svelte';
   import { HStack, VStack, FixedPosition } from './layout';
-
-  // Check if selected item supports physics
-  let canHavePhysics = $derived($selectedItem ? assetSupportsPhysics($selectedItem.assetKey) : false);
 
   function handleSave() {
     switchToGame();
@@ -23,30 +22,6 @@
   
   function handleZoomToggle() {
     toggleBuilderZoom();
-  }
-  
-  function handleToggleDepth() {
-    if (!$selectedItemId) return;
-    const newLayer = $itemDepthLayer === 'behind' ? 'front' : 'behind';
-    const newDepth = getItemDepth(newLayer);
-    toggleItemDepthLayer();
-    updateItemDepth($selectedItemId, newDepth);
-  }
-  
-  function handleTogglePhysics() {
-    if (!$selectedItemId) return;
-    updateItemPhysics($selectedItemId, !$selectedItemPhysicsEnabled);
-  }
-  
-  function handleToggleFlipX() {
-    if (!$selectedItemId) return;
-    updateItemFlipX($selectedItemId, !$selectedItemFlipX);
-  }
-  
-  function handleDelete() {
-    if (!$selectedItemId) return;
-    deletePlacedItem($selectedItemId);
-    clearSelection();
   }
   
   function handleToggleGridSnapping() {
@@ -58,6 +33,12 @@
   }
 </script>
 
+<!-- Item controls overlay (positioned above selected item) -->
+<ItemControlsOverlay />
+
+<!-- Frame controls overlay (positioned above selected frame) -->
+<FrameControlsOverlay />
+
 <!-- Conditional panels based on mode -->
 {#if $builderEditMode === 'items'}
   <AssetPalette />
@@ -65,15 +46,22 @@
   <DialogZonePanel />
 {:else if $builderEditMode === 'frames'}
   <FramePalette />
-  <FramePanel />
 {/if}
+<!-- FramePanel shows whenever a frame is selected, regardless of mode -->
+<FramePanel />
 <FrameContent />
 <BuilderMinimap />
 <LandscapeHint />
 
+<!-- Temporary zone button (shown on click in dialog mode) -->
+<TempZoneButton />
+
+<!-- Hint for dialog mode FIT view -->
+<DialogModeHint />
+
 <!-- Top-left: Save, Zoom, Snap buttons -->
 <FixedPosition position="top-left">
-  <HStack>
+  <div class="left-buttons">
     <PixelButton variant="green" width="100px" onclick={handleSave}>
       SAVE
     </PixelButton>
@@ -88,14 +76,14 @@
     </PixelButton>
     
     <PixelButton 
-      variant={$gridSnappingEnabled ? 'orange' : 'blue'}
+      variant={$gridSnappingEnabled ? 'blue' : 'orange'}
       width="80px"
       onclick={handleToggleGridSnapping}
       title="Toggle grid snapping"
     >
       {$gridSnappingEnabled ? 'FREE' : 'SNAP'}
     </PixelButton>
-  </HStack>
+  </div>
 </FixedPosition>
 
 <!-- Top-right: Mode selection buttons (ASSETS, FRAMES, DIALOGS) -->
@@ -160,46 +148,20 @@
   </VStack>
 </FixedPosition>
 
-<!-- Top-center: Item controls (when item selected) -->
-{#if $builderEditMode === 'items' && $selectedItemId}
-  <FixedPosition position="top-center">
-    <HStack>
-      <PixelButton
-        variant={$itemDepthLayer === 'behind' ? 'blue' : 'orange'}
-        title={$selectedItemPhysicsEnabled ? "Solid items must be behind player" : "Toggle item depth: behind or in front of player"}
-        onclick={handleToggleDepth}
-        disabled={$selectedItemPhysicsEnabled}
-      >
-        {$itemDepthLayer === 'behind' ? 'To Front' : 'To Back'}
-      </PixelButton>
-      
-      <PixelButton
-        variant={$selectedItemFlipX ? 'orange' : 'blue'}
-        title="Flip item horizontally"
-        onclick={handleToggleFlipX}
-      >
-        {$selectedItemFlipX ? 'Unflip' : 'Flip'}
-      </PixelButton>
-      
-      {#if canHavePhysics}
-        <PixelButton
-          variant={$selectedItemPhysicsEnabled ? 'orange' : 'blue'}
-          title="Toggle physics: item will block player movement"
-          onclick={handleTogglePhysics}
-        >
-          {$selectedItemPhysicsEnabled ? 'Ghost' : 'Solid'}
-        </PixelButton>
-      {/if}
-      
-      <PixelButton
-        variant="red"
-        title="Delete selected item"
-        onclick={handleDelete}
-      >
-        DELETE
-      </PixelButton>
-    </HStack>
-  </FixedPosition>
-{/if}
+<style>
+  .left-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: calc(100vw - 140px);
+  }
+  
+  @media (max-width: 500px) {
+    .left-buttons {
+      flex-direction: column;
+      max-width: none;
+    }
+  }
+</style>
 
 

@@ -167,6 +167,10 @@ export class BuilderScene extends Phaser.Scene {
       updateParallaxTiling(this.parallaxLayers.baseLayer, this.cameras.main);
     }
     
+    // Update selection visuals and screen position (for UI overlay)
+    this.itemManager?.updateSelectionVisuals();
+    this.framesController?.updateSelectionVisuals();
+    
     // Update camera info for minimap
     const camera = this.cameras.main;
     const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;

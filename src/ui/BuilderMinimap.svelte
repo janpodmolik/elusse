@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { builderCameraInfo, isBuilderZoomedOut } from '../stores/builderStores';
+  import { builderCameraInfo, isBuilderZoomedOut, isDraggingInBuilder } from '../stores/builderStores';
   import { EventBus, EVENTS, type MinimapNavigateEvent } from '../events/EventBus';
   
   // Minimap dimensions (normal and enlarged)
@@ -127,7 +127,7 @@
 <div 
   class="minimap-container"
   class:enlarged={isDragging}
-  style="width: {currentWidth}px; height: {currentHeight}px;"
+  style="width: {currentWidth}px; height: {currentHeight}px;{$isDraggingInBuilder ? ' pointer-events: none;' : ''}"
   bind:this={containerRef}
   onmousedown={handleMouseDown}
   ontouchstart={handleTouchStart}

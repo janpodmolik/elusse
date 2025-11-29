@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { selectedFrameId, selectedFrame, deletePlacedFrame, selectFrame, updatePlacedFrame, builderPreviewLanguage, setBuilderPreviewLanguage } from '../stores/builderStores';
+  import { selectedFrameId, selectedFrame, deletePlacedFrame, selectFrame, updatePlacedFrame, builderPreviewLanguage, setBuilderPreviewLanguage, isFramePanelOpen, closeFramePanel } from '../stores/builderStores';
   import { FRAME_COLORS, TEXT_COLORS, TEXT_SIZES, DEFAULT_TEXT_COLOR, DEFAULT_TEXT_SIZE, FRAME_SIZES, getSizeFromScale, getScaleFromSize, type FrameSize } from '../types/FrameTypes';
   import type { FrameLocalizedText } from '../types/FrameTypes';
   import type { Language } from '../types/Language';
@@ -83,6 +83,7 @@
   }
   
   function handleClose() {
+    closeFramePanel();
     selectFrame(null);
   }
   
@@ -132,7 +133,7 @@
   });
 </script>
 
-{#if currentFrame}
+{#if $isFramePanelOpen && currentFrame}
   <DraggablePanel
     panelId="frame-panel"
     title="Edit Frame"
@@ -173,15 +174,18 @@
           </div>
         </div>
         
-        <button 
-          class="rotate-btn" 
-          onclick={handleRotate}
-          title={currentFrame.rotation === 90 ? 'Portrait (click to rotate)' : 'Landscape (click to rotate)'}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-        </button>
+        <div class="rotate-section">
+          <span class="section-label">Rotate</span>
+          <button 
+            class="rotate-btn" 
+            onclick={handleRotate}
+            title={currentFrame.rotation === 90 ? 'Portrait (click to rotate)' : 'Landscape (click to rotate)'}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+        </div>
       </div>
       
       <div class="panel-extras">
@@ -287,7 +291,7 @@
           CONFIRM
         </PixelButton>
         <PixelButton variant="red" onclick={handleDelete}>
-          DELETE FRAME
+          DELETE
         </PixelButton>
       </div>
     </div>
@@ -303,7 +307,6 @@
   }
   
   .text-section {
-    padding: 0 12px 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -382,9 +385,10 @@
     color: white;
     font-family: 'Press Start 2P', monospace;
     font-size: 10px;
-    padding: 8px 12px;
+    padding: 10px 16px;
     cursor: pointer;
     transition: all 0.15s ease;
+    min-width: 40px;
   }
   
   .size-btn:hover {
@@ -424,6 +428,19 @@
   .size-section select:focus {
     outline: none;
     border-color: #9b59b6;
+  }
+  
+  .rotate-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  
+  .rotate-section .section-label {
+    color: #aaa;
+    font-size: 9px;
+    text-transform: uppercase;
   }
   
   .rotate-btn {
@@ -496,6 +513,7 @@
     padding: 12px;
     border-top: 2px solid #4a4a5a;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
   }
