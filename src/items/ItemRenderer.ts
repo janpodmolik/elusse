@@ -31,7 +31,7 @@ export class ItemRenderer {
    * Create a sprite from item data
    */
   createSprite(itemData: PlacedItem): Phaser.GameObjects.Sprite {
-    const { id, assetKey, x, scale = 1, depth = 5, yOffset = 0 } = itemData;
+    const { id, assetKey, x, scale = 1, depth = 5, yOffset = 0, flipX = false } = itemData;
     
     // Calculate final Y position (ground + offset)
     const finalY = this.groundY + yOffset;
@@ -40,6 +40,7 @@ export class ItemRenderer {
     const sprite = this.scene.add.sprite(x, finalY, assetKey);
     sprite.setScale(scale);
     sprite.setDepth(depth);
+    sprite.setFlipX(flipX);
     sprite.setData('itemId', id);
     
     return sprite;
@@ -82,6 +83,9 @@ export class ItemRenderer {
     }
     if (updates.depth !== undefined) {
       sprite.setDepth(updates.depth);
+    }
+    if (updates.flipX !== undefined) {
+      sprite.setFlipX(updates.flipX);
     }
   }
 

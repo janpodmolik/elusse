@@ -20,7 +20,9 @@ export class BuilderCameraController {
   // Mouse panning state (right/middle click)
   private isPanning: boolean = false;
   private panStartX: number = 0;
+  private panStartY: number = 0;
   private cameraDragStartX: number = 0;
+  private cameraDragStartY: number = 0;
   
   // Drag-and-scroll state (left click)
   private isDraggingToScroll: boolean = false;
@@ -64,17 +66,19 @@ export class BuilderCameraController {
   }
 
   private setupMouseControls(): void {
-    // Mouse wheel for horizontal scrolling
+    // Mouse wheel / trackpad scrolling (supports 2D scrolling)
     this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: any[], deltaX: number, deltaY: number) => {
       // Disable scrolling when zoomed out
       if (this.isZoomedOut) return;
       
-      const scrollAmount = deltaX !== 0 ? deltaX : deltaY;
-      const newScrollX = this.camera.scrollX + scrollAmount;
+      // Apply both horizontal and vertical scroll simultaneously
+      // This properly supports trackpad two-finger scrolling
+      const newScrollX = this.camera.scrollX + deltaX;
+      const newScrollY = this.camera.scrollY + deltaY;
       
       this.camera.setScroll(
         Phaser.Math.Clamp(newScrollX, 0, this.worldWidth - this.camera.width),
-        this.camera.scrollY
+        Phaser.Math.Clamp(newScrollY, 0, this.worldHeight - this.camera.height)
       );
     });
 
@@ -86,7 +90,9 @@ export class BuilderCameraController {
       if (pointer.rightButtonDown() || pointer.middleButtonDown()) {
         this.isPanning = true;
         this.panStartX = pointer.x;
+        this.panStartY = pointer.y;
         this.cameraDragStartX = this.camera.scrollX;
+        this.cameraDragStartY = this.camera.scrollY;
       } else if (pointer.leftButtonDown() && !this.isDraggingObject()) {
         // Left-click drag-and-scroll (only if not dragging an object)
         const isDraggingItem = this.scene.data.get('isDraggingItem') === true;
@@ -106,11 +112,13 @@ export class BuilderCameraController {
       
       if (this.isPanning) {
         const deltaX = pointer.x - this.panStartX;
+        const deltaY = pointer.y - this.panStartY;
         const newScrollX = this.cameraDragStartX - deltaX;
+        const newScrollY = this.cameraDragStartY - deltaY;
         
         this.camera.setScroll(
           Phaser.Math.Clamp(newScrollX, 0, this.worldWidth - this.camera.width),
-          this.camera.scrollY
+          Phaser.Math.Clamp(newScrollY, 0, this.worldHeight - this.camera.height)
         );
       } else if (pointer.leftButtonDown() && !this.isDraggingToScroll && !this.isDraggingObject()) {
         // Check if we've moved enough to start drag-and-scroll

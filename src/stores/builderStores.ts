@@ -151,6 +151,9 @@ export const selectedItem = derived(builderState, $state => {
 /** Whether selected item has physics enabled */
 export const selectedItemPhysicsEnabled = derived(selectedItem, $item => $item?.physicsEnabled ?? false);
 
+/** Whether selected item is horizontally flipped */
+export const selectedItemFlipX = derived(selectedItem, $item => $item?.flipX ?? false);
+
 // ==================== Actions - Player ====================
 
 /** Update player start position in builder config */
@@ -261,6 +264,11 @@ export function updateItemPhysics(id: string, physicsEnabled: boolean): void {
   } else {
     updatePlacedItem(id, { physicsEnabled });
   }
+}
+
+/** Update flipX state of an existing item */
+export function updateItemFlipX(id: string, flipX: boolean): void {
+  updatePlacedItem(id, { flipX });
 }
 
 // ==================== Actions - Builder Mode ====================

@@ -21,10 +21,20 @@
   }: Props = $props();
   
   let isOpen = $state(false);
+  let pickerElement = $state<HTMLDivElement | null>(null);
+  
+  // Scroll to picker when it opens
+  $effect(() => {
+    if (isOpen && pickerElement) {
+      // Small delay to ensure element is rendered
+      requestAnimationFrame(() => {
+        pickerElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  });
   
   function handleSelect(color: string) {
     onselect(color);
-    isOpen = false;
   }
   
   function toggle() {
@@ -45,7 +55,7 @@
   </button>
   
   {#if isOpen}
-    <div class="color-picker">
+    <div class="color-picker" bind:this={pickerElement}>
       {#each colors as color}
         <button
           class="color-swatch"
@@ -106,8 +116,8 @@
   
   .color-picker {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+    gap: 5px;
     padding: 8px;
     background: rgba(20, 20, 30, 0.9);
     border: 2px solid #4a4a5a;
@@ -118,11 +128,11 @@
   .color-swatch {
     width: 100%;
     aspect-ratio: 1;
-    border: 3px solid transparent;
+    border: 2px solid transparent;
     border-radius: 4px;
     cursor: pointer;
     transition: transform 0.15s, border-color 0.15s;
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   }
   
   .color-swatch:hover {

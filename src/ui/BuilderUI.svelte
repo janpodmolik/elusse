@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, setBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette } from '../stores/builderStores';
+  import { itemDepthLayer, toggleItemDepthLayer, selectedItemId, updateItemDepth, deletePlacedItem, clearSelection, isBuilderZoomedOut, builderEditMode, setBuilderEditMode, selectedItem, selectedItemPhysicsEnabled, updateItemPhysics, selectedItemFlipX, updateItemFlipX, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { getItemDepth } from '../constants/depthLayers';
   import { assetSupportsPhysics } from '../data/assets';
@@ -36,6 +36,11 @@
   function handleTogglePhysics() {
     if (!$selectedItemId) return;
     updateItemPhysics($selectedItemId, !$selectedItemPhysicsEnabled);
+  }
+  
+  function handleToggleFlipX() {
+    if (!$selectedItemId) return;
+    updateItemFlipX($selectedItemId, !$selectedItemFlipX);
   }
   
   function handleDelete() {
@@ -88,7 +93,7 @@
       onclick={handleToggleGridSnapping}
       title="Toggle grid snapping"
     >
-      {$gridSnappingEnabled ? 'SNAP' : 'FREE'}
+      {$gridSnappingEnabled ? 'FREE' : 'SNAP'}
     </PixelButton>
   </HStack>
 </FixedPosition>
@@ -165,7 +170,15 @@
         onclick={handleToggleDepth}
         disabled={$selectedItemPhysicsEnabled}
       >
-        {$itemDepthLayer === 'behind' ? 'Behind' : 'Front'}
+        {$itemDepthLayer === 'behind' ? 'To Front' : 'To Back'}
+      </PixelButton>
+      
+      <PixelButton
+        variant={$selectedItemFlipX ? 'orange' : 'blue'}
+        title="Flip item horizontally"
+        onclick={handleToggleFlipX}
+      >
+        {$selectedItemFlipX ? 'Unflip' : 'Flip'}
       </PixelButton>
       
       {#if canHavePhysics}
@@ -174,7 +187,7 @@
           title="Toggle physics: item will block player movement"
           onclick={handleTogglePhysics}
         >
-          {$selectedItemPhysicsEnabled ? 'Solid' : 'Ghost'}
+          {$selectedItemPhysicsEnabled ? 'Ghost' : 'Solid'}
         </PixelButton>
       {/if}
       

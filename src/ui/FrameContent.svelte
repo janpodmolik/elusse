@@ -119,10 +119,10 @@
     /* Preserve newlines from textarea */
     white-space: pre-wrap;
     
-    /* The magic - CSS handles word wrap perfectly */
+    /* Word-based wrapping (not letter-based) */
     word-wrap: break-word;
     overflow-wrap: break-word;
-    word-break: break-all;
+    word-break: normal;
     
     /* Hide overflow */
     overflow: hidden;

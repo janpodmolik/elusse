@@ -53,6 +53,9 @@ export class DialogZoneRenderer {
   /** Right resize handles */
   private rightHandles: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   
+  /** Arrow graphics for handles */
+  private arrowGraphics: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  
   /** Currently dragging state */
   private dragging: { 
     zoneId: string; 
@@ -146,6 +149,10 @@ export class DialogZoneRenderer {
     this.leftHandles.clear();
     this.rightHandles.forEach(handle => handle.destroy());
     this.rightHandles.clear();
+    
+    // Destroy all arrow graphics
+    this.arrowGraphics.forEach(g => g.destroy());
+    this.arrowGraphics.clear();
   }
 
   /**
@@ -220,9 +227,13 @@ export class DialogZoneRenderer {
   }
 
   /**
-   * Create resize handles for a zone
+   * Create resize handles for a zone with arrow indicators
    */
   private createHandles(zone: DialogZone): void {
+    const cameraY = this.scene.cameras.main.scrollY;
+    const viewportHeight = this.scene.cameras.main.height;
+    const arrowY = cameraY + viewportHeight / 2;
+    
     // Left handle
     const leftHandle = this.scene.add.rectangle(
       zone.x,
@@ -243,6 +254,13 @@ export class DialogZoneRenderer {
     
     this.leftHandles.set(zone.id, leftHandle);
     
+    // Left arrow (pointing left) - offset outward from zone edge
+    const arrowOffset = 8;
+    const leftArrow = this.scene.add.graphics();
+    leftArrow.setDepth(ZONE_DEPTH + 0.3);
+    this.drawArrow(leftArrow, zone.x - arrowOffset, arrowY, 'left');
+    this.arrowGraphics.set(`${zone.id}_left`, leftArrow);
+    
     // Right handle
     const rightHandle = this.scene.add.rectangle(
       zone.x + zone.width,
@@ -262,6 +280,40 @@ export class DialogZoneRenderer {
     });
     
     this.rightHandles.set(zone.id, rightHandle);
+    
+    // Right arrow (pointing right) - offset outward from zone edge
+    const rightArrow = this.scene.add.graphics();
+    rightArrow.setDepth(ZONE_DEPTH + 0.3);
+    this.drawArrow(rightArrow, zone.x + zone.width + arrowOffset, arrowY, 'right');
+    this.arrowGraphics.set(`${zone.id}_right`, rightArrow);
+  }
+  
+  /**
+   * Draw a filled triangle pointing left or right (pixel art style)
+   * Left arrow: ◀ (tip points left, base on right)
+   * Right arrow: ▶ (tip points right, base on left)
+   */
+  private drawArrow(g: Phaser.GameObjects.Graphics, x: number, y: number, direction: 'left' | 'right'): void {
+    const size = 10;
+    const dir = direction === 'left' ? -1 : 1;
+    
+    // Dark outline/shadow (offset by 1px)
+    g.fillStyle(0x333333, 0.8);
+    g.beginPath();
+    g.moveTo(x + dir * size + 1, y);           // Tip
+    g.lineTo(x - dir * size + 1, y - size + 1); // Top of base
+    g.lineTo(x - dir * size + 1, y + size - 1); // Bottom of base
+    g.closePath();
+    g.fillPath();
+    
+    // White filled triangle
+    g.fillStyle(0xffffff, 0.9);
+    g.beginPath();
+    g.moveTo(x + dir * size, y);           // Tip points outward
+    g.lineTo(x - dir * size, y - size);    // Top of base
+    g.lineTo(x - dir * size, y + size);    // Bottom of base
+    g.closePath();
+    g.fillPath();
   }
 
   /**

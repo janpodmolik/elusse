@@ -98,6 +98,9 @@
       </div>
       
       <div class="panel-footer">
+        <PixelButton variant="cyan" onclick={handleClose}>
+          CONFIRM
+        </PixelButton>
         <PixelButton variant="red" onclick={handleDelete}>
           DELETE ZONE
         </PixelButton>
@@ -123,5 +126,6 @@
     border-top: 2px solid #4a4a5a;
     display: flex;
     justify-content: center;
+    gap: 8px;
   }
 </style>

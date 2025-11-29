@@ -106,10 +106,16 @@ export class BuilderFramesController {
   }
 
   /**
-   * Update frame visuals (rotation, scale, background)
+   * Update frame visuals (rotation, scale, background, texture)
    */
   private updateFrameVisuals(container: FrameContainer): void {
     const { sprite, background, data } = container;
+    
+    // Update texture if frameKey changed
+    const textureKey = `frame_${data.frameKey}`;
+    if (sprite.texture.key !== textureKey && this.scene.textures.exists(textureKey)) {
+      sprite.setTexture(textureKey);
+    }
     
     // Update scale
     const scale = data.scale ?? DEFAULT_FRAME_SCALE;
@@ -282,10 +288,11 @@ export class BuilderFramesController {
           const textsChanged = JSON.stringify(oldFrameData.texts) !== JSON.stringify(newFrameData.texts);
           const rotationChanged = oldFrameData.rotation !== newFrameData.rotation;
           const scaleChanged = oldFrameData.scale !== newFrameData.scale;
+          const frameKeyChanged = oldFrameData.frameKey !== newFrameData.frameKey;
           
           existingFrame.data = newFrameData;
           
-          if (colorChanged || textColorChanged || textSizeChanged || textsChanged || rotationChanged || scaleChanged) {
+          if (colorChanged || textColorChanged || textSizeChanged || textsChanged || rotationChanged || scaleChanged || frameKeyChanged) {
             this.updateFrameVisuals(existingFrame);
             // Update selection border if this frame is selected
             if (this.scene.data.get('selectedFrameId') === newFrameData.id) {

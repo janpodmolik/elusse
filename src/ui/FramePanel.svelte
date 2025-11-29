@@ -3,6 +3,7 @@
   import { FRAME_COLORS, TEXT_COLORS, TEXT_SIZES, DEFAULT_TEXT_COLOR, DEFAULT_TEXT_SIZE, FRAME_SIZES, getSizeFromScale, getScaleFromSize, type FrameSize } from '../types/FrameTypes';
   import type { FrameLocalizedText } from '../types/FrameTypes';
   import type { Language } from '../types/Language';
+  import { FRAMES } from '../data/frames';
   import PixelButton from './PixelButton.svelte';
   import DraggablePanel from './DraggablePanel.svelte';
   import LanguageTabs from './LanguageTabs.svelte';
@@ -88,6 +89,47 @@
   function handleLanguageSelect(lang: Language) {
     setBuilderPreviewLanguage(lang);
   }
+  
+  // Style picker state
+  let isStylePickerOpen = $state(false);
+  let stylePickerElement = $state<HTMLDivElement | null>(null);
+  let styleButtonElement = $state<HTMLButtonElement | null>(null);
+  
+  function handleFrameStyleChange(frameKey: string) {
+    if (!$selectedFrameId) return;
+    updatePlacedFrame($selectedFrameId, { frameKey });
+  }
+  
+  function toggleStylePicker() {
+    isStylePickerOpen = !isStylePickerOpen;
+  }
+  
+  // Scroll to style picker when it opens
+  $effect(() => {
+    if (isStylePickerOpen && stylePickerElement) {
+      requestAnimationFrame(() => {
+        stylePickerElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  });
+  
+  // Close style picker when clicking outside
+  $effect(() => {
+    if (!isStylePickerOpen) return;
+    
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (
+        stylePickerElement && !stylePickerElement.contains(target) &&
+        styleButtonElement && !styleButtonElement.contains(target)
+      ) {
+        isStylePickerOpen = false;
+      }
+    }
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  });
 </script>
 
 {#if currentFrame}
@@ -142,19 +184,19 @@
         </button>
       </div>
       
-      <!-- Single text input -->
-      <div class="text-section">
-        <label for="frame-text">Text</label>
-        <textarea 
-          id="frame-text"
-          value={currentText?.text ?? ''}
-          oninput={handleTextChange}
-          placeholder="Enter text..."
-          rows="3"
-        ></textarea>
-      </div>
-      
       <div class="panel-extras">
+        <!-- Single text input -->
+        <div class="text-section">
+          <label for="frame-text">Text</label>
+          <textarea 
+            id="frame-text"
+            value={currentText?.text ?? ''}
+            oninput={handleTextChange}
+            placeholder="Enter text..."
+            rows="3"
+          ></textarea>
+        </div>
+        
         <!-- Text Size -->
         <div class="size-rotation-row">
           <div class="size-section">
@@ -205,9 +247,45 @@
           label="Background Color"
           accentColor={ACCENT_COLOR}
         />
+        
+        <!-- Frame Style Picker -->
+        <div class="style-section">
+          <span class="section-label">Frame Style</span>
+          <button 
+            class="style-button"
+            bind:this={styleButtonElement}
+            onclick={toggleStylePicker}
+            title="Change frame style"
+          >
+            <img 
+              src={FRAMES.find(f => f.key === currentFrame.frameKey)?.path ?? ''} 
+              alt="Current frame" 
+              class="style-preview"
+            />
+            <span class="style-label">Change Style</span>
+          </button>
+          
+          {#if isStylePickerOpen}
+            <div class="style-picker" bind:this={stylePickerElement}>
+              {#each FRAMES as frame}
+                <button
+                  class="style-item"
+                  class:selected={currentFrame.frameKey === frame.key}
+                  onclick={() => handleFrameStyleChange(frame.key)}
+                  title={frame.name}
+                >
+                  <img src={frame.path} alt={frame.name} />
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
       </div>
       
       <div class="panel-footer">
+        <PixelButton variant="purple" onclick={handleClose}>
+          CONFIRM
+        </PixelButton>
         <PixelButton variant="red" onclick={handleDelete}>
           DELETE FRAME
         </PixelButton>
@@ -225,7 +303,7 @@
   }
   
   .text-section {
-    padding: 12px;
+    padding: 0 12px 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -419,5 +497,90 @@
     border-top: 2px solid #4a4a5a;
     display: flex;
     justify-content: center;
+    gap: 8px;
+  }
+  
+  /* Frame Style Picker */
+  .style-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .style-section .section-label {
+    color: #aaa;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+  
+  .style-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(20, 20, 30, 0.8);
+    border: 2px solid #4a4a5a;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: white;
+    font-family: inherit;
+    font-size: 10px;
+    transition: border-color 0.2s;
+  }
+  
+  .style-button:hover {
+    border-color: #9b59b6;
+  }
+  
+  .style-preview {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  
+  .style-label {
+    color: #aaa;
+  }
+  
+  .style-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 6px;
+    background: rgba(20, 20, 30, 0.9);
+    border: 2px solid #4a4a5a;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 4px;
+  }
+  
+  .style-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(40, 40, 50, 0.8);
+    border: 2px solid transparent;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    aspect-ratio: 1;
+  }
+  
+  .style-item:hover {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.2);
+  }
+  
+  .style-item.selected {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.3);
+  }
+  
+  .style-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
   }
 </style>
