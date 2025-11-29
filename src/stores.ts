@@ -67,6 +67,35 @@ export function setPlayerScreenPosition(x: number, y: number): void {
   playerScreenPosition.set({ x, y });
 }
 
+// ==================== Game Camera Info ====================
+
+/** Game camera info for Svelte overlays */
+export const gameCameraInfo = writable<{ scrollX: number; scrollY: number; zoom: number }>({ 
+  scrollX: 0, 
+  scrollY: 0, 
+  zoom: 1 
+});
+
+/** Update game camera info (called from GameScene update) */
+export function setGameCameraInfo(scrollX: number, scrollY: number, zoom: number = 1): void {
+  gameCameraInfo.set({ scrollX, scrollY, zoom });
+}
+
+// ==================== Frame Click Blocking ====================
+
+/** 
+ * Flag to block player input when frame link is clicked
+ * Prevents jump loop when window loses focus during redirect
+ */
+export const frameClickBlocked = writable<boolean>(false);
+
+/** Block player input temporarily (called when frame with URL is clicked) */
+export function blockFrameClick(): void {
+  frameClickBlocked.set(true);
+  // Auto-reset after short delay
+  setTimeout(() => frameClickBlocked.set(false), 150);
+}
+
 // ==================== Store Utilities ====================
 
 /**

@@ -13,7 +13,7 @@ export const PLAYER_SCALE = 5;
 export const PLAYER_DEPTH = DEPTH_LAYERS.PLAYER;
 
 // Grid overlay
-export const GRID_SIZE = 100;
+export const GRID_SIZE = 50;
 export const GRID_LINE_COLOR = 0x4a5568;  // Gray-blue for subtle grid
 export const GRID_LINE_ALPHA = 0.4;
 export const GRID_LINE_WIDTH = 1;

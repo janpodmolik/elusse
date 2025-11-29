@@ -91,7 +91,7 @@
             <img 
               src={frame.path} 
               alt={frame.name}
-              class="item-preview item-preview--wide"
+              class="item-preview item-preview--landscape"
             />
             <span class="item-name">{frame.name}</span>
           </div>
@@ -165,9 +165,10 @@
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
   }
   
-  .item-preview--wide {
-    width: 64px;
+  .item-preview--landscape {
+    width: 72px;
     height: 48px;
+    transform: rotate(90deg);
   }
   
   .item-name {
@@ -213,9 +214,10 @@
       height: 40px;
     }
     
-    .item-preview--wide {
-      width: 48px;
-      height: 36px;
+    .item-preview--landscape {
+      width: 56px;
+      height: 40px;
+      transform: rotate(90deg);
     }
     
     .item-name {

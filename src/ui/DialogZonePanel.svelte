@@ -8,7 +8,6 @@
   import LanguageTabs from './LanguageTabs.svelte';
   import ColorPicker from './ColorPicker.svelte';
   import TextForm from './TextForm.svelte';
-  import { EventBus, EVENTS } from '../events/EventBus';
   
   const ACCENT_COLOR = '#88ddff'; // Blue for dialogs
   
@@ -44,10 +43,6 @@
     selectDialogZone(null);
   }
   
-  function handleCreateZone() {
-    EventBus.emit(EVENTS.DIALOG_ZONE_CREATE);
-  }
-  
   function handleColorSelect(color: string) {
     if (!$selectedDialogZoneId) return;
     updateDialogZone($selectedDialogZoneId, { color });
@@ -57,17 +52,6 @@
     selectedLanguage = lang;
   }
 </script>
-
-<!-- Create zone button - positioned left of DIALOGS button -->
-<PixelButton 
-  position="stack-2-left"
-  variant="green"
-  width="100px"
-  onclick={handleCreateZone}
-  title="Create new dialog zone at center of view"
->
-  + ZONE
-</PixelButton>
 
 {#if selectedZone}
   <DraggablePanel

@@ -52,13 +52,14 @@ export class BuilderItemsController {
     this.unsubscribers.push(selectedUnsubscribe);
     
     // Subscribe to edit mode changes to enable/disable item interactions
+    // Only disable items when in dialogs mode (items and frames share interaction)
     const editModeUnsubscribe = builderEditMode.subscribe(mode => {
-      if (mode !== 'items') {
-        // Disable item interactions and clear selection in non-items mode
+      if (mode === 'dialogs') {
+        // Disable item interactions and clear selection only in dialogs mode
         clearSelection();
         this.itemManager.setInteractiveEnabled(false);
       } else {
-        // Re-enable in items mode
+        // Re-enable in items or frames mode
         this.itemManager.setInteractiveEnabled(true);
       }
     });

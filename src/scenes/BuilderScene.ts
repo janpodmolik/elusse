@@ -171,9 +171,11 @@ export class BuilderScene extends Phaser.Scene {
     const camera = this.cameras.main;
     const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
     
+    // Use worldView for accurate world-to-screen conversion
+    // worldView represents the visible area in world coordinates
     updateCameraInfo({
-      scrollX: camera.scrollX,
-      scrollY: camera.scrollY,
+      scrollX: camera.worldView.x,
+      scrollY: camera.worldView.y,
       viewWidth: camera.width,
       viewHeight: camera.height,
       worldWidth: this.config.worldWidth,

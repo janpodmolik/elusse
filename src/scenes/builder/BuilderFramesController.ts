@@ -1,23 +1,35 @@
 import Phaser from 'phaser';
+import { get } from 'svelte/store';
 import type { PlacedFrame } from '../../types/FrameTypes';
 import { generateFrameId, DEFAULT_FRAME_COLOR, DEFAULT_FRAME_SCALE } from '../../types/FrameTypes';
-import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, placedFrames, updatePlacedFrame } from '../../stores/builderStores';
+import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, setBuilderEditMode, placedFrames, updatePlacedFrame, updateDraggingFramePosition, clearDraggingFramePosition, gridSnappingEnabled } from '../../stores/builderStores';
 import { EventBus, EVENTS, type FrameDroppedEvent } from '../../events/EventBus';
 import { isTypingInTextField } from '../../utils/inputUtils';
-import { getFrameScale } from '../../data/frames';
+import { getFrameScale, getFrameDimensions } from '../../data/frames';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
+import { GRID_SIZE } from './builderConstants';
+import { type FrameContainer, drawFrameBackground, DoubleClickDetector } from '../../utils/frameUtils';
+
+/**
+ * Snap coordinate to grid
+ */
+function snapToGrid(value: number, gridSize: number): number {
+  return Math.round(value / gridSize) * gridSize;
+}
 
 /**
  * BuilderFramesController - Manages placed frames and their interactions
+ * Note: Text is rendered via Svelte FrameContent component
  */
 export class BuilderFramesController {
   private scene: Phaser.Scene;
-  private frames: Map<string, { sprite: Phaser.GameObjects.Sprite; data: PlacedFrame }> = new Map();
+  private frames: Map<string, FrameContainer> = new Map();
   private unsubscribers: Array<() => void> = [];
   private selectionGraphics: Phaser.GameObjects.Graphics | null = null;
   private isDragging: boolean = false;
   private dragStartX: number = 0;
   private dragStartY: number = 0;
+  private doubleClickDetector = new DoubleClickDetector();
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -53,7 +65,8 @@ export class BuilderFramesController {
   }
 
   /**
-   * Create a single frame sprite
+   * Create a single frame with all visual elements
+   * Note: Text is rendered via Svelte overlay
    */
   private createFrame(frameData: PlacedFrame): void {
     const textureKey = `frame_${frameData.frameKey}`;
@@ -64,34 +77,76 @@ export class BuilderFramesController {
       return;
     }
     
+    const scale = frameData.scale ?? DEFAULT_FRAME_SCALE;
+    const depth = frameData.depth ?? DEPTH_LAYERS.ITEMS_FRONT;
+    const rotation = (frameData.rotation ?? 0) * (Math.PI / 180); // Convert degrees to radians
+    const isRotated = frameData.rotation === 90;
+    
+    // Get dimensions using centralized utility
+    const { innerWidth, innerHeight } = getFrameDimensions(scale, isRotated);
+    
+    // Create background graphics (below sprite)
+    const background = this.scene.add.graphics();
+    background.setDepth(depth - 0.1);
+    drawFrameBackground(background, frameData.x, frameData.y, innerWidth, innerHeight, frameData.backgroundColor || DEFAULT_FRAME_COLOR);
+    
+    // Create sprite
     const sprite = this.scene.add.sprite(frameData.x, frameData.y, textureKey);
-    sprite.setScale(frameData.scale ?? DEFAULT_FRAME_SCALE);
-    sprite.setDepth(frameData.depth ?? DEPTH_LAYERS.ITEMS_FRONT);
+    sprite.setScale(scale);
+    sprite.setDepth(depth);
     sprite.setOrigin(0.5, 0.5);
+    sprite.setRotation(rotation);
     
-    // Apply tint based on background color
-    this.applyBackgroundColor(sprite, frameData.backgroundColor);
-    
-    // Store frame reference
-    this.frames.set(frameData.id, { sprite, data: frameData });
+    // Store frame container (text is rendered via Svelte overlay)
+    const container: FrameContainer = { sprite, background, data: frameData };
+    this.frames.set(frameData.id, container);
     
     // Make interactive
-    this.makeInteractive(sprite, frameData.id);
+    this.makeInteractive(container, frameData.id);
   }
 
   /**
-   * Apply background color as tint to sprite
+   * Update frame visuals (rotation, scale, background)
    */
-  private applyBackgroundColor(sprite: Phaser.GameObjects.Sprite, color: string): void {
-    // Convert hex color to number for tint
-    const tintColor = parseInt(color.replace('#', ''), 16);
-    sprite.setTint(tintColor);
+  private updateFrameVisuals(container: FrameContainer): void {
+    const { sprite, background, data } = container;
+    
+    // Update scale
+    const scale = data.scale ?? DEFAULT_FRAME_SCALE;
+    sprite.setScale(scale);
+    
+    // Update rotation
+    const rotation = (data.rotation ?? 0) * (Math.PI / 180);
+    sprite.setRotation(rotation);
+    
+    // Get dimensions using centralized utility
+    const isRotated = data.rotation === 90;
+    const { innerWidth, innerHeight } = getFrameDimensions(scale, isRotated);
+    
+    drawFrameBackground(background, sprite.x, sprite.y, innerWidth, innerHeight, data.backgroundColor || DEFAULT_FRAME_COLOR);
   }
 
   /**
-   * Make a frame sprite interactive
+   * Move sprite and background to new position
    */
-  private makeInteractive(sprite: Phaser.GameObjects.Sprite, frameId: string): void {
+  private moveContainer(container: FrameContainer, x: number, y: number): void {
+    const { sprite, background, data } = container;
+    sprite.setPosition(x, y);
+    
+    // Get dimensions using centralized utility
+    const scale = data.scale ?? DEFAULT_FRAME_SCALE;
+    const isRotated = data.rotation === 90;
+    const { innerWidth, innerHeight } = getFrameDimensions(scale, isRotated);
+    
+    drawFrameBackground(background, x, y, innerWidth, innerHeight, data.backgroundColor || DEFAULT_FRAME_COLOR);
+  }
+
+  /**
+   * Make a frame container interactive
+   */
+  private makeInteractive(container: FrameContainer, frameId: string): void {
+    const { sprite } = container;
+    
     sprite.setInteractive({ draggable: true, useHandCursor: true });
     
     sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -100,6 +155,13 @@ export class BuilderFramesController {
       // Select this frame
       selectFrame(frameId);
       this.updateSelectionVisuals();
+      
+      // Check for double-click using shared detector
+      if (this.doubleClickDetector.check(frameId)) {
+        // Double-click: switch to frames mode (panel opens automatically when frame is selected)
+        setBuilderEditMode('frames');
+        return; // Don't start drag on double-click
+      }
       
       // Start drag
       this.isDragging = true;
@@ -115,9 +177,21 @@ export class BuilderFramesController {
         return;
       }
       
-      sprite.x = pointer.worldX + this.dragStartX;
-      sprite.y = pointer.worldY + this.dragStartY;
+      let newX = pointer.worldX + this.dragStartX;
+      let newY = pointer.worldY + this.dragStartY;
+      
+      // Apply grid snapping if enabled
+      const isSnapEnabled = get(gridSnappingEnabled);
+      if (isSnapEnabled) {
+        newX = snapToGrid(newX, GRID_SIZE);
+        newY = snapToGrid(newY, GRID_SIZE);
+      }
+      
+      this.moveContainer(container, newX, newY);
       this.updateSelectionVisuals();
+      
+      // Update real-time position for Svelte overlay
+      updateDraggingFramePosition(frameId, newX, newY);
     });
     
     sprite.on('pointerup', () => {
@@ -125,13 +199,13 @@ export class BuilderFramesController {
       this.isDragging = false;
       this.scene.data.set('isDraggingItem', false);
       
+      // Clear dragging position
+      clearDraggingFramePosition(frameId);
+      
       // Update store with new position
-      const frame = this.frames.get(frameId);
-      if (frame) {
-        frame.data.x = Math.round(sprite.x);
-        frame.data.y = Math.round(sprite.y);
-        updatePlacedFrame(frameId, { x: frame.data.x, y: frame.data.y });
-      }
+      container.data.x = Math.round(sprite.x);
+      container.data.y = Math.round(sprite.y);
+      updatePlacedFrame(frameId, { x: container.data.x, y: container.data.y });
     });
   }
 
@@ -171,13 +245,14 @@ export class BuilderFramesController {
     this.unsubscribers.push(selectedUnsubscribe);
     
     // Subscribe to edit mode changes
+    // Only disable frames when in dialogs mode (frames and items share interaction)
     const editModeUnsubscribe = builderEditMode.subscribe(mode => {
-      if (mode !== 'frames') {
-        // Clear selection and disable interactions
+      if (mode === 'dialogs') {
+        // Clear selection and disable interactions only in dialogs mode
         selectFrame(null);
         this.setInteractiveEnabled(false);
       } else {
-        // Re-enable in frames mode
+        // Re-enable in items or frames mode
         this.setInteractiveEnabled(true);
       }
     });
@@ -194,17 +269,29 @@ export class BuilderFramesController {
         }
       });
       
-      // Check for updated frames (e.g., color change)
+      // Check for updated frames (color, text, rotation, etc.)
       currentFrames.forEach(newFrameData => {
         const oldFrameData = previousFrames.find(f => f.id === newFrameData.id);
         const existingFrame = this.frames.get(newFrameData.id);
         
         if (existingFrame && oldFrameData) {
-          // Update color if changed
-          if (oldFrameData.backgroundColor !== newFrameData.backgroundColor) {
-            this.applyBackgroundColor(existingFrame.sprite, newFrameData.backgroundColor);
-          }
+          // Check if anything visual changed
+          const colorChanged = oldFrameData.backgroundColor !== newFrameData.backgroundColor;
+          const textColorChanged = oldFrameData.textColor !== newFrameData.textColor;
+          const textSizeChanged = oldFrameData.textSize !== newFrameData.textSize;
+          const textsChanged = JSON.stringify(oldFrameData.texts) !== JSON.stringify(newFrameData.texts);
+          const rotationChanged = oldFrameData.rotation !== newFrameData.rotation;
+          const scaleChanged = oldFrameData.scale !== newFrameData.scale;
+          
           existingFrame.data = newFrameData;
+          
+          if (colorChanged || textColorChanged || textSizeChanged || textsChanged || rotationChanged || scaleChanged) {
+            this.updateFrameVisuals(existingFrame);
+            // Update selection border if this frame is selected
+            if (this.scene.data.get('selectedFrameId') === newFrameData.id) {
+              this.updateSelectionVisuals();
+            }
+          }
         }
       });
       
@@ -229,10 +316,13 @@ export class BuilderFramesController {
         y: Math.round(worldPoint.y),
         scale: getFrameScale(frameKey),
         depth: DEPTH_LAYERS.ITEMS_FRONT,
+        rotation: 90, // Default to landscape mode
         backgroundColor: DEFAULT_FRAME_COLOR,
+        textColor: '#333333',
+        textSize: 16,
         texts: [
-          { language: 'cs', title: '', content: '' },
-          { language: 'en', title: '', content: '' },
+          { language: 'cs', text: '' },
+          { language: 'en', text: '' },
         ],
       };
       
@@ -316,6 +406,7 @@ export class BuilderFramesController {
     const frame = this.frames.get(id);
     if (frame) {
       frame.sprite.destroy();
+      frame.background.destroy();
       this.frames.delete(id);
     }
     this.updateSelectionVisuals();
@@ -325,13 +416,15 @@ export class BuilderFramesController {
    * Enable or disable all frame interactions
    */
   setInteractiveEnabled(enabled: boolean): void {
-    this.frames.forEach(({ sprite }) => {
+    this.frames.forEach(({ sprite, background }) => {
       if (enabled) {
         sprite.setInteractive({ draggable: true, useHandCursor: true });
         sprite.setAlpha(1);
+        background.setAlpha(1);
       } else {
         sprite.disableInteractive();
         sprite.setAlpha(0.6);
+        background.setAlpha(0.6);
       }
     });
     
@@ -347,7 +440,10 @@ export class BuilderFramesController {
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
     this.unsubscribers = [];
     
-    this.frames.forEach(({ sprite }) => sprite.destroy());
+    this.frames.forEach(({ sprite, background }) => {
+      sprite.destroy();
+      background.destroy();
+    });
     this.frames.clear();
     
     if (this.selectionGraphics) {

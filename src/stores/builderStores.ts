@@ -11,6 +11,7 @@ import type { MapConfig, PlacedItem } from '../data/mapConfig';
 import type { DialogZone, LocalizedText } from '../types/DialogTypes';
 import type { PlacedFrame } from '../types/FrameTypes';
 import { getItemDepth } from '../constants/depthLayers';
+import { DEFAULT_LANGUAGE, type Language } from '../types/Language';
 
 // ==================== Types ====================
 
@@ -79,6 +80,16 @@ export function toggleFramePalette(): void {
   isFramePaletteOpen.update(open => !open);
 }
 
+// ==================== Builder Preview Language ====================
+
+/** Language used for previewing text in builder mode */
+export const builderPreviewLanguage = writable<Language>(DEFAULT_LANGUAGE);
+
+/** Set the builder preview language */
+export function setBuilderPreviewLanguage(lang: Language): void {
+  builderPreviewLanguage.set(lang);
+}
+
 /** Currently selected item ID (null if none) */
 export const selectedItemId = derived(builderState, $state => $state.selectedItemId);
 
@@ -99,6 +110,31 @@ export const selectedFrameId = derived(builderState, $state => $state.selectedFr
 
 /** All placed frames from config */
 export const placedFrames = derived(builderState, $state => $state.config?.placedFrames || []);
+
+/** 
+ * Real-time frame positions during drag operations
+ * Key: frame ID, Value: { x, y } position
+ * Used by FrameContent for smooth text following during drag
+ */
+export const draggingFramePositions = writable<Map<string, { x: number; y: number }>>(new Map());
+
+/** Update frame position during drag (real-time, doesn't persist) */
+export function updateDraggingFramePosition(id: string, x: number, y: number): void {
+  draggingFramePositions.update(map => {
+    const newMap = new Map(map);
+    newMap.set(id, { x, y });
+    return newMap;
+  });
+}
+
+/** Clear dragging position when drag ends */
+export function clearDraggingFramePosition(id: string): void {
+  draggingFramePositions.update(map => {
+    const newMap = new Map(map);
+    newMap.delete(id);
+    return newMap;
+  });
+}
 
 /** Get selected frame data */
 export const selectedFrame = derived(builderState, $state => {
@@ -533,41 +569,4 @@ export function selectFrame(id: string | null): void {
     ...state,
     selectedFrameId: id
   }));
-}
-
-/** Update localized text for a frame */
-export function updateFrameText(frameId: string, language: string, updates: Partial<LocalizedText>): void {
-  builderState.update(state => {
-    if (!state.config || !state.config.placedFrames) return state;
-    
-    return {
-      ...state,
-      config: {
-        ...state.config,
-        placedFrames: state.config.placedFrames.map(frame => {
-          if (frame.id !== frameId) return frame;
-          
-          const existingIndex = frame.texts.findIndex(t => t.language === language);
-          let newTexts: LocalizedText[];
-          
-          if (existingIndex >= 0) {
-            // Update existing
-            newTexts = frame.texts.map((t, i) => 
-              i === existingIndex ? { ...t, ...updates } : t
-            );
-          } else {
-            // Add new language
-            newTexts = [...frame.texts, { language, title: '', content: '', ...updates }];
-          }
-          
-          return { ...frame, texts: newTexts };
-        })
-      }
-    };
-  });
-}
-
-/** Update frame background color */
-export function updateFrameColor(frameId: string, backgroundColor: string): void {
-  updatePlacedFrame(frameId, { backgroundColor });
 }

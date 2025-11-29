@@ -5,11 +5,12 @@ import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
 import { PlacedItemManager } from './PlacedItemManager';
+import { GameFrameManager } from './GameFrameManager';
 import { loadMapConfig, MapConfig } from '../data/mapConfig';
 import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { isLoading, setActiveDialogZone, setPlayerScreenPosition } from '../stores';
+import { isLoading, setActiveDialogZone, setPlayerScreenPosition, setGameCameraInfo } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
 
 export class GameScene extends Phaser.Scene {
@@ -24,6 +25,9 @@ export class GameScene extends Phaser.Scene {
 
   // Placed items system (replaces dialog trigger system)
   private itemManager!: PlacedItemManager;
+  
+  // Frame manager for clickable frames
+  private frameManager!: GameFrameManager;
   
   // Dialog zones loaded from config
   private dialogZones: DialogZone[] = [];
@@ -61,6 +65,9 @@ export class GameScene extends Phaser.Scene {
 
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
+    
+    // Load frame assets
+    GameFrameManager.preloadAssets(this);
   }
 
   create(): void {
@@ -111,6 +118,14 @@ export class GameScene extends Phaser.Scene {
       const itemPhysicsGroup = this.itemManager.getPhysicsGroup();
       if (itemPhysicsGroup) {
         this.physics.add.collider(this.player, itemPhysicsGroup);
+      }
+      
+      // Initialize frame manager for clickable frames
+      this.frameManager = new GameFrameManager(this);
+      
+      // Load placed frames from config
+      if (this.mapConfig.placedFrames && this.mapConfig.placedFrames.length > 0) {
+        this.frameManager.createFrames(this.mapConfig.placedFrames);
       }
       
       // Load dialog zones from config (initial load)
@@ -234,6 +249,9 @@ export class GameScene extends Phaser.Scene {
     const screenX = this.player.x - camera.scrollX;
     const screenY = this.player.y - camera.scrollY;
     setPlayerScreenPosition(screenX, screenY);
+    
+    // Update camera info for frame text overlay
+    setGameCameraInfo(camera.scrollX, camera.scrollY, camera.zoom);
     
     // Check dialog zone collisions
     this.checkDialogZones();

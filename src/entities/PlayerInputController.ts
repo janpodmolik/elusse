@@ -8,6 +8,8 @@
  */
 
 import Phaser from 'phaser';
+import { get } from 'svelte/store';
+import { frameClickBlocked } from '../stores';
 
 // Touch control constants
 export const TOUCH_CONFIG = {
@@ -97,6 +99,14 @@ export class PlayerInputController {
     const scene = this.scene;
 
     const handlePointer = (pointer: Phaser.Input.Pointer) => {
+      // Block input if frame was clicked (prevents jump loop on redirect)
+      if (get(frameClickBlocked)) {
+        this.touchLeft = false;
+        this.touchRight = false;
+        this.touchJump = false;
+        return;
+      }
+      
       const x = pointer.x;
       const y = pointer.y;
       const screenWidth = scene.scale.width;

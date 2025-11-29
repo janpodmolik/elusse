@@ -11,6 +11,7 @@
   import BuilderUI from './BuilderUI.svelte';
   import PixelButton from './PixelButton.svelte';
   import DialogBubble from './DialogBubble.svelte';
+  import FrameContent from './FrameContent.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../utils/sceneManager';
 
   let dialogElement: HTMLDialogElement;
@@ -66,8 +67,9 @@
   {#if $isBuilderMode}
     <BuilderUI />
   {:else}
-    <!-- Game Mode: Dialog Bubble -->
+    <!-- Game Mode: Dialog Bubble and Frame Content -->
     <DialogBubble />
+    <FrameContent />
   {/if}
 
   <!-- Builder Mode Toggle Button (only in play mode) -->
