@@ -103,6 +103,7 @@ export class BuilderFramesController {
       
       // Start drag
       this.isDragging = true;
+      this.scene.data.set('isDraggingItem', true);
       this.dragStartX = sprite.x - pointer.worldX;
       this.dragStartY = sprite.y - pointer.worldY;
     });
@@ -122,6 +123,7 @@ export class BuilderFramesController {
     sprite.on('pointerup', () => {
       if (!this.isDragging) return;
       this.isDragging = false;
+      this.scene.data.set('isDraggingItem', false);
       
       // Update store with new position
       const frame = this.frames.get(frameId);
