@@ -20,8 +20,11 @@ const ZONE_FILL_ALPHA = 0.3;
 /** Alpha for selected zone fill */
 const SELECTED_ZONE_FILL_ALPHA = 0.5;
 
-/** Handle width for resize */
-const HANDLE_WIDTH = 16;
+/** Handle visual width for resize */
+const HANDLE_WIDTH = 40;
+
+/** Handle hit area width (larger for easier grabbing) */
+const HANDLE_HIT_WIDTH = 60;
 
 /** Handle color */
 const HANDLE_COLOR = 0xffffff;
@@ -53,11 +56,17 @@ export class DialogZoneRenderer {
   /** Interactive zone areas */
   private zoneAreas: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   
-  /** Left resize handles */
+  /** Left resize handles (hit area) */
   private leftHandles: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   
-  /** Right resize handles */
+  /** Left resize handle visuals */
+  private leftHandleVisuals: Map<string, Phaser.GameObjects.Rectangle> = new Map();
+  
+  /** Right resize handles (hit area) */
   private rightHandles: Map<string, Phaser.GameObjects.Rectangle> = new Map();
+  
+  /** Right resize handle visuals */
+  private rightHandleVisuals: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   
   /** Arrow graphics for handles */
   private arrowGraphics: Map<string, Phaser.GameObjects.Graphics> = new Map();
@@ -96,6 +105,13 @@ export class DialogZoneRenderer {
   private pendingTap: { worldX: number; worldY: number; startTime: number } | null = null;
   private readonly TAP_MAX_DURATION = 300; // ms - max time for tap gesture
   private readonly TAP_MAX_DISTANCE = 15; // pixels - max movement for tap
+
+  /** Pending zone selection - wait to see if user drags or clicks */
+  private pendingZoneSelection: { 
+    zoneId: string; 
+    worldX: number; 
+    startTime: number;
+  } | null = null;
 
   /** Event subscription for create zone at position */
   private createZoneAtSubscription?: { unsubscribe: () => void };
@@ -187,11 +203,17 @@ export class DialogZoneRenderer {
     this.zoneAreas.forEach(area => area.destroy());
     this.zoneAreas.clear();
     
-    // Destroy all handles
+    // Destroy all handles (hit areas)
     this.leftHandles.forEach(handle => handle.destroy());
     this.leftHandles.clear();
     this.rightHandles.forEach(handle => handle.destroy());
     this.rightHandles.clear();
+    
+    // Destroy all handle visuals
+    this.leftHandleVisuals.forEach(v => v.destroy());
+    this.leftHandleVisuals.clear();
+    this.rightHandleVisuals.forEach(v => v.destroy());
+    this.rightHandleVisuals.clear();
     
     // Destroy all arrow graphics
     this.arrowGraphics.forEach(g => g.destroy());
@@ -247,6 +269,9 @@ export class DialogZoneRenderer {
     
     // Click to select, drag to move (only if selected)
     zoneArea.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Ignore clicks that started on UI elements (buttons, panels, etc.)
+      if (this.isClickOnUIElement(pointer)) return;
+      
       const now = Date.now();
       const isDoubleClick = 
         now - this.lastClickTime < this.DOUBLE_CLICK_THRESHOLD &&
@@ -255,25 +280,29 @@ export class DialogZoneRenderer {
       this.lastClickTime = now;
       this.lastClickX = pointer.worldX;
       
-      // Set flag to prevent camera drag
-      this.scene.data.set('isDraggingItem', true);
-      setDraggingInBuilder(true);
+      const isAlreadySelected = this.currentSelectedId === zone.id;
       
-      // If not selected, select it first
-      if (this.currentSelectedId !== zone.id) {
-        selectDialogZone(zone.id);
-      }
-      
-      // Double-click opens dialog panel
-      if (isDoubleClick) {
+      // Double-click opens dialog panel (only if already selected)
+      if (isDoubleClick && isAlreadySelected) {
         openDialogZonePanel();
-        this.scene.data.set('isDraggingItem', false);
-        setDraggingInBuilder(false);
         return;
       }
       
-      // Always start moving drag (even if just selected)
-      this.startDrag(zone.id, 'move', pointer.worldX);
+      // If already selected, start dragging immediately
+      if (isAlreadySelected) {
+        // Set flag to prevent camera drag
+        this.scene.data.set('isDraggingItem', true);
+        setDraggingInBuilder(true);
+        this.startDrag(zone.id, 'move', pointer.worldX);
+      } else {
+        // Not selected yet - wait to see if this is a click (select) or drag (scroll)
+        // Don't block camera scroll yet
+        this.pendingZoneSelection = {
+          zoneId: zone.id,
+          worldX: pointer.worldX,
+          startTime: now
+        };
+      }
     });
     
     this.zoneAreas.set(zone.id, zoneArea);
@@ -292,25 +321,38 @@ export class DialogZoneRenderer {
     const viewportHeight = this.scene.cameras.main.height;
     const arrowY = cameraY + viewportHeight / 2;
     
-    // Left handle
-    const leftHandle = this.scene.add.rectangle(
+    // Left handle - visual
+    const leftHandleVisual = this.scene.add.rectangle(
       zone.x,
       this.worldHeight / 2,
       HANDLE_WIDTH,
       this.worldHeight
     );
+    leftHandleVisual.setOrigin(0.5, 0.5);
+    leftHandleVisual.setDepth(ZONE_DEPTH + 0.2);
+    leftHandleVisual.setFillStyle(HANDLE_COLOR, HANDLE_ALPHA);
+    
+    // Left handle - hit area (larger for easier grabbing)
+    const leftHandle = this.scene.add.rectangle(
+      zone.x,
+      this.worldHeight / 2,
+      HANDLE_HIT_WIDTH,
+      this.worldHeight
+    );
     leftHandle.setOrigin(0.5, 0.5);
     leftHandle.setInteractive({ cursor: 'ew-resize' });
-    leftHandle.setDepth(ZONE_DEPTH + 0.2);
-    leftHandle.setFillStyle(HANDLE_COLOR, HANDLE_ALPHA);
+    leftHandle.setDepth(ZONE_DEPTH + 0.25);
+    leftHandle.setAlpha(0.001); // Nearly invisible but interactive
     leftHandle.setData('zoneId', zone.id);
     leftHandle.setData('type', 'left');
     
     leftHandle.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isClickOnUIElement(pointer)) return;
       this.startDrag(zone.id, 'left', pointer.worldX);
     });
     
     this.leftHandles.set(zone.id, leftHandle);
+    this.leftHandleVisuals.set(zone.id, leftHandleVisual);
     
     // Left arrow (pointing left) - offset outward from zone edge
     const arrowOffset = 8;
@@ -319,25 +361,38 @@ export class DialogZoneRenderer {
     this.drawArrow(leftArrow, zone.x - arrowOffset, arrowY, 'left');
     this.arrowGraphics.set(`${zone.id}_left`, leftArrow);
     
-    // Right handle
-    const rightHandle = this.scene.add.rectangle(
+    // Right handle - visual
+    const rightHandleVisual = this.scene.add.rectangle(
       zone.x + zone.width,
       this.worldHeight / 2,
       HANDLE_WIDTH,
       this.worldHeight
     );
+    rightHandleVisual.setOrigin(0.5, 0.5);
+    rightHandleVisual.setDepth(ZONE_DEPTH + 0.2);
+    rightHandleVisual.setFillStyle(HANDLE_COLOR, HANDLE_ALPHA);
+    
+    // Right handle - hit area (larger for easier grabbing)
+    const rightHandle = this.scene.add.rectangle(
+      zone.x + zone.width,
+      this.worldHeight / 2,
+      HANDLE_HIT_WIDTH,
+      this.worldHeight
+    );
     rightHandle.setOrigin(0.5, 0.5);
     rightHandle.setInteractive({ cursor: 'ew-resize' });
-    rightHandle.setDepth(ZONE_DEPTH + 0.2);
-    rightHandle.setFillStyle(HANDLE_COLOR, HANDLE_ALPHA);
+    rightHandle.setDepth(ZONE_DEPTH + 0.25);
+    rightHandle.setAlpha(0.001); // Nearly invisible but interactive
     rightHandle.setData('zoneId', zone.id);
     rightHandle.setData('type', 'right');
     
     rightHandle.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isClickOnUIElement(pointer)) return;
       this.startDrag(zone.id, 'right', pointer.worldX);
     });
     
     this.rightHandles.set(zone.id, rightHandle);
+    this.rightHandleVisuals.set(zone.id, rightHandleVisual);
     
     // Right arrow (pointing right) - offset outward from zone edge
     const rightArrow = this.scene.add.graphics();
@@ -444,36 +499,78 @@ export class DialogZoneRenderer {
   }
 
   /**
-   * Convert screen coordinates to world coordinates
+   * Check if a pointer event started on a UI element (not canvas)
    */
-  private screenToWorld(screenX: number, screenY: number): { worldX: number; worldY: number } {
-    const camera = this.scene.cameras.main;
-    const worldX = screenX / camera.zoom + camera.scrollX;
-    const worldY = screenY / camera.zoom + camera.scrollY;
-    return { worldX, worldY };
+  private isClickOnUIElement(pointer: Phaser.Input.Pointer): boolean {
+    const target = pointer.downElement;
+    if (!target) return false;
+    const tagName = (target as HTMLElement).tagName?.toUpperCase();
+    return tagName !== 'CANVAS';
   }
 
   /**
-   * Handle window pointer move for dragging (works even over UI)
+   * Cancel pending interactions if pointer moved too far
    */
-  private handleWindowPointerMove(event: PointerEvent): void {
-    // Cancel pending tap if pointer is moving (it's a drag, not a tap)
+  private cancelPendingIfMoved(worldX: number): void {
     if (this.pendingTap) {
-      const { worldX } = this.screenToWorld(event.clientX, event.clientY);
       const distance = Math.abs(worldX - this.pendingTap.worldX);
       if (distance > this.TAP_MAX_DISTANCE) {
         this.pendingTap = null;
       }
     }
     
+    if (this.pendingZoneSelection) {
+      const distance = Math.abs(worldX - this.pendingZoneSelection.worldX);
+      if (distance > this.TAP_MAX_DISTANCE) {
+        this.pendingZoneSelection = null;
+      }
+    }
+  }
+
+  /**
+   * Convert screen coordinates to world coordinates
+   */
+  private screenToWorld(screenX: number, screenY: number): { worldX: number; worldY: number } {
+    const camera = this.scene.cameras.main;
+    // Get canvas bounds to convert page coordinates to canvas-relative coordinates
+    const canvas = this.scene.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const canvasX = screenX - rect.left;
+    const canvasY = screenY - rect.top;
+    
+    const worldX = canvasX / camera.zoom + camera.scrollX;
+    const worldY = canvasY / camera.zoom + camera.scrollY;
+    return { worldX, worldY };
+  }
+
+  /**
+   * Handle window pointer move for dragging (works even over UI)
+   * This is a fallback - Phaser's handlePointerMove is primary
+   */
+  private handleWindowPointerMove(event: PointerEvent): void {
+    const coords = this.screenToWorld(event.clientX, event.clientY);
+    this.cancelPendingIfMoved(coords.worldX);
+    
     if (!this.dragging) return;
     
-    // Store screen X for auto-scroll
-    this.currentScreenX = event.clientX;
+    // Check if the event is over the canvas - if so, Phaser's handler will process it
+    const canvas = this.scene.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const isOverCanvas = 
+      event.clientX >= rect.left && 
+      event.clientX <= rect.right && 
+      event.clientY >= rect.top && 
+      event.clientY <= rect.bottom;
     
-    // Convert screen coordinates to world coordinates
-    const { worldX } = this.screenToWorld(event.clientX, event.clientY);
-    this.updateDrag(worldX);
+    // Only process if pointer is outside canvas (Phaser won't fire events there)
+    if (isOverCanvas) {
+      return;
+    }
+    
+    // Store screen X for auto-scroll (relative to canvas)
+    this.currentScreenX = event.clientX - rect.left;
+    
+    this.updateDrag(coords.worldX);
     
     // Check for auto-scroll
     this.checkAutoScroll();
@@ -483,13 +580,7 @@ export class DialogZoneRenderer {
    * Handle pointer move for dragging (Phaser input)
    */
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
-    // Cancel pending tap if pointer is moving (it's a drag, not a tap)
-    if (this.pendingTap) {
-      const distance = Math.abs(pointer.worldX - this.pendingTap.worldX);
-      if (distance > this.TAP_MAX_DISTANCE) {
-        this.pendingTap = null;
-      }
-    }
+    this.cancelPendingIfMoved(pointer.worldX);
     
     if (!this.dragging) return;
     
@@ -519,6 +610,14 @@ export class DialogZoneRenderer {
     const zone = this.currentZones.find(z => z.id === this.dragging?.zoneId);
     if (!zone) return;
     
+    // Check if scrolling is even possible (whole world might be visible)
+    const maxScroll = Math.max(0, this.worldWidth - camera.width / camera.zoom);
+    if (maxScroll <= 0) {
+      // Whole world is visible, no scrolling possible
+      this.stopAutoScroll();
+      return;
+    }
+    
     // Calculate zone's screen position (left and right edges)
     const zoneLeftScreen = (zone.x - camera.scrollX) * camera.zoom;
     const zoneRightScreen = (zone.x + zone.width - camera.scrollX) * camera.zoom;
@@ -528,14 +627,18 @@ export class DialogZoneRenderer {
     const zoneAtRightEdge = zoneRightScreen >= screenWidth - AUTO_SCROLL_MARGIN;
     
     const canScrollLeft = camera.scrollX > 0;
-    const canScrollRight = camera.scrollX < this.worldWidth - camera.width / camera.zoom;
+    const canScrollRight = camera.scrollX < maxScroll;
+    
+    // Also check if zone can move (not at world boundaries)
+    const zoneCanMoveLeft = zone.x > 0;
+    const zoneCanMoveRight = zone.x + zone.width < this.worldWidth;
     
     // Also check if pointer is at edge (user is trying to push further)
     const pointerAtLeftEdge = this.currentScreenX < AUTO_SCROLL_MARGIN;
     const pointerAtRightEdge = this.currentScreenX > screenWidth - AUTO_SCROLL_MARGIN;
     
-    const shouldScrollLeft = zoneAtLeftEdge && pointerAtLeftEdge && canScrollLeft;
-    const shouldScrollRight = zoneAtRightEdge && pointerAtRightEdge && canScrollRight;
+    const shouldScrollLeft = zoneAtLeftEdge && pointerAtLeftEdge && canScrollLeft && zoneCanMoveLeft;
+    const shouldScrollRight = zoneAtRightEdge && pointerAtRightEdge && canScrollRight && zoneCanMoveRight;
     
     const shouldScroll = shouldScrollLeft || shouldScrollRight;
     
@@ -572,11 +675,21 @@ export class DialogZoneRenderer {
     // Calculate scroll direction and speed based on pointer edge proximity
     if (this.currentScreenX < AUTO_SCROLL_MARGIN) {
       // Near left edge - scroll left
+      // But stop if zone is already at world's left edge
+      if (zone.x <= 0) {
+        this.stopAutoScroll();
+        return;
+      }
       const edgeDistance = AUTO_SCROLL_MARGIN - this.currentScreenX;
       const speedFactor = edgeDistance / AUTO_SCROLL_MARGIN;
       scrollDelta = -AUTO_SCROLL_SPEED * speedFactor;
     } else if (this.currentScreenX > screenWidth - AUTO_SCROLL_MARGIN) {
       // Near right edge - scroll right
+      // But stop if zone is already at world's right edge
+      if (zone.x + zone.width >= this.worldWidth) {
+        this.stopAutoScroll();
+        return;
+      }
       const edgeDistance = this.currentScreenX - (screenWidth - AUTO_SCROLL_MARGIN);
       const speedFactor = edgeDistance / AUTO_SCROLL_MARGIN;
       scrollDelta = AUTO_SCROLL_SPEED * speedFactor;
@@ -587,28 +700,55 @@ export class DialogZoneRenderer {
     // Check bounds before scrolling
     const newScrollX = camera.scrollX + scrollDelta;
     const minScroll = 0;
-    const maxScroll = this.worldWidth - camera.width / camera.zoom;
+    const maxScroll = Math.max(0, this.worldWidth - camera.width / camera.zoom);
     const clampedScrollX = Math.max(minScroll, Math.min(maxScroll, newScrollX));
     const actualDelta = clampedScrollX - camera.scrollX;
+    
+    // If maxScroll is 0 or negative, we can't scroll (whole world is visible)
+    if (maxScroll <= 0) {
+      this.stopAutoScroll();
+      return;
+    }
     
     if (actualDelta === 0) {
       this.stopAutoScroll();
       return;
     }
     
-    // Apply camera scroll
-    camera.scrollX = clampedScrollX;
-    
-    // Move zone with camera (zone stays at same screen position)
+    // Calculate new zone position
     const newZoneX = zone.x + actualDelta;
     const clampedZoneX = Math.max(0, Math.min(this.worldWidth - zone.width, newZoneX));
     
+    // Calculate actual zone movement (may be less than camera movement due to clamping)
+    const actualZoneDelta = clampedZoneX - zone.x;
+    
+    // Only scroll if zone can actually move
+    if (actualZoneDelta === 0) {
+      this.stopAutoScroll();
+      return;
+    }
+    
+    // Limit camera scroll to match zone movement (don't scroll more than zone can move)
+    const limitedCameraScrollX = camera.scrollX + actualZoneDelta;
+    const finalCameraScrollX = Math.max(0, Math.min(maxScroll, limitedCameraScrollX));
+    
+    // Don't apply if camera would jump too far (more than a reasonable amount)
+    const cameraJump = Math.abs(finalCameraScrollX - camera.scrollX);
+    if (cameraJump > Math.abs(actualZoneDelta) * 2) {
+      this.stopAutoScroll();
+      return;
+    }
+    
+    // Apply camera scroll (limited to zone movement)
+    camera.scrollX = finalCameraScrollX;
+    
+    // Move zone with camera (zone stays at same screen position)
     if (!this.wouldOverlap(zone.id, clampedZoneX, zone.width)) {
       updateDialogZone(zone.id, { x: clampedZoneX });
       
-      // Update drag reference to keep sync - zone moved, so original position changed
-      this.dragging.originalX += actualDelta;
-      this.dragging.startX += actualDelta;
+      // Update drag reference to keep sync - use actual zone delta, not camera delta
+      this.dragging.originalX += actualZoneDelta;
+      this.dragging.startX += actualZoneDelta;
     }
   }
 
@@ -799,6 +939,27 @@ export class DialogZoneRenderer {
       this.dragging = null;
     }
     
+    // Handle pending zone selection (user clicked on unselected zone)
+    if (this.pendingZoneSelection) {
+      const now = Date.now();
+      const duration = now - this.pendingZoneSelection.startTime;
+      
+      // Check if this was a quick click (not a scroll/drag)
+      let isValidClick = duration < this.TAP_MAX_DURATION;
+      if (isValidClick && pointer && pointer.worldX !== undefined) {
+        const distance = Math.abs(pointer.worldX - this.pendingZoneSelection.worldX);
+        isValidClick = distance < this.TAP_MAX_DISTANCE;
+      }
+      
+      if (isValidClick) {
+        // User clicked without dragging - select the zone
+        selectDialogZone(this.pendingZoneSelection.zoneId);
+      }
+      // If user dragged, don't select - they were scrolling
+      
+      this.pendingZoneSelection = null;
+    }
+    
     // Check for tap gesture to show temp button
     if (this.pendingTap && this.currentEditMode === 'dialogs') {
       const now = Date.now();
@@ -903,30 +1064,7 @@ export class DialogZoneRenderer {
    * Create a new zone centered at the given X position
    */
   private createZoneAtPosition(worldX: number): void {
-    let newX = worldX - DEFAULT_ZONE_WIDTH / 2;
-    const newWidth = DEFAULT_ZONE_WIDTH;
-    
-    // Clamp x to world bounds
-    newX = Math.max(0, Math.min(this.worldWidth - newWidth, newX));
-    
-    // Check for overlap
-    if (this.wouldOverlap('', newX, newWidth)) {
-      // Try to find a non-overlapping position nearby
-      const validX = this.findNonOverlappingPosition('', newX, newWidth);
-      if (validX === null) {
-        // No room for a new zone - could show a message
-        console.warn('No room for a new dialog zone');
-        return;
-      }
-      newX = validX;
-    }
-    
-    // Create new zone
-    const newZone = createDialogZone(newX, newWidth);
-    newZone.x = newX;
-    
-    addDialogZone(newZone);
-    selectDialogZone(newZone.id);
+    this.createZoneAt(worldX);
   }
   
   /**
@@ -936,7 +1074,14 @@ export class DialogZoneRenderer {
   public createNewZone(): void {
     const camera = this.scene.cameras.main;
     const centerX = camera.scrollX + camera.width / 2;
-    
+    this.createZoneAt(centerX);
+  }
+  
+  /**
+   * Create a new zone centered at the given X position
+   * Shared logic for createZoneAtPosition and createNewZone
+   */
+  private createZoneAt(centerX: number): void {
     let newX = centerX - DEFAULT_ZONE_WIDTH / 2;
     const newWidth = DEFAULT_ZONE_WIDTH;
     
@@ -948,7 +1093,6 @@ export class DialogZoneRenderer {
       // Try to find a non-overlapping position nearby
       const validX = this.findNonOverlappingPosition('', newX, newWidth);
       if (validX === null) {
-        // No room for a new zone - could show a message
         console.warn('No room for a new dialog zone');
         return;
       }
@@ -986,12 +1130,12 @@ export class DialogZoneRenderer {
       return;
     }
     
-    // Calculate screen position (center of zone, at arrow level)
+    // Calculate screen position (center of zone, below arrows)
     const camera = this.scene.cameras.main;
     const zoneCenterX = zone.x + zone.width / 2;
     const screenX = (zoneCenterX - camera.scrollX) * camera.zoom;
-    // Position Y at center of viewport (same level as resize arrows)
-    const screenY = camera.height / 2;
+    // Position Y below the center (arrows are at 50%, buttons at 65%)
+    const screenY = camera.height * 0.65;
     
     updateSelectedDialogZoneScreenPosition({ screenX, screenY });
   }

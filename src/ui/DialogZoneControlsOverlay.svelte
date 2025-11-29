@@ -43,6 +43,10 @@
     deleteDialogZone($selectedDialogZoneId);
     selectDialogZone(null);
   }
+  
+  function handleDeselect() {
+    selectDialogZone(null);
+  }
 </script>
 
 {#if $builderEditMode === 'dialogs' && $selectedDialogZoneId && controlsPosition}
@@ -65,6 +69,14 @@
         onclick={handleDelete}
       >
         DEL
+      </PixelButton>
+      
+      <PixelButton
+        variant="default"
+        title="Deselect zone"
+        onclick={handleDeselect}
+      >
+        DONE
       </PixelButton>
     </div>
   </div>
