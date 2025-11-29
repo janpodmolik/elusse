@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isBuilderZoomedOut, builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId } from '../stores/builderStores';
+  import { isBuilderZoomedOut, builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId, selectedDialogZoneId } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { EventBus, EVENTS } from '../events/EventBus';
   import AssetPalette from './AssetPalette.svelte';
@@ -14,15 +14,16 @@
   import DialogModeHint from './DialogModeHint.svelte';
   import ItemControlsOverlay from './ItemControlsOverlay.svelte';
   import FrameControlsOverlay from './FrameControlsOverlay.svelte';
+  import DialogZoneControlsOverlay from './DialogZoneControlsOverlay.svelte';
   import { HStack, VStack, FixedPosition } from './layout';
 
   const NARROW_SCREEN_THRESHOLD = 600;
   
-  // Track if buttons should be hidden (narrow screen + item/frame selected)
+  // Track if buttons should be hidden (narrow screen + item/frame/zone selected)
   let isNarrowScreen = $state(typeof window !== 'undefined' ? window.innerWidth < NARROW_SCREEN_THRESHOLD : false);
   
   // Reactive: hide buttons when something is selected on narrow screen
-  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedFrameId !== null));
+  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedFrameId !== null || $selectedDialogZoneId !== null));
   
   // Listen for window resize
   $effect(() => {
@@ -55,6 +56,9 @@
 
 <!-- Frame controls overlay (positioned above selected frame) -->
 <FrameControlsOverlay />
+
+<!-- Dialog zone controls overlay (positioned above selected zone) -->
+<DialogZoneControlsOverlay />
 
 <!-- Conditional panels based on mode -->
 {#if $builderEditMode === 'items'}

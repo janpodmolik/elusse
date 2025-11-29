@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { DialogZone } from '../../types/DialogTypes';
 import { createDialogZone } from '../../types/DialogTypes';
-import { builderEditMode, dialogZones, selectedDialogZoneId, selectDialogZone, addDialogZone, updateDialogZone, setDraggingInBuilder } from '../../stores/builderStores';
+import { builderEditMode, dialogZones, selectedDialogZoneId, selectDialogZone, addDialogZone, updateDialogZone, setDraggingInBuilder, updateSelectedDialogZoneScreenPosition, openDialogZonePanel } from '../../stores/builderStores';
 import { OVERLAY_DEPTH } from './builderConstants';
 import { EventBus, EVENTS } from '../../events/EventBus';
 
@@ -31,6 +31,12 @@ const HANDLE_ALPHA = 0.6;
 
 /** Minimum gap between zones */
 const MIN_ZONE_GAP = 0;
+
+/** Edge margin for auto-scroll (pixels from screen edge) */
+const AUTO_SCROLL_MARGIN = 60;
+
+/** Auto-scroll speed (pixels per frame) */
+const AUTO_SCROLL_SPEED = 8;
 
 /**
  * DialogZoneRenderer - Renders and manages dialog trigger zones in builder mode
@@ -99,6 +105,12 @@ export class DialogZoneRenderer {
 
   /** Bound handler for window pointermove */
   private boundWindowPointerMove: (e: PointerEvent) => void = () => {};
+
+  /** Current screen X position during drag (for auto-scroll) */
+  private currentScreenX: number = 0;
+
+  /** Auto-scroll update timer */
+  private autoScrollTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -235,20 +247,33 @@ export class DialogZoneRenderer {
     
     // Click to select, drag to move (only if selected)
     zoneArea.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const now = Date.now();
+      const isDoubleClick = 
+        now - this.lastClickTime < this.DOUBLE_CLICK_THRESHOLD &&
+        Math.abs(pointer.worldX - this.lastClickX) < this.DOUBLE_CLICK_DISTANCE;
+      
+      this.lastClickTime = now;
+      this.lastClickX = pointer.worldX;
+      
       // Set flag to prevent camera drag
       this.scene.data.set('isDraggingItem', true);
       setDraggingInBuilder(true);
       
-      if (this.currentSelectedId === zone.id) {
-        // Already selected, start moving
-        this.startDrag(zone.id, 'move', pointer.worldX);
-      } else {
-        // Select the zone
+      // If not selected, select it first
+      if (this.currentSelectedId !== zone.id) {
         selectDialogZone(zone.id);
-        // Reset flag since we're not actually dragging yet
+      }
+      
+      // Double-click opens dialog panel
+      if (isDoubleClick) {
+        openDialogZonePanel();
         this.scene.data.set('isDraggingItem', false);
         setDraggingInBuilder(false);
+        return;
       }
+      
+      // Always start moving drag (even if just selected)
+      this.startDrag(zone.id, 'move', pointer.worldX);
     });
     
     this.zoneAreas.set(zone.id, zoneArea);
@@ -443,9 +468,15 @@ export class DialogZoneRenderer {
     
     if (!this.dragging) return;
     
+    // Store screen X for auto-scroll
+    this.currentScreenX = event.clientX;
+    
     // Convert screen coordinates to world coordinates
     const { worldX } = this.screenToWorld(event.clientX, event.clientY);
     this.updateDrag(worldX);
+    
+    // Check for auto-scroll
+    this.checkAutoScroll();
   }
 
   /**
@@ -462,10 +493,133 @@ export class DialogZoneRenderer {
     
     if (!this.dragging) return;
     
+    // Store screen X for auto-scroll
+    this.currentScreenX = pointer.x;
+    
     // Stop camera from moving while dragging
     pointer.event?.stopPropagation?.();
     
     this.updateDrag(pointer.worldX);
+    
+    // Check for auto-scroll
+    this.checkAutoScroll();
+  }
+
+  /**
+   * Check if auto-scroll should be active and start/stop timer accordingly
+   */
+  private checkAutoScroll(): void {
+    if (!this.dragging || this.dragging.type !== 'move') {
+      this.stopAutoScroll();
+      return;
+    }
+    
+    const camera = this.scene.cameras.main;
+    const screenWidth = camera.width;
+    const zone = this.currentZones.find(z => z.id === this.dragging?.zoneId);
+    if (!zone) return;
+    
+    // Calculate zone's screen position (left and right edges)
+    const zoneLeftScreen = (zone.x - camera.scrollX) * camera.zoom;
+    const zoneRightScreen = (zone.x + zone.width - camera.scrollX) * camera.zoom;
+    
+    // Check if zone edge is at screen edge AND there's room to scroll
+    const zoneAtLeftEdge = zoneLeftScreen <= AUTO_SCROLL_MARGIN;
+    const zoneAtRightEdge = zoneRightScreen >= screenWidth - AUTO_SCROLL_MARGIN;
+    
+    const canScrollLeft = camera.scrollX > 0;
+    const canScrollRight = camera.scrollX < this.worldWidth - camera.width / camera.zoom;
+    
+    // Also check if pointer is at edge (user is trying to push further)
+    const pointerAtLeftEdge = this.currentScreenX < AUTO_SCROLL_MARGIN;
+    const pointerAtRightEdge = this.currentScreenX > screenWidth - AUTO_SCROLL_MARGIN;
+    
+    const shouldScrollLeft = zoneAtLeftEdge && pointerAtLeftEdge && canScrollLeft;
+    const shouldScrollRight = zoneAtRightEdge && pointerAtRightEdge && canScrollRight;
+    
+    const shouldScroll = shouldScrollLeft || shouldScrollRight;
+    
+    if (shouldScroll && !this.autoScrollTimer) {
+      // Start auto-scroll timer
+      this.autoScrollTimer = this.scene.time.addEvent({
+        delay: 16, // ~60fps
+        callback: this.performAutoScroll,
+        callbackScope: this,
+        loop: true
+      });
+    } else if (!shouldScroll && this.autoScrollTimer) {
+      this.stopAutoScroll();
+    }
+  }
+
+  /**
+   * Perform auto-scroll based on current pointer position
+   * Zone "pushes against" screen edge and moves with camera
+   */
+  private performAutoScroll(): void {
+    if (!this.dragging || this.dragging.type !== 'move') {
+      this.stopAutoScroll();
+      return;
+    }
+    
+    const camera = this.scene.cameras.main;
+    const screenWidth = camera.width;
+    const zone = this.currentZones.find(z => z.id === this.dragging?.zoneId);
+    if (!zone) return;
+    
+    let scrollDelta = 0;
+    
+    // Calculate scroll direction and speed based on pointer edge proximity
+    if (this.currentScreenX < AUTO_SCROLL_MARGIN) {
+      // Near left edge - scroll left
+      const edgeDistance = AUTO_SCROLL_MARGIN - this.currentScreenX;
+      const speedFactor = edgeDistance / AUTO_SCROLL_MARGIN;
+      scrollDelta = -AUTO_SCROLL_SPEED * speedFactor;
+    } else if (this.currentScreenX > screenWidth - AUTO_SCROLL_MARGIN) {
+      // Near right edge - scroll right
+      const edgeDistance = this.currentScreenX - (screenWidth - AUTO_SCROLL_MARGIN);
+      const speedFactor = edgeDistance / AUTO_SCROLL_MARGIN;
+      scrollDelta = AUTO_SCROLL_SPEED * speedFactor;
+    }
+    
+    if (scrollDelta === 0) return;
+    
+    // Check bounds before scrolling
+    const newScrollX = camera.scrollX + scrollDelta;
+    const minScroll = 0;
+    const maxScroll = this.worldWidth - camera.width / camera.zoom;
+    const clampedScrollX = Math.max(minScroll, Math.min(maxScroll, newScrollX));
+    const actualDelta = clampedScrollX - camera.scrollX;
+    
+    if (actualDelta === 0) {
+      this.stopAutoScroll();
+      return;
+    }
+    
+    // Apply camera scroll
+    camera.scrollX = clampedScrollX;
+    
+    // Move zone with camera (zone stays at same screen position)
+    const newZoneX = zone.x + actualDelta;
+    const clampedZoneX = Math.max(0, Math.min(this.worldWidth - zone.width, newZoneX));
+    
+    if (!this.wouldOverlap(zone.id, clampedZoneX, zone.width)) {
+      updateDialogZone(zone.id, { x: clampedZoneX });
+      
+      // Update drag reference to keep sync - zone moved, so original position changed
+      this.dragging.originalX += actualDelta;
+      this.dragging.startX += actualDelta;
+    }
+  }
+
+  /**
+   * Stop auto-scroll timer
+   */
+  private stopAutoScroll(): void {
+    if (this.autoScrollTimer) {
+      this.autoScrollTimer.destroy();
+      this.autoScrollTimer = null;
+    }
   }
 
   /**
@@ -636,6 +790,9 @@ export class DialogZoneRenderer {
   private handlePointerUp(pointer?: Phaser.Input.Pointer): void {
     // Handle zone drag end
     if (this.dragging) {
+      // Stop auto-scroll
+      this.stopAutoScroll();
+      
       // Clear flag to re-enable camera scrolling
       this.scene.data.set('isDraggingItem', false);
       setDraggingInBuilder(false);
@@ -807,6 +964,39 @@ export class DialogZoneRenderer {
   }
 
   /**
+   * Update selection visuals and screen position for UI overlay
+   * Called from scene's update loop
+   */
+  updateSelectionVisuals(): void {
+    // Only update in dialog mode
+    if (this.currentEditMode !== 'dialogs') {
+      updateSelectedDialogZoneScreenPosition(null);
+      return;
+    }
+    
+    if (!this.currentSelectedId) {
+      updateSelectedDialogZoneScreenPosition(null);
+      return;
+    }
+    
+    // Find the selected zone
+    const zone = this.currentZones.find(z => z.id === this.currentSelectedId);
+    if (!zone) {
+      updateSelectedDialogZoneScreenPosition(null);
+      return;
+    }
+    
+    // Calculate screen position (center of zone, at arrow level)
+    const camera = this.scene.cameras.main;
+    const zoneCenterX = zone.x + zone.width / 2;
+    const screenX = (zoneCenterX - camera.scrollX) * camera.zoom;
+    // Position Y at center of viewport (same level as resize arrows)
+    const screenY = camera.height / 2;
+    
+    updateSelectedDialogZoneScreenPosition({ screenX, screenY });
+  }
+
+  /**
    * Destroy renderer and clean up
    */
   destroy(): void {
@@ -826,6 +1016,9 @@ export class DialogZoneRenderer {
     if (this.createZoneAtSubscription) {
       this.createZoneAtSubscription.unsubscribe();
     }
+    
+    // Stop auto-scroll
+    this.stopAutoScroll();
     
     // Remove input listeners
     this.scene.input.off('pointerdown', this.handlePointerDown, this);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { selectedDialogZoneId, dialogZones, updateDialogZoneText, deleteDialogZone, selectDialogZone, updateDialogZone } from '../stores/builderStores';
+  import { selectedDialogZoneId, dialogZones, updateDialogZoneText, deleteDialogZone, updateDialogZone, isDialogZonePanelOpen, closeDialogZonePanel } from '../stores/builderStores';
   import type { DialogZone, LocalizedText } from '../types/DialogTypes';
   import { ZONE_COLORS } from '../types/DialogTypes';
   import { DEFAULT_LANGUAGE, type Language } from '../types/Language';
@@ -37,10 +37,11 @@
   function handleDelete() {
     if (!$selectedDialogZoneId) return;
     deleteDialogZone($selectedDialogZoneId);
+    closeDialogZonePanel();
   }
   
   function handleClose() {
-    selectDialogZone(null);
+    closeDialogZonePanel();
   }
   
   function handleColorSelect(color: string) {
@@ -53,7 +54,7 @@
   }
 </script>
 
-{#if selectedZone}
+{#if selectedZone && $isDialogZonePanelOpen}
   <DraggablePanel
     panelId="dialog-zone-panel"
     title="Dialog Zone"

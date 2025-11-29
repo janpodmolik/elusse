@@ -170,6 +170,7 @@ export class BuilderScene extends Phaser.Scene {
     // Update selection visuals and screen position (for UI overlay)
     this.itemManager?.updateSelectionVisuals();
     this.framesController?.updateSelectionVisuals();
+    this.dialogZoneRenderer?.updateSelectionVisuals();
     
     // Update camera info for minimap
     const camera = this.cameras.main;

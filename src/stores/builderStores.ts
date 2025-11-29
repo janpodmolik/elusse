@@ -187,6 +187,30 @@ export function updateSelectedFrameScreenPosition(pos: { screenX: number; screen
   selectedFrameScreenPosition.set(pos);
 }
 
+/**
+ * Screen position of selected dialog zone (updated from Phaser scene)
+ * Used for positioning dialog zone controls overlay
+ */
+export const selectedDialogZoneScreenPosition = writable<{ screenX: number; screenY: number } | null>(null);
+
+/** Update selected dialog zone screen position (called from DialogZoneRenderer) */
+export function updateSelectedDialogZoneScreenPosition(pos: { screenX: number; screenY: number } | null): void {
+  selectedDialogZoneScreenPosition.set(pos);
+}
+
+/** Whether dialog zone panel is open */
+export const isDialogZonePanelOpen = writable<boolean>(false);
+
+/** Open dialog zone panel */
+export function openDialogZonePanel(): void {
+  isDialogZonePanelOpen.set(true);
+}
+
+/** Close dialog zone panel */
+export function closeDialogZonePanel(): void {
+  isDialogZonePanelOpen.set(false);
+}
+
 /** Get selected item data */
 export const selectedItem = derived(builderState, $state => {
   if (!$state.selectedItemId || !$state.config?.placedItems) return null;
