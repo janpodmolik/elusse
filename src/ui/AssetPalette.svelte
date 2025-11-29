@@ -118,7 +118,6 @@
               alt={asset.name}
               class="item-preview"
             />
-            <span class="item-name">{asset.name}</span>
           </div>
         {/each}
       </div>
@@ -153,13 +152,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 12px;
+    padding: 8px;
     background: #252540;
     border: 2px solid #333;
     cursor: grab;
     transition: all 0.1s ease-out;
-    min-height: 100px;
+    aspect-ratio: 1;
     user-select: none;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
   }
@@ -183,24 +181,11 @@
   }
   
   .item-preview {
-    width: 48px;
-    height: 48px;
+    width: 80%;
+    height: 80%;
     object-fit: contain;
     image-rendering: pixelated;
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
-  }
-  
-  .item-name {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    color: #aaa;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .palette-item:hover .item-name {
-    color: #fff;
   }
   
   .palette-item:hover .item-preview {
@@ -220,21 +205,9 @@
     }
     
     .palette-item {
-      padding: 8px;
-      min-height: 80px;
-      gap: 6px;
+      padding: 6px;
       border-width: 2px;
       box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    .item-preview {
-      width: 40px;
-      height: 40px;
-    }
-    
-    .item-name {
-      font-size: 7px;
-      letter-spacing: 0;
     }
   }
 </style>

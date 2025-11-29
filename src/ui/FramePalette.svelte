@@ -8,14 +8,8 @@
   import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#9b59b6'; // Purple for frames
-  const NARROW_SCREEN_THRESHOLD = 600; // px - same as AssetPalette
   
   const frames = FRAMES;
-  
-  /** Check if screen is narrow (portrait mobile) */
-  function isNarrowScreen(): boolean {
-    return window.innerWidth < NARROW_SCREEN_THRESHOLD;
-  }
   
   // Drag state
   let draggedFrame = $state<string | null>(null);
@@ -29,10 +23,8 @@
       dataKey: 'frameKey',
       eventName: EVENTS.FRAME_DROPPED,
       onDrop: () => {
-        // Always close on narrow screens, keep open on wide screens for quick adding
-        if (isNarrowScreen()) {
-          isFramePaletteOpen.set(false);
-        }
+        // Always close palette after dropping a frame
+        isFramePaletteOpen.set(false);
       },
     },
     () => ({ draggedKey: draggedFrame, touchDragElement }),
@@ -116,9 +108,8 @@
             <img 
               src={frame.path} 
               alt={frame.name}
-              class="item-preview item-preview--landscape"
+              class="item-preview"
             />
-            <span class="item-name">{frame.name}</span>
           </div>
         {/each}
       </div>
@@ -153,13 +144,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 12px;
+    padding: 8px;
     background: #252540;
     border: 2px solid #333;
     cursor: grab;
     transition: all 0.1s ease-out;
-    min-height: 90px;
+    aspect-ratio: 1;
     user-select: none;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
   }
@@ -183,30 +173,12 @@
   }
   
   .item-preview {
-    width: 48px;
-    height: 48px;
+    width: 85%;
+    height: 85%;
     object-fit: contain;
     image-rendering: pixelated;
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
-  }
-  
-  .item-preview--landscape {
-    width: 72px;
-    height: 48px;
     transform: rotate(90deg);
-  }
-  
-  .item-name {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    color: #aaa;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .palette-item:hover .item-name {
-    color: #fff;
   }
   
   .palette-item:hover .item-preview {
@@ -227,27 +199,9 @@
     }
     
     .palette-item {
-      padding: 8px;
-      min-height: 70px;
-      gap: 6px;
+      padding: 6px;
       border-width: 2px;
       box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    .item-preview {
-      width: 40px;
-      height: 40px;
-    }
-    
-    .item-preview--landscape {
-      width: 56px;
-      height: 40px;
-      transform: rotate(90deg);
-    }
-    
-    .item-name {
-      font-size: 7px;
-      letter-spacing: 0;
     }
   }
 </style>
