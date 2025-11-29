@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isBuilderZoomedOut, builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette } from '../stores/builderStores';
+  import { isBuilderZoomedOut, builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId } from '../stores/builderStores';
   import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
   import { EventBus, EVENTS } from '../events/EventBus';
   import AssetPalette from './AssetPalette.svelte';
@@ -15,6 +15,23 @@
   import ItemControlsOverlay from './ItemControlsOverlay.svelte';
   import FrameControlsOverlay from './FrameControlsOverlay.svelte';
   import { HStack, VStack, FixedPosition } from './layout';
+
+  const NARROW_SCREEN_THRESHOLD = 600;
+  
+  // Track if buttons should be hidden (narrow screen + item/frame selected)
+  let isNarrowScreen = $state(typeof window !== 'undefined' ? window.innerWidth < NARROW_SCREEN_THRESHOLD : false);
+  
+  // Reactive: hide buttons when something is selected on narrow screen
+  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedFrameId !== null));
+  
+  // Listen for window resize
+  $effect(() => {
+    function handleResize() {
+      isNarrowScreen = window.innerWidth < NARROW_SCREEN_THRESHOLD;
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  });
 
   function handleSave() {
     switchToGame();
@@ -61,7 +78,7 @@
 
 <!-- Top-left: Save, Zoom, Snap buttons -->
 <FixedPosition position="top-left">
-  <div class="left-buttons">
+  <div class="left-buttons" class:hide-left={hideButtons}>
     <PixelButton variant="green" width="100px" onclick={handleSave}>
       SAVE
     </PixelButton>
@@ -88,8 +105,9 @@
 
 <!-- Top-right: Mode selection buttons (ASSETS, FRAMES, DIALOGS) -->
 <FixedPosition position="top-right">
-  <VStack align="end">
-    <PixelButton 
+  <div class="right-buttons" class:hide-right={hideButtons}>
+    <VStack align="end">
+      <PixelButton 
       variant={$builderEditMode === 'items' && $isAssetPaletteOpen ? 'orange' : 'blue'}
       onclick={() => {
         if ($builderEditMode === 'items') {
@@ -145,7 +163,8 @@
         DIALOGS
       </PixelButton>
     </HStack>
-  </VStack>
+    </VStack>
+  </div>
 </FixedPosition>
 
 <style>
@@ -154,6 +173,24 @@
     flex-wrap: wrap;
     gap: 8px;
     max-width: calc(100vw - 140px);
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  }
+  
+  .right-buttons {
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  }
+  
+  /* Slide buttons off screen when item/frame selected on narrow display */
+  .left-buttons.hide-left {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .right-buttons.hide-right {
+    transform: translateX(120%);
+    opacity: 0;
+    pointer-events: none;
   }
   
   @media (max-width: 500px) {

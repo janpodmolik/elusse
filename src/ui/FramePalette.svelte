@@ -8,8 +8,14 @@
   import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#9b59b6'; // Purple for frames
+  const NARROW_SCREEN_THRESHOLD = 600; // px - same as AssetPalette
   
   const frames = FRAMES;
+  
+  /** Check if screen is narrow (portrait mobile) */
+  function isNarrowScreen(): boolean {
+    return window.innerWidth < NARROW_SCREEN_THRESHOLD;
+  }
   
   // Drag state
   let draggedFrame = $state<string | null>(null);
@@ -22,7 +28,12 @@
       borderColor: ACCENT_COLOR,
       dataKey: 'frameKey',
       eventName: EVENTS.FRAME_DROPPED,
-      onDrop: () => isFramePaletteOpen.set(false),
+      onDrop: () => {
+        // Always close on narrow screens, keep open on wide screens for quick adding
+        if (isNarrowScreen()) {
+          isFramePaletteOpen.set(false);
+        }
+      },
     },
     () => ({ draggedKey: draggedFrame, touchDragElement }),
     (updates) => {

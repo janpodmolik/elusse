@@ -8,8 +8,21 @@
   import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#4a90e2'; // Blue for assets
+  const NARROW_SCREEN_THRESHOLD = 600; // px - close palette after adding item on narrow screens
   
   const assets = ASSETS;
+  
+  /** Check if screen is narrow (portrait mobile) */
+  function isNarrowScreen(): boolean {
+    return window.innerWidth < NARROW_SCREEN_THRESHOLD;
+  }
+  
+  /** Close palette if on narrow screen */
+  function closeOnNarrowScreen() {
+    if (isNarrowScreen()) {
+      isAssetPaletteOpen.set(false);
+    }
+  }
   
   // Drag state
   let draggedAsset = $state<string | null>(null);
@@ -22,6 +35,7 @@
       borderColor: ACCENT_COLOR,
       dataKey: 'assetKey',
       eventName: EVENTS.ASSET_DROPPED,
+      onDrop: closeOnNarrowScreen,
     },
     () => ({ draggedKey: draggedAsset, touchDragElement }),
     (updates) => {
@@ -44,6 +58,7 @@
     const centerX = cam.scrollX + cam.viewWidth / 2;
     const centerY = cam.scrollY + cam.viewHeight / 2;
     EventBus.emit(EVENTS.ASSET_DROPPED, { assetKey, canvasX: centerX, canvasY: centerY });
+    closeOnNarrowScreen();
   }
   
   // Setup canvas listeners on mount
