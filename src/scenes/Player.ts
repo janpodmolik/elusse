@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CatSkin } from '../data/catSkin';
 import { hasPlayerMoved } from '../stores';
-import { DEPTH_LAYERS } from '../constants/depthLayers';
+import { PLAYER_SPRITE } from '../constants/playerConstants';
 import { PlayerAnimations, PlayerInputController, MOVEMENT_CONFIG, type AnimationState } from '../entities';
 
 /**
@@ -42,8 +42,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Cat sprite is 48x48, we want a small body at the bottom center
     this.setSize(16, 12);
     this.setOffset(16, 36); // Center horizontally, bottom of sprite
-    this.setScale(5);
-    this.setDepth(DEPTH_LAYERS.PLAYER);
+    this.setScale(PLAYER_SPRITE.SCALE);
+    this.setDepth(PLAYER_SPRITE.DEPTH);
 
     // Start with idle animation
     this.animations.play(this, 'idle');

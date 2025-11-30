@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { updatePlayerPosition, builderEditMode } from '../../stores/builderStores';
 import { setupSpriteInteraction } from '../../utils/spriteInteraction';
 import {
-  GROUND_HEIGHT,
-  PLAYER_SPRITE_FRAME_HEIGHT,
-  PLAYER_SCALE,
-  PLAYER_DEPTH,
+  PLAYER_SPRITE,
+  getPlayerGroundY,
+  isPlayerBelowGround,
+} from '../../constants/playerConstants';
+import {
   DRAG_MARGIN_HORIZONTAL,
   DRAG_MARGIN_TOP,
   DRAG_TINT
@@ -20,23 +21,26 @@ export class BuilderPlayerController {
   private scene: Phaser.Scene;
   private player!: Phaser.GameObjects.Sprite;
   private worldWidth: number;
-  private groundY: number;
+  private worldHeight: number;
   private unsubscribers: Array<() => void> = [];
   private interactionCleanup: (() => void) | null = null;
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
     this.worldWidth = worldWidth;
-    this.groundY = worldHeight - GROUND_HEIGHT;
+    this.worldHeight = worldHeight;
   }
 
   /**
    * Create and setup player sprite
    */
   create(startX: number, startY: number): Phaser.GameObjects.Sprite {
-    this.player = this.scene.add.sprite(startX, startY, 'cat-idle-white', 0);
-    this.player.setScale(PLAYER_SCALE);
-    this.player.setDepth(PLAYER_DEPTH);
+    // Ensure player starts on ground, not floating or underground
+    const safeY = Math.min(startY, getPlayerGroundY(this.worldHeight));
+    
+    this.player = this.scene.add.sprite(startX, safeY, 'cat-idle-white', 0);
+    this.player.setScale(PLAYER_SPRITE.SCALE);
+    this.player.setDepth(PLAYER_SPRITE.DEPTH);
 
     // Store player sprite in scene data for camera controller access
     this.scene.data.set('playerSprite', this.player);
@@ -79,16 +83,12 @@ export class BuilderPlayerController {
           this.player.clearTint();
           this.scene.data.set('isDraggingObject', false);
           
-          // Check if player is below ground line
+          // Check if player is below ground line and correct if needed
           let finalY = this.player.y;
           
-          // Calculate player's bottom position
-          const spriteHeight = PLAYER_SPRITE_FRAME_HEIGHT * PLAYER_SCALE;
-          const playerBottom = this.player.y + (spriteHeight / 2);
-          
-          if (playerBottom > this.groundY) {
+          if (isPlayerBelowGround(this.player.y, this.worldHeight)) {
             // Teleport player so feet are on ground level
-            finalY = this.groundY - (spriteHeight / 2);
+            finalY = getPlayerGroundY(this.worldHeight);
             this.player.setY(finalY);
           }
           

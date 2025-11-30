@@ -7,10 +7,12 @@
 
 import Phaser from 'phaser';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
+import { GROUND_HEIGHT } from '../../constants/playerConstants';
 
-// Default ground configuration
+// Ground visual configuration (height comes from playerConstants)
 export const GROUND_CONFIG = {
-  HEIGHT: 40,
+  /** @deprecated Use GROUND_HEIGHT from playerConstants instead */
+  HEIGHT: GROUND_HEIGHT,
   // Visual appearance for builder mode
   VISUAL: {
     COLOR: 0x8b7355,
@@ -43,8 +45,9 @@ export interface GroundResult {
 export const GroundManager = {
   /**
    * Calculate ground Y position from world height
+   * @deprecated Use getGroundY() from playerConstants instead for consistency
    */
-  getGroundY(worldHeight: number, groundHeight: number = GROUND_CONFIG.HEIGHT): number {
+  getGroundY(worldHeight: number, groundHeight: number = GROUND_HEIGHT): number {
     return worldHeight - groundHeight;
   },
 

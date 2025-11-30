@@ -10,6 +10,7 @@ import { loadMapConfig, MapConfig } from '../data/mapConfig';
 import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
+import { clampPlayerY, getPlayerGroundY } from '../constants/playerConstants';
 import { isLoading, setActiveDialogZone, setPlayerScreenPosition, setGameCameraInfo } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
 
@@ -100,8 +101,9 @@ export class GameScene extends Phaser.Scene {
         worldHeight: this.mapConfig.worldHeight,
       });
 
-      // Create player
-      this.player = new Player(this, this.mapConfig.playerStartX, this.mapConfig.playerStartY);
+      // Create player - ensure they start on ground, not floating or underground
+      const playerY = clampPlayerY(this.mapConfig.playerStartY, this.mapConfig.worldHeight);
+      this.player = new Player(this, this.mapConfig.playerStartX, playerY);
 
       // Add collision between player and ground
       GroundManager.addPlayerCollision(this, this.player, ground);
@@ -174,12 +176,13 @@ export class GameScene extends Phaser.Scene {
       }
     } catch (error) {
       console.error('[GameScene] Failed to load map configuration:', error);
-      // Fallback to default config
+      // Fallback to default config - playerStartY will be clamped to ground level
+      const fallbackWorldHeight = 600;
       this.mapConfig = {
         worldWidth: 3200,
-        worldHeight: 600,
+        worldHeight: fallbackWorldHeight,
         playerStartX: 400,
-        playerStartY: 300,
+        playerStartY: getPlayerGroundY(fallbackWorldHeight),
         placedItems: [],
       };
     }

@@ -1,16 +1,14 @@
 /**
  * Shared constants for Builder mode
+ * 
+ * Note: Player constants (PLAYER_SPRITE, PLAYER_SIZE, GROUND_HEIGHT) are in
+ * src/constants/playerConstants.ts for shared use across GameScene and BuilderScene.
  */
 
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
 
-// Ground level
-export const GROUND_HEIGHT = 40;
-
-// Player sprite dimensions
-export const PLAYER_SPRITE_FRAME_HEIGHT = 48;
-export const PLAYER_SCALE = 5;
-export const PLAYER_DEPTH = DEPTH_LAYERS.PLAYER;
+// Re-export player constants for convenience
+export { GROUND_HEIGHT, PLAYER_SPRITE, PLAYER_SIZE } from '../../constants/playerConstants';
 
 // Grid overlay
 export const GRID_SIZE = 50;
