@@ -9,6 +9,7 @@ import { catSkinManager } from './data/catSkin';
 import { backgroundManager } from './data/background';
 import { initSceneManager } from './utils/sceneManager';
 import { initUIInputBlocking } from './utils/inputUtils';
+import { SCENE_KEYS } from './constants/sceneKeys';
 
 // Initialize UI input blocking (must be before Phaser)
 initUIInputBlocking();
@@ -52,10 +53,15 @@ const config: Phaser.Types.Core.GameConfig = {
   audio: {
     noAudio: true,
   },
-  scene: [GameScene, BuilderScene],
+  // Don't auto-start any scene - we'll start GameScene after background selection
+  scene: [],
 };
 
 const game = new Phaser.Game(config);
+
+// Add scenes manually (without auto-starting)
+game.scene.add(SCENE_KEYS.GAME, GameScene);
+game.scene.add(SCENE_KEYS.BUILDER, BuilderScene);
 
 // Initialize scene manager
 initSceneManager(game);

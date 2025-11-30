@@ -23,6 +23,9 @@ export const currentSkin = writable<'orange' | 'white'>('orange');
 /** Current background name */
 export const currentBackground = writable<string>('Forest');
 
+/** Whether user has selected a background (shown after page refresh) */
+export const hasSelectedBackground = writable<boolean>(false);
+
 /** Loading overlay visibility - set true during async operations */
 export const isLoading = writable<boolean>(false);
 

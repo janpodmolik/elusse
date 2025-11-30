@@ -11,13 +11,15 @@ export interface BackgroundConfig {
 
 export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
   {
-    name: 'FOREST',
-    folder: 'forest',
-    scrollFactors: [1.0, 0.8, 0.85, 0.9, 0.95, 1.0],
+    name: 'FOREST GREEN',
+    folder: 'forest_green',
+    // forest_green has layers 0-5 (5 parallax layers)
+    scrollFactors: [1.0, 0.8, 0.85, 0.9, 0.95],
   },
   {
     name: 'FOREST BLUE',
     folder: 'forest_blue',
+    // forest_blue has layers 0-6 (6 parallax layers)
     scrollFactors: [1.0, 0.8, 0.85, 0.9, 0.95, 1.0],
   },
 ];
@@ -76,6 +78,23 @@ class BackgroundManager {
    */
   getAllBackgrounds(): readonly BackgroundConfig[] {
     return AVAILABLE_BACKGROUNDS;
+  }
+
+  /**
+   * Set background by index
+   */
+  setBackgroundByIndex(index: number): void {
+    if (index >= 0 && index < AVAILABLE_BACKGROUNDS.length) {
+      this.currentIndex = index;
+      localStorage.setItem('background', AVAILABLE_BACKGROUNDS[index].folder);
+    }
+  }
+
+  /**
+   * Get current background index
+   */
+  getCurrentIndex(): number {
+    return this.currentIndex;
   }
 }
 

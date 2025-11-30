@@ -4,11 +4,13 @@
     isLoading, 
     showControlsDialog, 
     isTouchDevice,
-    hasPlayerMoved
+    hasPlayerMoved,
+    hasSelectedBackground
   } from '../stores';
   import { isBuilderMode } from '../stores/builderStores';
   import { localization } from '../data/localization';
   import BuilderUI from './BuilderUI.svelte';
+  import BackgroundSelect from './BackgroundSelect.svelte';
   import PixelButton from './PixelButton.svelte';
   import DialogBubble from './DialogBubble.svelte';
   import FrameContent from './FrameContent.svelte';
@@ -62,80 +64,85 @@
 
 <svelte:document on:pointerdown={handlePointerDown} />
 
-<div class="game-ui-wrapper">
-  <!-- Builder Mode UI -->
-  {#if $isBuilderMode}
-    <BuilderUI />
-  {:else}
-    <!-- Game Mode: Dialog Bubble and Frame Content -->
-    <DialogBubble />
-    <FrameContent />
-  {/if}
+<!-- Background Selection Screen (shown before game starts) -->
+{#if !$hasSelectedBackground}
+  <BackgroundSelect />
+{:else}
+  <div class="game-ui-wrapper">
+    <!-- Builder Mode UI -->
+    {#if $isBuilderMode}
+      <BuilderUI />
+    {:else}
+      <!-- Game Mode: Dialog Bubble and Frame Content -->
+      <DialogBubble />
+      <FrameContent />
+    {/if}
 
-  <!-- Builder Mode Toggle Button (only in play mode) -->
-  {#if !$isBuilderMode}
-    <PixelButton 
-      position="top-left"
-      variant="green"
-      width="120px"
-      onclick={handleBuilderToggle}
-      title="Toggle Builder Mode"
+    <!-- Builder Mode Toggle Button (only in play mode) -->
+    {#if !$isBuilderMode}
+      <PixelButton 
+        position="top-left"
+        variant="green"
+        width="120px"
+        onclick={handleBuilderToggle}
+        title="Toggle Builder Mode"
+      >
+        BUILD
+      </PixelButton>
+    {/if}
+
+    <!-- Language Button (only in play mode) -->
+    {#if !$isBuilderMode}
+      <PixelButton 
+        position="top-right"
+        variant="default"
+        width="100px"
+        onclick={handleLanguageToggle}
+        title="Toggle Language (L)"
+      >
+        {$currentLanguage.toUpperCase()}
+      </PixelButton>
+    {/if}
+
+    <!-- Controls Dialog -->
+    <dialog 
+      bind:this={dialogElement}
+      class="pixel-dialog"
     >
-      BUILD
-    </PixelButton>
-  {/if}
-
-  <!-- Language Button (only in play mode) -->
-  {#if !$isBuilderMode}
-    <PixelButton 
-      position="top-right"
-      variant="default"
-      width="100px"
-      onclick={handleLanguageToggle}
-      title="Toggle Language (L)"
-    >
-      {$currentLanguage.toUpperCase()}
-    </PixelButton>
-  {/if}
-
-  <!-- Controls Dialog -->
-  <dialog 
-    bind:this={dialogElement}
-    class="pixel-dialog"
-  >
-    <h1>CONTROLS</h1>
-    <div class="controls-content">
-      {#if $isTouchDevice}
-        <!-- Touch controls -->
-        <div class="touch-controls">
-          <p class="touch-text">Tap and hold<br>where you want<br>to move</p>
-        </div>
-      {:else}
-        <!-- Desktop controls -->
-        <div class="desktop-controls">
-          <div class="key-row">
-            <div class="pixel-key">A</div>
-            <div class="pixel-key">W</div>
-            <div class="pixel-key">D</div>
+      <h1>CONTROLS</h1>
+      <div class="controls-content">
+        {#if $isTouchDevice}
+          <!-- Touch controls -->
+          <div class="touch-controls">
+            <p class="touch-text">Tap and hold<br>where you want<br>to move</p>
           </div>
-          <p class="or-text">or</p>
-          <div class="key-row">
-            <div class="pixel-key">←</div>
-            <div class="pixel-key">↑</div>
-            <div class="pixel-key">→</div>
+        {:else}
+          <!-- Desktop controls -->
+          <div class="desktop-controls">
+            <div class="key-row">
+              <div class="pixel-key">A</div>
+              <div class="pixel-key">W</div>
+              <div class="pixel-key">D</div>
+            </div>
+            <p class="or-text">or</p>
+            <div class="key-row">
+              <div class="pixel-key">←</div>
+              <div class="pixel-key">↑</div>
+              <div class="pixel-key">→</div>
+            </div>
           </div>
-        </div>
-      {/if}
-    </div>
-  </dialog>
+        {/if}
+      </div>
+    </dialog>
 
-  <!-- Loading Overlay -->
-  {#if $isLoading}
-    <div class="loader-overlay">
-      <div class="pixel-loader"></div>
-    </div>
-  {/if}
-</div>
+    <!-- Loading Overlay -->
+    {#if $isLoading}
+      <div class="loader-overlay">
+        <div class="pixel-loader"></div>
+      </div>
+    {/if}
+  </div>
+{/if}
 
 <style>
   .game-ui-wrapper {

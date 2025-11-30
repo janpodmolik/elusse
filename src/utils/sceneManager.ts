@@ -106,3 +106,19 @@ export function toggleBuilderZoom(): void {
     console.error('Failed to toggle zoom:', error);
   }
 }
+
+/**
+ * Start GameScene (called after background selection)
+ */
+export function startGameScene(): void {
+  if (!gameInstance) {
+    console.error('Scene manager not initialized');
+    return;
+  }
+
+  try {
+    gameInstance.scene.start(SCENE_KEYS.GAME);
+  } catch (error) {
+    console.error('Failed to start game scene:', error);
+  }
+}
