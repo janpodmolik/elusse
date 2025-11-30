@@ -29,7 +29,7 @@
 </script>
 
 {#if !dismissed && isMobileDevice}
-  <div class="landscape-hint">
+  <div class="landscape-hint" data-ui>
     <div class="hint-content">
       <div class="rotate-icon">📱↻</div>
       <p class="hint-text">Rotate your phone for a better experience</p>
@@ -48,6 +48,7 @@
     z-index: 9999;
     /* Hidden by default, shown via media query */
     display: none;
+    pointer-events: auto; /* Re-enable pointer events since parent wrapper has pointer-events: none */
   }
   
   /* Show only on mobile portrait */

@@ -1,21 +1,13 @@
 import Phaser from 'phaser';
-import { get } from 'svelte/store';
 import type { PlacedFrame } from '../../types/FrameTypes';
 import { generateFrameId, DEFAULT_FRAME_COLOR, DEFAULT_FRAME_SCALE } from '../../types/FrameTypes';
-import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, placedFrames, updatePlacedFrame, updateDraggingFramePosition, clearDraggingFramePosition, gridSnappingEnabled, openFramePanel, setDraggingInBuilder, updateSelectedFrameScreenPosition } from '../../stores/builderStores';
+import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, placedFrames, updatePlacedFrame, updateDraggingFramePosition, clearDraggingFramePosition, openFramePanel, updateSelectedFrameScreenPosition } from '../../stores/builderStores';
 import { EventBus, EVENTS, type FrameDroppedEvent } from '../../events/EventBus';
-import { isTypingInTextField } from '../../utils/inputUtils';
+import { isTypingInTextField, isPointerOverUI, worldToScreen } from '../../utils/inputUtils';
 import { getFrameScale, getFrameDimensions } from '../../data/frames';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
-import { GRID_SIZE } from './builderConstants';
-import { type FrameContainer, drawFrameBackground, DoubleClickDetector } from '../../utils/frameUtils';
-
-/**
- * Snap coordinate to grid
- */
-function snapToGrid(value: number, gridSize: number): number {
-  return Math.round(value / gridSize) * gridSize;
-}
+import { type FrameContainer, drawFrameBackground } from '../../utils/frameUtils';
+import { setupSpriteInteraction, DoubleClickDetector } from '../../utils/spriteInteraction';
 
 /**
  * BuilderFramesController - Manages placed frames and their interactions
@@ -23,16 +15,18 @@ function snapToGrid(value: number, gridSize: number): number {
  */
 export class BuilderFramesController {
   private scene: Phaser.Scene;
+  private worldWidth: number;
+  private worldHeight: number;
   private frames: Map<string, FrameContainer> = new Map();
   private unsubscribers: Array<() => void> = [];
   private selectionGraphics: Phaser.GameObjects.Graphics | null = null;
-  private isDragging: boolean = false;
-  private dragStartX: number = 0;
-  private dragStartY: number = 0;
+  private cleanupFunctions: Map<string, () => void> = new Map();
   private doubleClickDetector = new DoubleClickDetector();
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
+    this.worldWidth = worldWidth;
+    this.worldHeight = worldHeight;
   }
 
   /**
@@ -148,73 +142,54 @@ export class BuilderFramesController {
   }
 
   /**
-   * Make a frame container interactive
+   * Make a frame container interactive using shared sprite interaction utility
    */
   private makeInteractive(container: FrameContainer, frameId: string): void {
     const { sprite } = container;
     
-    sprite.setInteractive({ draggable: true, useHandCursor: true });
-    
-    sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.isDragging) return;
-      
-      // Select this frame
-      selectFrame(frameId);
-      this.updateSelectionVisuals();
-      
-      // Check for double-click using shared detector
-      if (this.doubleClickDetector.check(frameId)) {
-        // Double-click: open the frame panel for editing
-        openFramePanel();
-        return; // Don't start drag on double-click
+    const cleanup = setupSpriteInteraction({
+      sprite,
+      scene: this.scene,
+      cursor: 'grab',
+      useGridSnapping: true,
+      // Constrain to world bounds (allow frames to go right to edge)
+      constraints: {
+        minX: 0,
+        maxX: this.worldWidth,
+        minY: 0,
+        maxY: this.worldHeight,
+      },
+      callbacks: {
+        onSelect: () => {
+          selectFrame(frameId);
+          this.updateSelectionVisuals();
+        },
+        onDoubleClick: () => {
+          if (this.doubleClickDetector.check(frameId)) {
+            openFramePanel();
+            return true; // Prevent drag start
+          }
+          return false;
+        },
+        onDrag: (x, y) => {
+          // Move background along with sprite
+          this.moveContainer(container, x, y);
+          this.updateSelectionVisuals();
+          // Update real-time position for Svelte overlay
+          updateDraggingFramePosition(frameId, x, y);
+        },
+        onDragEnd: (x, y) => {
+          // Clear dragging position
+          clearDraggingFramePosition(frameId);
+          // Update store with new position
+          container.data.x = Math.round(x);
+          container.data.y = Math.round(y);
+          updatePlacedFrame(frameId, { x: container.data.x, y: container.data.y });
+        }
       }
-      
-      // Start drag
-      this.isDragging = true;
-      this.scene.data.set('isDraggingItem', true);
-      setDraggingInBuilder(true);
-      this.dragStartX = sprite.x - pointer.worldX;
-      this.dragStartY = sprite.y - pointer.worldY;
     });
     
-    sprite.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!this.isDragging) return;
-      if (!pointer.isDown) {
-        this.isDragging = false;
-        return;
-      }
-      
-      let newX = pointer.worldX + this.dragStartX;
-      let newY = pointer.worldY + this.dragStartY;
-      
-      // Apply grid snapping if enabled
-      const isSnapEnabled = get(gridSnappingEnabled);
-      if (isSnapEnabled) {
-        newX = snapToGrid(newX, GRID_SIZE);
-        newY = snapToGrid(newY, GRID_SIZE);
-      }
-      
-      this.moveContainer(container, newX, newY);
-      this.updateSelectionVisuals();
-      
-      // Update real-time position for Svelte overlay
-      updateDraggingFramePosition(frameId, newX, newY);
-    });
-    
-    sprite.on('pointerup', () => {
-      if (!this.isDragging) return;
-      this.isDragging = false;
-      this.scene.data.set('isDraggingItem', false);
-      setDraggingInBuilder(false);
-      
-      // Clear dragging position
-      clearDraggingFramePosition(frameId);
-      
-      // Update store with new position
-      container.data.x = Math.round(sprite.x);
-      container.data.y = Math.round(sprite.y);
-      updatePlacedFrame(frameId, { x: container.data.x, y: container.data.y });
-    });
+    this.cleanupFunctions.set(frameId, cleanup);
   }
 
   /**
@@ -222,6 +197,9 @@ export class BuilderFramesController {
    */
   private setupBackgroundDeselect(): void {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Skip if pointer is over UI element
+      if (isPointerOverUI()) return;
+      
       // Only in frames or items mode (frames are interactive in both)
       let currentMode = 'items';
       const unsub = builderEditMode.subscribe(m => currentMode = m);
@@ -237,7 +215,7 @@ export class BuilderFramesController {
         return false;
       });
       
-      if (!clickedFrame && !this.isDragging) {
+      if (!clickedFrame) {
         selectFrame(null);
         this.updateSelectionVisuals();
       }
@@ -395,9 +373,9 @@ export class BuilderFramesController {
     const bounds = sprite.getBounds();
     
     // Update screen position for UI overlay
+    // Use worldToScreen for correct FIT mode support
     const camera = this.scene.cameras.main;
-    const screenX = (sprite.x - camera.scrollX) * camera.zoom;
-    const screenY = (sprite.y - camera.scrollY) * camera.zoom;
+    const { screenX, screenY } = worldToScreen(sprite.x, sprite.y, camera);
     updateSelectedFrameScreenPosition({
       screenX,
       screenY,

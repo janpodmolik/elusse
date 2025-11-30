@@ -4,6 +4,7 @@ import { createDialogZone } from '../../types/DialogTypes';
 import { builderEditMode, dialogZones, selectedDialogZoneId, selectDialogZone, addDialogZone, updateDialogZone, setDraggingInBuilder, updateSelectedDialogZoneScreenPosition, openDialogZonePanel } from '../../stores/builderStores';
 import { OVERLAY_DEPTH } from './builderConstants';
 import { EventBus, EVENTS } from '../../events/EventBus';
+import { isPointerOverUI, worldToScreen, screenToWorld as screenToWorldUtil } from '../../utils/inputUtils';
 
 /** Depth for dialog zone graphics (below grid, above background) */
 const ZONE_DEPTH = OVERLAY_DEPTH - 1;
@@ -529,6 +530,7 @@ export class DialogZoneRenderer {
 
   /**
    * Convert screen coordinates to world coordinates
+   * Uses shared utility for correct FIT mode support
    */
   private screenToWorld(screenX: number, screenY: number): { worldX: number; worldY: number } {
     const camera = this.scene.cameras.main;
@@ -538,9 +540,8 @@ export class DialogZoneRenderer {
     const canvasX = screenX - rect.left;
     const canvasY = screenY - rect.top;
     
-    const worldX = canvasX / camera.zoom + camera.scrollX;
-    const worldY = canvasY / camera.zoom + camera.scrollY;
-    return { worldX, worldY };
+    // Use shared utility for correct FIT mode support
+    return screenToWorldUtil(canvasX, canvasY, camera);
   }
 
   /**
@@ -619,8 +620,9 @@ export class DialogZoneRenderer {
     }
     
     // Calculate zone's screen position (left and right edges)
-    const zoneLeftScreen = (zone.x - camera.scrollX) * camera.zoom;
-    const zoneRightScreen = (zone.x + zone.width - camera.scrollX) * camera.zoom;
+    // Use worldToScreen for correct FIT mode support
+    const { screenX: zoneLeftScreen } = worldToScreen(zone.x, 0, camera);
+    const { screenX: zoneRightScreen } = worldToScreen(zone.x + zone.width, 0, camera);
     
     // Check if zone edge is at screen edge AND there's room to scroll
     const zoneAtLeftEdge = zoneLeftScreen <= AUTO_SCROLL_MARGIN;
@@ -987,6 +989,9 @@ export class DialogZoneRenderer {
    * Handle pointer down - show temp add button or create zone on double-click
    */
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    // Skip if pointer is over UI element
+    if (isPointerOverUI()) return;
+    
     // Only in dialog edit mode
     if (this.currentEditMode !== 'dialogs') return;
     
@@ -1045,9 +1050,9 @@ export class DialogZoneRenderer {
    */
   private showTempAddButton(worldX: number, worldY: number): void {
     // Convert world coordinates to screen coordinates
+    // Use worldToScreen for correct FIT mode support
     const camera = this.scene.cameras.main;
-    const screenX = (worldX - camera.scrollX) * camera.zoom;
-    const screenY = (worldY - camera.scrollY) * camera.zoom;
+    const { screenX, screenY } = worldToScreen(worldX, worldY, camera);
     
     // Emit event for Svelte component to show button
     EventBus.emit(EVENTS.TEMP_ZONE_BUTTON_SHOW, { screenX, screenY, worldX });
@@ -1073,7 +1078,9 @@ export class DialogZoneRenderer {
    */
   public createNewZone(): void {
     const camera = this.scene.cameras.main;
-    const centerX = camera.scrollX + camera.width / 2;
+    // Use worldView for correct FIT mode support
+    // worldView.x + worldView.width/2 gives the center in world coordinates
+    const centerX = camera.worldView.x + camera.worldView.width / 2;
     this.createZoneAt(centerX);
   }
   
@@ -1131,9 +1138,10 @@ export class DialogZoneRenderer {
     }
     
     // Calculate screen position (center of zone, below arrows)
+    // Use worldToScreen for correct FIT mode support (only for X, Y is fixed)
     const camera = this.scene.cameras.main;
     const zoneCenterX = zone.x + zone.width / 2;
-    const screenX = (zoneCenterX - camera.scrollX) * camera.zoom;
+    const { screenX } = worldToScreen(zoneCenterX, 0, camera);
     // Position Y below the center (arrows are at 50%, buttons at 65%)
     const screenY = camera.height * 0.65;
     

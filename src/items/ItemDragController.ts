@@ -1,23 +1,18 @@
 /**
  * ItemDragController - Handles drag & drop interactions for items in builder mode
+ * 
+ * Uses shared spriteInteraction utility for consistent behavior with frames and player.
  */
 
 import Phaser from 'phaser';
-import { updatePlacedItem, selectItem, gridSnappingEnabled, setDraggingInBuilder } from '../stores/builderStores';
-import { GRID_SIZE } from '../scenes/builder/builderConstants';
-import { get } from 'svelte/store';
+import { updatePlacedItem, selectItem } from '../stores/builderStores';
+import { setupSpriteInteraction } from '../utils/spriteInteraction';
 
 export interface ItemDragCallbacks {
+  onSelect?: (id: string) => void;
   onDragStart?: (id: string) => void;
   onDrag?: (id: string, x: number, y: number) => void;
   onDragEnd?: (id: string, x: number, yOffset: number) => void;
-}
-
-/**
- * Snap coordinate to grid
- */
-function snapToGrid(value: number, gridSize: number): number {
-  return Math.round(value / gridSize) * gridSize;
 }
 
 /**
@@ -26,12 +21,23 @@ function snapToGrid(value: number, gridSize: number): number {
 export class ItemDragController {
   private scene: Phaser.Scene;
   private groundY: number;
+  private worldWidth: number;
+  private worldHeight: number;
   private isDragging: boolean = false;
   private callbacks: ItemDragCallbacks;
+  private cleanupFunctions: Map<string, () => void> = new Map();
 
-  constructor(scene: Phaser.Scene, groundY: number, callbacks: ItemDragCallbacks = {}) {
+  constructor(
+    scene: Phaser.Scene, 
+    groundY: number, 
+    worldWidth: number,
+    worldHeight: number,
+    callbacks: ItemDragCallbacks = {}
+  ) {
     this.scene = scene;
     this.groundY = groundY;
+    this.worldWidth = worldWidth;
+    this.worldHeight = worldHeight;
     this.callbacks = callbacks;
   }
 
@@ -46,62 +52,45 @@ export class ItemDragController {
    * Make a sprite interactive and draggable
    */
   makeInteractive(sprite: Phaser.GameObjects.Sprite, id: string): void {
-    sprite.setInteractive({ cursor: 'pointer' });
-    this.scene.input.setDraggable(sprite);
-
-    // Click to select
-    sprite.on('pointerdown', () => {
-      if (!this.isDragging) {
-        selectItem(id);
+    const cleanup = setupSpriteInteraction({
+      sprite,
+      scene: this.scene,
+      cursor: 'pointer',
+      // Constrain to world bounds (allow items to go right to edge)
+      constraints: {
+        minX: 0,
+        maxX: this.worldWidth,
+        minY: 0,
+        maxY: this.worldHeight,
+      },
+      callbacks: {
+        onSelect: () => {
+          selectItem(id);
+          this.callbacks.onSelect?.(id);
+        },
+        onDragStart: () => {
+          this.isDragging = true;
+          sprite.setTint(0x4a90e2);
+          this.callbacks.onDragStart?.(id);
+        },
+        onDrag: (x, y) => {
+          this.callbacks.onDrag?.(id, x, y);
+        },
+        onDragEnd: (x, y) => {
+          sprite.clearTint();
+          this.isDragging = false;
+          
+          const worldX = Math.round(x);
+          const worldY = Math.round(y);
+          const yOffset = worldY - this.groundY;
+          
+          updatePlacedItem(id, { x: worldX, yOffset });
+          this.callbacks.onDragEnd?.(id, worldX, yOffset);
+        }
       }
     });
-
-    // Drag handlers
-    sprite.on('dragstart', () => {
-      this.isDragging = false; // Will be set to true on actual drag
-      sprite.setTint(0x4a90e2);
-      
-      // Notify scene and UI that we're dragging an item
-      this.scene.data?.set('isDraggingItem', true);
-      setDraggingInBuilder(true);
-      
-      this.callbacks.onDragStart?.(id);
-    });
-
-    sprite.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      this.isDragging = true;
-      
-      // Apply grid snapping if enabled
-      const isSnapEnabled = get(gridSnappingEnabled);
-      const finalX = isSnapEnabled ? snapToGrid(dragX, GRID_SIZE) : dragX;
-      const finalY = isSnapEnabled ? snapToGrid(dragY, GRID_SIZE) : dragY;
-      
-      sprite.setPosition(finalX, finalY);
-      
-      this.callbacks.onDrag?.(id, finalX, finalY);
-    });
-
-    sprite.on('dragend', () => {
-      sprite.clearTint();
-      
-      // Notify scene and UI that dragging ended
-      this.scene.data?.set('isDraggingItem', false);
-      setDraggingInBuilder(false);
-      
-      // Update store with new position
-      const worldX = Math.round(sprite.x);
-      const worldY = Math.round(sprite.y);
-      const yOffset = worldY - this.groundY;
-      
-      updatePlacedItem(id, { x: worldX, yOffset });
-      
-      this.callbacks.onDragEnd?.(id, worldX, yOffset);
-      
-      // Reset dragging flag after a short delay
-      this.scene.time.delayedCall(50, () => {
-        this.isDragging = false;
-      });
-    });
+    
+    this.cleanupFunctions.set(id, cleanup);
   }
 
   /**
@@ -111,10 +100,20 @@ export class ItemDragController {
     // Guard against already destroyed sprites
     if (!sprite || !sprite.scene) return;
     
+    const id = sprite.getData('itemId') as string;
+    if (id && this.cleanupFunctions.has(id)) {
+      this.cleanupFunctions.get(id)!();
+      this.cleanupFunctions.delete(id);
+    }
+    
     sprite.removeInteractive();
-    sprite.off('pointerdown');
-    sprite.off('dragstart');
-    sprite.off('drag');
-    sprite.off('dragend');
+  }
+
+  /**
+   * Cleanup all
+   */
+  destroy(): void {
+    this.cleanupFunctions.forEach(cleanup => cleanup());
+    this.cleanupFunctions.clear();
   }
 }

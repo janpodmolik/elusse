@@ -10,6 +10,7 @@
 import Phaser from 'phaser';
 import { get } from 'svelte/store';
 import { frameClickBlocked } from '../stores';
+import { isPointerOverUI } from '../utils/inputUtils';
 
 // Touch control constants
 export const TOUCH_CONFIG = {
@@ -148,10 +149,14 @@ export class PlayerInputController {
     };
 
     const pointerdownHandler = (pointer: Phaser.Input.Pointer) => {
+      // Skip if pointer is over UI element
+      if (isPointerOverUI()) return;
       handlePointer(pointer);
     };
 
     const pointermoveHandler = (pointer: Phaser.Input.Pointer) => {
+      // Skip if pointer is over UI element
+      if (isPointerOverUI()) return;
       if (pointer.isDown) {
         handlePointer(pointer);
       }

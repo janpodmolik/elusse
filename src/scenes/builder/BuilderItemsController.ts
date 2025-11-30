@@ -12,19 +12,29 @@ import { isTypingInTextField } from '../../utils/inputUtils';
 export class BuilderItemsController {
   private scene: Phaser.Scene;
   private groundY: number;
+  private worldWidth: number;
+  private worldHeight: number;
   public itemManager!: PlacedItemManager;
   private unsubscribers: Array<() => void> = [];
 
-  constructor(scene: Phaser.Scene, groundY: number) {
+  constructor(scene: Phaser.Scene, groundY: number, worldWidth: number, worldHeight: number) {
     this.scene = scene;
     this.groundY = groundY;
+    this.worldWidth = worldWidth;
+    this.worldHeight = worldHeight;
   }
 
   /**
    * Create and setup placed items manager
    */
   create(existingItems: PlacedItem[]): PlacedItemManager {
-    this.itemManager = new PlacedItemManager(this.scene, this.groundY, true);
+    this.itemManager = new PlacedItemManager(
+      this.scene, 
+      this.groundY, 
+      this.worldWidth, 
+      this.worldHeight, 
+      true
+    );
     
     // Load existing items
     if (existingItems && existingItems.length > 0) {

@@ -3,9 +3,8 @@
   import DraggablePanel from './DraggablePanel.svelte';
   import { ASSETS } from '../data/assets';
   import { EventBus, EVENTS } from '../events/EventBus';
-  import { builderEditMode, isAssetPaletteOpen, builderCameraInfo } from '../stores/builderStores';
+  import { builderEditMode, isAssetPaletteOpen } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
-  import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#4a90e2'; // Blue for assets
   const NARROW_SCREEN_THRESHOLD = 600; // px - close palette after adding item on narrow screens
@@ -54,10 +53,17 @@
   
   /** Double-click to place asset in center of screen */
   function handleDoubleClick(assetKey: string) {
-    const cam = get(builderCameraInfo);
-    const centerX = cam.scrollX + cam.viewWidth / 2;
-    const centerY = cam.scrollY + cam.viewHeight / 2;
-    EventBus.emit(EVENTS.ASSET_DROPPED, { assetKey, canvasX: centerX, canvasY: centerY });
+    // Get canvas element to find its center
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    // Send screen coordinates (center of visible canvas)
+    // These will be converted to world coordinates by the controller
+    const canvasX = rect.width / 2;
+    const canvasY = rect.height / 2;
+    
+    EventBus.emit(EVENTS.ASSET_DROPPED, { assetKey, canvasX, canvasY });
     closeOnNarrowScreen();
   }
   
@@ -102,6 +108,7 @@
         {#each assets as asset}
           <div 
             class="palette-item"
+            data-ui
             class:dragging={draggedAsset === asset.key}
             draggable="true"
             ondragstart={(e) => dragHandlers.onDragStart(e, asset.key)}

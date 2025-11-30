@@ -35,7 +35,9 @@
     }
   });
   
-  function handleDismiss() {
+  function handleDismiss(e: Event) {
+    e.stopPropagation();
+    e.preventDefault();
     isVisible = false;
     if (hideTimer) {
       clearTimeout(hideTimer);
@@ -43,19 +45,32 @@
     }
   }
   
-  function handleZoomOut() {
+  function handleZoomOut(e: Event) {
+    e.stopPropagation(); // Prevent dismissing hint
+    e.preventDefault();
     toggleBuilderZoom();
-    handleDismiss();
+    isVisible = false;
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
   }
 </script>
 
 {#if isVisible}
-  <div class="dialog-hint">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div 
+    class="dialog-hint"
+    data-ui
+    onclick={handleDismiss}
+    onpointerdown={(e) => e.stopPropagation()}
+    ontouchstart={(e) => e.stopPropagation()}
+  >
     <div class="hint-content">
       <span class="hint-icon">💡</span>
       <span class="hint-text">Tip: Use <strong>FIT</strong> view for dialog zones</span>
       <button class="hint-action" onclick={handleZoomOut}>FIT NOW</button>
-      <button class="hint-close" onclick={handleDismiss}>✕</button>
     </div>
   </div>
 {/if}
@@ -69,6 +84,7 @@
     max-width: 380px;
     z-index: 2000;
     animation: slideIn 0.3s ease-out;
+    pointer-events: auto; /* Re-enable pointer events since parent wrapper has pointer-events: none */
   }
   
   @keyframes slideIn {
@@ -115,10 +131,10 @@
   .hint-action {
     background: #3498db;
     border: none;
-    border-radius: 2px;
-    padding: 4px 8px;
+    border-radius: 3px;
+    padding: 10px 16px;
     font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
+    font-size: 9px;
     color: white;
     cursor: pointer;
     transition: background 0.2s;
@@ -127,20 +143,5 @@
   
   .hint-action:hover {
     background: #2980b9;
-  }
-  
-  .hint-close {
-    background: transparent;
-    border: none;
-    color: #7f8c8d;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px 4px;
-    line-height: 1;
-    transition: color 0.2s;
-  }
-  
-  .hint-close:hover {
-    color: #ecf0f1;
   }
 </style>

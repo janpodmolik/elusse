@@ -27,6 +27,9 @@ export interface PaletteDragState {
 /**
  * Creates all drag & drop handlers for a palette
  */
+// Minimum distance in pixels to consider as drag (not just tap)
+const DRAG_THRESHOLD = 10;
+
 export function createPaletteDragHandlers(
   config: PaletteDragConfig,
   getState: () => PaletteDragState,
@@ -34,6 +37,11 @@ export function createPaletteDragHandlers(
 ) {
   const { previewSize, borderColor, dataKey, eventName, onDrop } = config;
   const halfSize = previewSize / 2;
+  
+  // Touch start position for movement detection
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let hasMoved = false;
 
   // Desktop drag handlers
   function onDragStart(event: DragEvent, itemKey: string) {
@@ -66,6 +74,10 @@ export function createPaletteDragHandlers(
     if (event.touches.length !== 1) return;
     
     const touch = event.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    hasMoved = false;
+    
     setState({ draggedKey: itemKey });
     setPaletteDragging(true);
     
@@ -109,6 +121,15 @@ export function createPaletteDragHandlers(
     state.touchDragElement.style.top = `${touch.clientY - halfSize}px`;
     state.touchDragElement.style.left = `${touch.clientX - halfSize}px`;
     
+    // Check if moved beyond threshold
+    if (!hasMoved) {
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+        hasMoved = true;
+      }
+    }
+    
     event.preventDefault();
   }
   
@@ -125,8 +146,18 @@ export function createPaletteDragHandlers(
       setState({ touchDragElement: null });
     }
     
-    // Check if dropped on canvas
-    if (canvas) {
+    // Only emit drop if user actually dragged (not just tapped)
+    // Check movement one more time in case touchmove wasn't called
+    if (!hasMoved) {
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+        hasMoved = true;
+      }
+    }
+    
+    // Check if dropped on canvas (only if actually dragged)
+    if (canvas && hasMoved) {
       const rect = canvas.getBoundingClientRect();
       const x = touch.clientX;
       const y = touch.clientY;

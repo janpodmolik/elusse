@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { setBuilderZoom } from '../../stores/builderStores';
-import { isTypingInTextField, isPaletteDragging } from '../../utils/inputUtils';
+import { isTypingInTextField, isPaletteDragging, isPointerOverUI } from '../../utils/inputUtils';
 
 // Zoom constants
 const MIN_ZOOM = 0.05;  // Minimum zoom (zoomed out) - allow very small zoom to fit any screen
@@ -84,6 +84,9 @@ export class BuilderCameraController {
 
     // Pointer down - detect right/middle click panning or left-click drag-scroll
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Skip if pointer is over UI element
+      if (isPointerOverUI()) return;
+      
       // Disable all camera panning/dragging when zoomed out or dragging from palette
       if (this.isZoomedOut || isPaletteDragging()) return;
       

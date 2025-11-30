@@ -107,7 +107,13 @@ export class GameScene extends Phaser.Scene {
       GroundManager.addPlayerCollision(this, this.player, ground);
 
       // Initialize placed items system (read-only mode for game scene)
-      this.itemManager = new PlacedItemManager(this, groundY, false);
+      this.itemManager = new PlacedItemManager(
+        this, 
+        groundY, 
+        this.mapConfig.worldWidth,
+        this.mapConfig.worldHeight,
+        false
+      );
       
       // Load placed items from config
       if (this.mapConfig.placedItems && this.mapConfig.placedItems.length > 0) {

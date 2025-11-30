@@ -8,6 +8,10 @@ import { localization } from './data/localization';
 import { catSkinManager } from './data/catSkin';
 import { backgroundManager } from './data/background';
 import { initSceneManager } from './utils/sceneManager';
+import { initUIInputBlocking } from './utils/inputUtils';
+
+// Initialize UI input blocking (must be before Phaser)
+initUIInputBlocking();
 
 // Wait for DOM to be ready
 const gameUIElement = document.getElementById('game-ui');

@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { DEPTH_LAYERS } from '../constants/depthLayers';
 import { clearSelection } from '../stores/builderStores';
+import { isPointerOverUI } from '../utils/inputUtils';
 
 export interface SelectionStyle {
   lineWidth: number;
@@ -101,6 +102,9 @@ export class ItemSelectionManager {
    */
   setupBackgroundDeselect(isDragging: () => boolean): void {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Skip if pointer is over UI element
+      if (isPointerOverUI()) return;
+      
       if (isDragging()) return;
       
       // Check if clicking on any sprite with itemId

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
-import { selectItem, updateSelectedItemScreenPosition } from '../stores/builderStores';
+import { updateSelectedItemScreenPosition } from '../stores/builderStores';
+import { worldToScreen } from '../utils/inputUtils';
 import { ItemRenderer, ItemDragController, ItemSelectionManager } from '../items';
 
 /**
@@ -27,9 +28,17 @@ export class PlacedItemManager {
   /**
    * @param scene - Phaser scene instance
    * @param groundY - Y coordinate of ground level
+   * @param worldWidth - Width of the world in pixels
+   * @param worldHeight - Height of the world in pixels
    * @param builderMode - Enable interactive builder features (drag, select, delete)
    */
-  constructor(scene: Phaser.Scene, groundY: number, builderMode: boolean = false) {
+  constructor(
+    scene: Phaser.Scene, 
+    groundY: number, 
+    worldWidth: number,
+    worldHeight: number,
+    builderMode: boolean = false
+  ) {
     this.scene = scene;
     this.isBuilderMode = builderMode;
     
@@ -43,7 +52,8 @@ export class PlacedItemManager {
     
     // Initialize builder-specific modules
     if (this.isBuilderMode) {
-      this.dragController = new ItemDragController(scene, groundY, {
+      this.dragController = new ItemDragController(scene, groundY, worldWidth, worldHeight, {
+        onSelect: () => this.updateSelectionVisuals(),
         onDrag: () => this.updateSelectionVisuals(),
       });
       this.selectionManager = new ItemSelectionManager(scene);
@@ -85,16 +95,9 @@ export class PlacedItemManager {
     this.items.set(itemData.id, itemEntry);
     
     // Add builder interactivity if in builder mode
+    // Selection is handled by ItemDragController via setupSpriteInteraction
     if (this.isBuilderMode && this.dragController) {
       this.dragController.makeInteractive(sprite, itemData.id);
-      
-      // Override pointerdown for selection sync
-      sprite.on('pointerdown', () => {
-        if (!this.dragController?.getIsDragging()) {
-          selectItem(itemData.id);
-          this.updateSelectionVisuals();
-        }
-      });
     }
   }
   
@@ -147,8 +150,8 @@ export class PlacedItemManager {
     if (item?.sprite) {
       const camera = this.scene.cameras.main;
       const bounds = item.sprite.getBounds();
-      const screenX = (bounds.centerX - camera.scrollX) * camera.zoom;
-      const screenY = (bounds.centerY - camera.scrollY) * camera.zoom;
+      // Use worldToScreen for correct FIT mode support
+      const { screenX, screenY } = worldToScreen(bounds.centerX, bounds.centerY, camera);
       const itemHeight = bounds.height * camera.zoom;
       updateSelectedItemScreenPosition({ screenX, screenY, itemHeight });
     } else {
@@ -240,20 +243,12 @@ export class PlacedItemManager {
     this.items.forEach(({ sprite, data }) => {
       if (enabled) {
         // Re-enable interaction and restore opacity
+        // Selection is handled by ItemDragController via setupSpriteInteraction
         this.dragController!.makeInteractive(sprite, data.id);
         sprite.setAlpha(1);
-        
-        // Re-add pointerdown for selection sync
-        sprite.on('pointerdown', () => {
-          if (!this.dragController?.getIsDragging()) {
-            selectItem(data.id);
-            this.updateSelectionVisuals();
-          }
-        });
       } else {
         // Disable interaction and make semi-transparent
         sprite.disableInteractive();
-        sprite.off('pointerdown');
         sprite.setAlpha(0.6);
       }
     });

@@ -3,9 +3,8 @@
   import DraggablePanel from './DraggablePanel.svelte';
   import { FRAMES } from '../data/frames';
   import { EventBus, EVENTS } from '../events/EventBus';
-  import { builderEditMode, isFramePaletteOpen, builderCameraInfo, openFramePanel } from '../stores/builderStores';
+  import { builderEditMode, isFramePaletteOpen, openFramePanel } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
-  import { get } from 'svelte/store';
   
   const ACCENT_COLOR = '#9b59b6'; // Purple for frames
   
@@ -44,10 +43,17 @@
   
   /** Double-click to place frame in center of screen */
   function handleDoubleClick(frameKey: string) {
-    const cam = get(builderCameraInfo);
-    const centerX = cam.scrollX + cam.viewWidth / 2;
-    const centerY = cam.scrollY + cam.viewHeight / 2;
-    EventBus.emit(EVENTS.FRAME_DROPPED, { frameKey, canvasX: centerX, canvasY: centerY });
+    // Get canvas element to find its center
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    // Send screen coordinates (center of visible canvas)
+    // These will be converted to world coordinates by the controller
+    const canvasX = rect.width / 2;
+    const canvasY = rect.height / 2;
+    
+    EventBus.emit(EVENTS.FRAME_DROPPED, { frameKey, canvasX, canvasY });
     // Close palette and open frame panel for the newly placed frame
     isFramePaletteOpen.set(false);
     openFramePanel();
@@ -94,6 +100,7 @@
         {#each frames as frame}
           <div 
             class="palette-item"
+            data-ui
             class:dragging={draggedFrame === frame.key}
             draggable="true"
             ondragstart={(e) => dragHandlers.onDragStart(e, frame.key)}

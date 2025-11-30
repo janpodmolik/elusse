@@ -86,8 +86,8 @@ export class BuilderScene extends Phaser.Scene {
     this.cameraController = new BuilderCameraController(this, this.config.worldWidth, this.config.worldHeight);
     this.playerController = new BuilderPlayerController(this, this.config.worldWidth, this.config.worldHeight);
     this.gridOverlay = new BuilderGridOverlay(this, this.config.worldWidth, this.config.worldHeight);
-    this.itemsController = new BuilderItemsController(this, groundY);
-    this.framesController = new BuilderFramesController(this);
+    this.itemsController = new BuilderItemsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
+    this.framesController = new BuilderFramesController(this, this.config.worldWidth, this.config.worldHeight);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
     // Load and create background
