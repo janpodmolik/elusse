@@ -1,7 +1,7 @@
 <script lang="ts">
   import { placedFrames, builderCameraInfo, draggingFramePositions, isBuilderMode, builderPreviewLanguage } from '../stores/builderStores';
   import { currentLanguage, gameCameraInfo } from '../stores';
-  import { DEFAULT_TEXT_COLOR, DEFAULT_TEXT_SIZE, DEFAULT_FRAME_SCALE, type PlacedFrame } from '../types/FrameTypes';
+  import { DEFAULT_TEXT_COLOR, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_ALIGN, DEFAULT_FRAME_SCALE, type PlacedFrame } from '../types/FrameTypes';
   import { getFrameDimensions } from '../data/frames';
   
   // Use store frames (same for both modes now)
@@ -73,11 +73,15 @@
     {@const text = getFrameText(frame)}
     {@const fontSize = (frame.textSize ?? DEFAULT_TEXT_SIZE) * cameraZoom}
     {@const textColor = frame.textColor ?? DEFAULT_TEXT_COLOR}
+    {@const textAlign = frame.textAlign ?? DEFAULT_TEXT_ALIGN}
     
     <!-- Text overlay (background is rendered in Phaser) -->
     {#if text}
       <div 
         class="frame-text"
+        class:align-top={textAlign === 'top'}
+        class:align-center={textAlign === 'center'}
+        class:align-bottom={textAlign === 'bottom'}
         style="
           left: {textPos.x}px;
           top: {textPos.y}px;
@@ -109,7 +113,6 @@
     transform: translate(-50%, -50%);
     
     display: flex;
-    align-items: center;
     justify-content: center;
     text-align: center;
     
@@ -126,5 +129,18 @@
     
     /* Hide overflow */
     overflow: hidden;
+  }
+  
+  /* Text alignment variants */
+  .frame-text.align-top {
+    align-items: flex-start;
+  }
+  
+  .frame-text.align-center {
+    align-items: center;
+  }
+  
+  .frame-text.align-bottom {
+    align-items: flex-end;
   }
 </style>

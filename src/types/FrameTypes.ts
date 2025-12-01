@@ -26,6 +26,7 @@ export interface PlacedFrame {
   backgroundColor: string; // Hex color for frame fill
   textColor?: string;      // Hex color for text (default: #333333)
   textSize?: number;       // Font size in pixels (default: 16)
+  textAlign?: TextAlign;   // Vertical text alignment (default: 'center')
   texts: FrameLocalizedText[]; // Localized text content (single text per language)
   url?: string;           // Optional hyperlink - opens in new tab when clicked
 }
@@ -100,6 +101,20 @@ export const TEXT_COLORS = [
 export const TEXT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32] as const;
 
 /**
+ * Text vertical alignment
+ */
+export type TextAlign = 'top' | 'center' | 'bottom';
+
+/**
+ * Text alignment options
+ */
+export const TEXT_ALIGNMENTS: { value: TextAlign; label: string; icon: string }[] = [
+  { value: 'top', label: 'Top', icon: '↑' },
+  { value: 'center', label: 'Center', icon: '⬌' },
+  { value: 'bottom', label: 'Bottom', icon: '↓' },
+] as const;
+
+/**
  * Frame size preset
  */
 export type FrameSize = 'S' | 'M' | 'L';
@@ -148,3 +163,4 @@ export const DEFAULT_FRAME_SCALE = 4;
 export const DEFAULT_FRAME_COLOR = '#ffffff';
 export const DEFAULT_TEXT_COLOR = '#333333';
 export const DEFAULT_TEXT_SIZE = 16;
+export const DEFAULT_TEXT_ALIGN: TextAlign = 'center';

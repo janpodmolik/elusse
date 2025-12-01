@@ -8,6 +8,7 @@ import { BuilderPlayerController } from './builder/BuilderPlayerController';
 import { BuilderGridOverlay } from './builder/BuilderGridOverlay';
 import { BuilderItemsController } from './builder/BuilderItemsController';
 import { BuilderFramesController } from './builder/BuilderFramesController';
+import { BuilderSocialsController } from './builder/BuilderSocialsController';
 import { DialogZoneRenderer } from './builder/DialogZoneRenderer';
 import { PlacedItemManager } from './PlacedItemManager';
 import { GROUND_HEIGHT } from './builder/builderConstants';
@@ -30,6 +31,7 @@ export class BuilderScene extends Phaser.Scene {
   private gridOverlay!: BuilderGridOverlay;
   private itemsController!: BuilderItemsController;
   private framesController!: BuilderFramesController;
+  private socialsController!: BuilderSocialsController;
   private dialogZoneRenderer!: DialogZoneRenderer;
   
   // Configuration
@@ -71,6 +73,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Load frame assets
     BuilderFramesController.preloadAssets(this);
+    
+    // Load social assets
+    BuilderSocialsController.preloadAssets(this);
   }
 
   create(): void {
@@ -88,6 +93,7 @@ export class BuilderScene extends Phaser.Scene {
     this.gridOverlay = new BuilderGridOverlay(this, this.config.worldWidth, this.config.worldHeight);
     this.itemsController = new BuilderItemsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
     this.framesController = new BuilderFramesController(this, this.config.worldWidth, this.config.worldHeight);
+    this.socialsController = new BuilderSocialsController(this, this.config.worldWidth, this.config.worldHeight);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
     // Load and create background
@@ -107,6 +113,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Create frames manager
     this.framesController.create(this.config.placedFrames || []);
+    
+    // Create socials manager
+    this.socialsController.create(this.config.placedSocials || []);
     
     // Create dialog zone renderer
     this.dialogZoneRenderer.create();
@@ -170,6 +179,7 @@ export class BuilderScene extends Phaser.Scene {
     // Update selection visuals and screen position (for UI overlay)
     this.itemManager?.updateSelectionVisuals();
     this.framesController?.updateSelectionVisuals();
+    this.socialsController?.updateSelectionVisuals();
     this.dialogZoneRenderer?.updateSelectionVisuals();
     
     // Update camera info for minimap
@@ -245,6 +255,9 @@ export class BuilderScene extends Phaser.Scene {
     }
     if (this.framesController) {
       this.framesController.destroy();
+    }
+    if (this.socialsController) {
+      this.socialsController.destroy();
     }
     if (this.dialogZoneRenderer) {
       this.dialogZoneRenderer.destroy();

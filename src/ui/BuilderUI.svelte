@@ -1,18 +1,21 @@
 <script lang="ts">
-  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId, selectedDialogZoneId } from '../stores/builderStores';
+  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, isSocialPaletteOpen, toggleAssetPalette, toggleFramePalette, toggleSocialPalette, selectedItemId, selectedFrameId, selectedDialogZoneId, selectedSocialId } from '../stores/builderStores';
   import { switchToGame } from '../utils/sceneManager';
   import { EventBus, EVENTS } from '../events/EventBus';
 import AssetPalette from './AssetPalette.svelte';
 import FramePalette from './FramePalette.svelte';
+import SocialsPalette from './SocialsPalette.svelte';
 import PixelButton from './PixelButton.svelte';
 import DialogZonePanel from './DialogZonePanel.svelte';
   import FramePanel from './FramePanel.svelte';
+  import SocialsPanel from './SocialsPanel.svelte';
   import FrameContent from './FrameContent.svelte';
   import TempZoneButton from './TempZoneButton.svelte';
   import DialogModeHint from './DialogModeHint.svelte';
   import ItemControlsOverlay from './ItemControlsOverlay.svelte';
   import FrameControlsOverlay from './FrameControlsOverlay.svelte';
   import DialogZoneControlsOverlay from './DialogZoneControlsOverlay.svelte';
+  import SocialControlsOverlay from './SocialControlsOverlay.svelte';
   import { HStack, VStack, FixedPosition } from './layout';
 
   const NARROW_SCREEN_THRESHOLD = 600;
@@ -21,7 +24,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   let isNarrowScreen = $state(typeof window !== 'undefined' ? window.innerWidth < NARROW_SCREEN_THRESHOLD : false);
   
   // Reactive: hide buttons when something is selected on narrow screen
-  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedFrameId !== null || $selectedDialogZoneId !== null));
+  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedFrameId !== null || $selectedDialogZoneId !== null || $selectedSocialId !== null));
   
   // Listen for window resize
   $effect(() => {
@@ -54,6 +57,9 @@ import DialogZonePanel from './DialogZonePanel.svelte';
 <!-- Dialog zone controls overlay (positioned above selected zone) -->
 <DialogZoneControlsOverlay />
 
+<!-- Social controls overlay (positioned above selected social) -->
+<SocialControlsOverlay />
+
 <!-- Conditional panels based on mode -->
 {#if $builderEditMode === 'items'}
   <AssetPalette />
@@ -61,9 +67,12 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   <DialogZonePanel />
 {:else if $builderEditMode === 'frames'}
   <FramePalette />
+{:else if $builderEditMode === 'socials'}
+  <SocialsPalette />
 {/if}
 <!-- FramePanel shows whenever a frame is selected, regardless of mode -->
 <FramePanel />
+<SocialsPanel />
 <FrameContent />
 
 <!-- Temporary zone button (shown on click in dialog mode) -->
@@ -122,6 +131,21 @@ import DialogZonePanel from './DialogZonePanel.svelte';
       title="Edit text frames"
     >
       FRAMES
+    </PixelButton>
+
+    <PixelButton 
+      variant={$builderEditMode === 'socials' && $isSocialPaletteOpen ? 'orange' : 'orange'}
+      onclick={() => {
+        if ($builderEditMode === 'socials') {
+          toggleSocialPalette();
+        } else {
+          setBuilderEditMode('socials');
+          isSocialPaletteOpen.set(true);
+        }
+      }}
+      title="Edit social icons"
+    >
+      SOCIALS
     </PixelButton>
 
     <HStack>

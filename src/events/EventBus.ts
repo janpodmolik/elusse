@@ -113,6 +113,13 @@ export interface FrameDroppedEvent {
   canvasY: number;
 }
 
+/** Social dropped from palette to canvas */
+export interface SocialDroppedEvent {
+  socialKey: string;
+  canvasX: number;
+  canvasY: number;
+}
+
 /** Item selected in builder */
 export interface ItemSelectedEvent {
   itemId: string | null;
@@ -153,6 +160,9 @@ export const EVENTS = {
   
   // Frame events
   FRAME_DROPPED: 'frame:dropped',
+  
+  // Social events
+  SOCIAL_DROPPED: 'social:dropped',
   
   // Item events
   ITEM_SELECTED: 'item:selected',

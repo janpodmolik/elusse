@@ -14,6 +14,12 @@ import { DRAG_TINT } from './builderConstants';
 /**
  * BuilderFramesController - Manages placed frames and their interactions
  * Note: Text is rendered via Svelte FrameContent component
+ * 
+ * IMPORTANT: When creating new interactive object types, remember to:
+ * 1. Add the data key to INTERACTIVE_DATA_KEYS in src/items/ItemSelectionManager.ts
+ * 2. Use sprite.setData('frameId', id) - the key must match INTERACTIVE_DATA_KEYS.FRAME
+ * 
+ * This ensures background click deselection works correctly for the new object type.
  */
 export class BuilderFramesController {
   private scene: Phaser.Scene;

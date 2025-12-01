@@ -1,11 +1,29 @@
 /**
  * ItemSelectionManager - Handles selection visuals and state for items
+ * Also manages global background click deselection for ALL interactive object types
  */
 
 import Phaser from 'phaser';
 import { DEPTH_LAYERS } from '../constants/depthLayers';
 import { clearSelection } from '../stores/builderStores';
 import { isPointerOverUI } from '../utils/inputUtils';
+
+/**
+ * INTERACTIVE_DATA_KEYS - Centralized registry of all data keys used to identify interactive objects
+ * 
+ * When adding a new interactive object type (like socials, stickers, etc.):
+ * 1. Add the data key here
+ * 2. In your controller, use sprite.setData('yourKey', id)
+ * 
+ * This prevents the "forgot to add key" bug that happens when the check is buried in code.
+ */
+export const INTERACTIVE_DATA_KEYS = {
+  ITEM: 'itemId',
+  FRAME: 'frameId', 
+  SOCIAL: 'socialId',
+  PLAYER: 'isPlayer',
+  ZONE: 'zoneId',  // Used for Rectangle objects (dialog zone handles)
+} as const;
 
 export interface SelectionStyle {
   lineWidth: number;
@@ -99,6 +117,9 @@ export class ItemSelectionManager {
 
   /**
    * Setup click handler for deselecting when clicking empty space
+   * 
+   * Uses INTERACTIVE_DATA_KEYS registry to check all known interactive object types.
+   * When adding new interactive objects, add their key to INTERACTIVE_DATA_KEYS above.
    */
   setupBackgroundDeselect(isDragging: () => boolean): void {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -107,16 +128,17 @@ export class ItemSelectionManager {
       
       if (isDragging()) return;
       
-      // Check if clicking on any interactive object (item, frame, player, or dialog zone handle)
+      // Check if clicking on any interactive object
+      // Uses centralized INTERACTIVE_DATA_KEYS to avoid forgetting new object types
       const hitObjects = this.scene.input.hitTestPointer(pointer);
       const hitInteractive = hitObjects.find(obj => {
-        // Check for sprites (items, frames, player)
-        if (obj.type === 'Sprite' && (obj.getData('itemId') || obj.getData('frameId') || obj.getData('isPlayer'))) {
-          return true;
+        // Check all registered sprite data keys
+        if (obj.type === 'Sprite') {
+          return Object.values(INTERACTIVE_DATA_KEYS).some(key => obj.getData(key));
         }
-        // Check for dialog zone handles (Rectangle objects with zoneId)
-        if (obj.type === 'Rectangle' && obj.getData('zoneId')) {
-          return true;
+        // Check for Rectangle objects (dialog zone handles use zoneId)
+        if (obj.type === 'Rectangle') {
+          return obj.getData(INTERACTIVE_DATA_KEYS.ZONE);
         }
         return false;
       });

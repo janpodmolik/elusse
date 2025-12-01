@@ -10,6 +10,7 @@ import { writable, derived, get } from 'svelte/store';
 import type { MapConfig, PlacedItem } from '../data/mapConfig';
 import type { DialogZone, LocalizedText } from '../types/DialogTypes';
 import type { PlacedFrame } from '../types/FrameTypes';
+import type { PlacedSocial } from '../types/SocialTypes';
 import { getItemDepth } from '../constants/depthLayers';
 import { DEFAULT_LANGUAGE, type Language } from '../types/Language';
 
@@ -18,7 +19,7 @@ import { DEFAULT_LANGUAGE, type Language } from '../types/Language';
 export type ItemDepthLayer = 'behind' | 'front';
 
 /** Builder edit mode */
-export type BuilderEditMode = 'items' | 'dialogs' | 'frames';
+export type BuilderEditMode = 'items' | 'dialogs' | 'frames' | 'socials';
 
 interface BuilderState {
   isActive: boolean;
@@ -28,6 +29,7 @@ interface BuilderState {
   editMode: BuilderEditMode;
   selectedDialogZoneId: string | null;
   selectedFrameId: string | null;
+  selectedSocialId: string | null;
   isPlayerSelected: boolean;
 }
 
@@ -41,6 +43,7 @@ const initialState: BuilderState = {
   editMode: 'items',
   selectedDialogZoneId: null,
   selectedFrameId: null,
+  selectedSocialId: null,
   isPlayerSelected: false,
 };
 
@@ -93,6 +96,12 @@ export const isFramePaletteOpen = writable<boolean>(false);
 /** Whether frame panel is explicitly open (set by double-click, not single click) */
 export const isFramePanelOpen = writable<boolean>(false);
 
+/** Whether social palette is open */
+export const isSocialPaletteOpen = writable<boolean>(false);
+
+/** Whether social panel is explicitly open (set by double-click, not single click) */
+export const isSocialPanelOpen = writable<boolean>(false);
+
 /** Toggle asset palette */
 export function toggleAssetPalette(): void {
   isAssetPaletteOpen.update(open => !open);
@@ -111,6 +120,21 @@ export function openFramePanel(): void {
 /** Close frame panel */
 export function closeFramePanel(): void {
   isFramePanelOpen.set(false);
+}
+
+/** Toggle social palette */
+export function toggleSocialPalette(): void {
+  isSocialPaletteOpen.update(open => !open);
+}
+
+/** Open social panel (called on double-click) */
+export function openSocialPanel(): void {
+  isSocialPanelOpen.set(true);
+}
+
+/** Close social panel */
+export function closeSocialPanel(): void {
+  isSocialPanelOpen.set(false);
 }
 
 // ==================== Builder Preview Language ====================
@@ -146,6 +170,29 @@ export const isPlayerSelected = derived(builderState, $state => $state.isPlayerS
 
 /** All placed frames from config */
 export const placedFrames = derived(builderState, $state => $state.config?.placedFrames || []);
+
+/** Currently selected social ID */
+export const selectedSocialId = derived(builderState, $state => $state.selectedSocialId);
+
+/** All placed socials from config */
+export const placedSocials = derived(builderState, $state => $state.config?.placedSocials || []);
+
+/** Get selected social data */
+export const selectedSocial = derived(builderState, $state => {
+  if (!$state.selectedSocialId || !$state.config?.placedSocials) return null;
+  return $state.config.placedSocials.find(social => social.id === $state.selectedSocialId) ?? null;
+});
+
+/**
+ * Screen position of selected social (updated from Phaser scene)
+ * Used for positioning social controls overlay
+ */
+export const selectedSocialScreenPosition = writable<{ screenX: number; screenY: number; socialHeight: number } | null>(null);
+
+/** Update selected social screen position (called from BuilderSocialsController) */
+export function updateSelectedSocialScreenPosition(pos: { screenX: number; screenY: number; socialHeight: number } | null): void {
+  selectedSocialScreenPosition.set(pos);
+}
 
 /** 
  * Real-time frame positions during drag operations
@@ -322,13 +369,14 @@ export function selectPlayer(selected: boolean): void {
   }));
 }
 
-/** Clear all selections (items, frames, dialogs, player) */
+/** Clear all selections (items, frames, dialogs, socials, player) */
 export function clearSelection(): void {
   builderState.update(state => ({
     ...state,
     selectedItemId: null,
     selectedFrameId: null,
     selectedDialogZoneId: null,
+    selectedSocialId: null,
     isPlayerSelected: false
   }));
 }
@@ -378,13 +426,15 @@ export function enterBuilderMode(config: MapConfig): void {
       ...config, 
       placedItems: config.placedItems || [],
       dialogZones: config.dialogZones || [],
-      placedFrames: config.placedFrames || []
+      placedFrames: config.placedFrames || [],
+      placedSocials: config.placedSocials || []
     },
     selectedItemId: null,
     itemDepthLayer: 'behind',
     editMode: 'items',
     selectedDialogZoneId: null,
     selectedFrameId: null,
+    selectedSocialId: null,
     isPlayerSelected: false,
   });
   // Reset zoom state when entering builder (will be set properly by camera controller)
@@ -680,5 +730,71 @@ export function selectFrame(id: string | null): void {
     // Deselect player and items when selecting a frame
     isPlayerSelected: id ? false : state.isPlayerSelected,
     selectedItemId: id ? null : state.selectedItemId
+  }));
+}
+
+// ==================== Actions - Socials ====================
+
+/** Add a new placed social */
+export function addPlacedSocial(social: PlacedSocial): void {
+  builderState.update(state => {
+    if (!state.config) return state;
+    
+    const placedSocials = state.config.placedSocials || [];
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedSocials: [...placedSocials, social]
+      }
+    };
+  });
+}
+
+/** Update an existing placed social by ID */
+export function updatePlacedSocial(id: string, updates: Partial<PlacedSocial>): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.placedSocials) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedSocials: state.config.placedSocials.map(social =>
+          social.id === id ? { ...social, ...updates } : social
+        )
+      }
+    };
+  });
+}
+
+/** Delete a placed social by ID */
+export function deletePlacedSocial(id: string): void {
+  builderState.update(state => {
+    if (!state.config || !state.config.placedSocials) return state;
+    
+    return {
+      ...state,
+      config: {
+        ...state.config,
+        placedSocials: state.config.placedSocials.filter(social => social.id !== id)
+      },
+      selectedSocialId: state.selectedSocialId === id ? null : state.selectedSocialId
+    };
+  });
+}
+
+/** Select a social by ID */
+export function selectSocial(id: string | null): void {
+  // Close social panel when changing selection (user can reopen with double-click or EDIT button)
+  isSocialPanelOpen.set(false);
+  
+  builderState.update(state => ({
+    ...state,
+    selectedSocialId: id,
+    // Deselect player, items and frames when selecting a social
+    isPlayerSelected: id ? false : state.isPlayerSelected,
+    selectedItemId: id ? null : state.selectedItemId,
+    selectedFrameId: id ? null : state.selectedFrameId
   }));
 }

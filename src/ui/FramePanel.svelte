@@ -1,6 +1,6 @@
 <script lang="ts">
   import { selectedFrameId, selectedFrame, deletePlacedFrame, selectFrame, updatePlacedFrame, builderPreviewLanguage, setBuilderPreviewLanguage, isFramePanelOpen, closeFramePanel } from '../stores/builderStores';
-  import { FRAME_COLORS, TEXT_COLORS, TEXT_SIZES, DEFAULT_TEXT_COLOR, DEFAULT_TEXT_SIZE, FRAME_SIZES, getSizeFromScale, getScaleFromSize, type FrameSize } from '../types/FrameTypes';
+  import { FRAME_COLORS, TEXT_COLORS, TEXT_SIZES, TEXT_ALIGNMENTS, DEFAULT_TEXT_COLOR, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_ALIGN, FRAME_SIZES, getSizeFromScale, getScaleFromSize, type FrameSize, type TextAlign } from '../types/FrameTypes';
   import type { FrameLocalizedText } from '../types/FrameTypes';
   import type { Language } from '../types/Language';
   import { FRAMES } from '../data/frames';
@@ -68,6 +68,11 @@
   function handleFrameSizeChange(size: FrameSize) {
     if (!$selectedFrameId) return;
     updatePlacedFrame($selectedFrameId, { scale: getScaleFromSize(size) });
+  }
+  
+  function handleTextAlignChange(align: TextAlign) {
+    if (!$selectedFrameId) return;
+    updatePlacedFrame($selectedFrameId, { textAlign: align });
   }
 
   function handleRotate() {
@@ -214,6 +219,23 @@
                 <option value={size}>{size}px</option>
               {/each}
             </select>
+          </div>
+        </div>
+        
+        <!-- Text Alignment -->
+        <div class="text-align-section">
+          <span class="section-label">Text Alignment</span>
+          <div class="align-buttons">
+            {#each TEXT_ALIGNMENTS as { value, label }}
+              <button
+                class="align-btn"
+                class:active={( currentFrame.textAlign ?? DEFAULT_TEXT_ALIGN) === value}
+                onclick={() => handleTextAlignChange(value)}
+                title={label}
+              >
+                {label}
+              </button>
+            {/each}
           </div>
         </div>
         
@@ -427,6 +449,48 @@
   
   .size-section select:focus {
     outline: none;
+    border-color: #9b59b6;
+  }
+  
+  .text-align-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .text-align-section .section-label {
+    color: #aaa;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+  
+  .align-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+  }
+  
+  .align-btn {
+    background: rgba(20, 20, 30, 0.8);
+    border: 2px solid #4a4a5a;
+    border-radius: 4px;
+    color: white;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+    flex: 1;
+  }
+  
+  .align-btn:hover {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.2);
+  }
+  
+  .align-btn.active {
+    background: #9b59b6;
     border-color: #9b59b6;
   }
   

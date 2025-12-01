@@ -71,7 +71,7 @@
   }
 </script>
 
-{#if $builderEditMode === 'items' && $selectedItemId && controlsPosition}
+{#if $builderEditMode !== 'dialogs' && $selectedItemId && controlsPosition}
   <div 
     class="item-controls"
     style="left: {controlsPosition.x}px; top: {controlsPosition.y}px;{$isDraggingInBuilder ? ' pointer-events: none;' : ''}"

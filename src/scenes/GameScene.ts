@@ -6,6 +6,7 @@ import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
 import { PlacedItemManager } from './PlacedItemManager';
 import { GameFrameManager } from './GameFrameManager';
+import { GameSocialManager } from './GameSocialManager';
 import { loadMapConfig, MapConfig } from '../data/mapConfig';
 import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { GroundManager } from './shared/GroundManager';
@@ -29,6 +30,9 @@ export class GameScene extends Phaser.Scene {
   
   // Frame manager for clickable frames
   private frameManager!: GameFrameManager;
+  
+  // Social manager for clickable social icons
+  private socialManager!: GameSocialManager;
   
   // Dialog zones loaded from config
   private dialogZones: DialogZone[] = [];
@@ -69,6 +73,9 @@ export class GameScene extends Phaser.Scene {
     
     // Load frame assets
     GameFrameManager.preloadAssets(this);
+    
+    // Load social assets
+    GameSocialManager.preloadAssets(this);
   }
 
   create(): void {
@@ -134,6 +141,14 @@ export class GameScene extends Phaser.Scene {
       // Load placed frames from config
       if (this.mapConfig.placedFrames && this.mapConfig.placedFrames.length > 0) {
         this.frameManager.createFrames(this.mapConfig.placedFrames);
+      }
+      
+      // Initialize social manager for clickable social icons
+      this.socialManager = new GameSocialManager(this);
+      
+      // Load placed socials from config
+      if (this.mapConfig.placedSocials && this.mapConfig.placedSocials.length > 0) {
+        this.socialManager.createSocials(this.mapConfig.placedSocials);
       }
       
       // Load dialog zones from config (initial load)
@@ -244,6 +259,16 @@ export class GameScene extends Phaser.Scene {
     // Clean up placed items
     if (this.itemManager) {
       this.itemManager.destroy();
+    }
+    
+    // Clean up frame manager
+    if (this.frameManager) {
+      this.frameManager.destroy();
+    }
+    
+    // Clean up social manager
+    if (this.socialManager) {
+      this.socialManager.destroy();
     }
   }
 

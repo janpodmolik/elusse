@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { selectedFrameId, selectedFrameScreenPosition, builderEditMode, deletePlacedFrame, selectFrame, openFramePanel, isDraggingInBuilder } from '../stores/builderStores';
+  import { selectedSocialId, selectedSocialScreenPosition, builderEditMode, deletePlacedSocial, selectSocial, openSocialPanel, isDraggingInBuilder } from '../stores/builderStores';
   import PixelButton from './PixelButton.svelte';
   
   // Calculate final position with edge clamping
   let controlsPosition = $derived.by(() => {
-    const pos = $selectedFrameScreenPosition;
+    const pos = $selectedSocialScreenPosition;
     if (!pos) return null;
     
     const padding = 10;
@@ -12,13 +12,13 @@
     // 2 buttons (~85px each) + gaps + padding = ~190px
     const controlsWidth = 190;
     
-    // Try to position above the frame first
-    let y = pos.screenY - pos.frameHeight / 2 - 45;
+    // Try to position above the social first
+    let y = pos.screenY - pos.socialHeight / 2 - 45;
     
-    // If buttons would go above screen, position below the frame instead
+    // If buttons would go above screen, position below the social instead
     const minY = padding + buttonRowHeight;
     if (y < minY) {
-      y = pos.screenY + pos.frameHeight / 2 + 10;
+      y = pos.screenY + pos.socialHeight / 2 + 10;
     }
     
     // Clamp Y to not go below visible area
@@ -27,7 +27,7 @@
       y = maxY;
     }
     
-    // Position X centered on frame
+    // Position X centered on social
     let x = pos.screenX;
     
     // Clamp X to stay within screen (accounting for translateX(-50%))
@@ -41,25 +41,25 @@
   });
   
   function handleEdit() {
-    openFramePanel();
+    openSocialPanel();
   }
   
   function handleDelete() {
-    if (!$selectedFrameId) return;
-    deletePlacedFrame($selectedFrameId);
-    selectFrame(null);
+    if (!$selectedSocialId) return;
+    deletePlacedSocial($selectedSocialId);
+    selectSocial(null);
   }
 </script>
 
-{#if $builderEditMode !== 'dialogs' && $selectedFrameId && controlsPosition}
+{#if $builderEditMode !== 'dialogs' && $selectedSocialId && controlsPosition}
   <div 
-    class="frame-controls"
+    class="social-controls"
     style="left: {controlsPosition.x}px; top: {controlsPosition.y}px;{$isDraggingInBuilder ? ' pointer-events: none;' : ''}"
   >
     <div class="controls-row">
       <PixelButton
-        variant="purple"
-        title="Edit frame content (or double-click)"
+        variant="orange"
+        title="Edit social settings (or double-click)"
         onclick={handleEdit}
       >
         EDIT
@@ -67,7 +67,7 @@
       
       <PixelButton
         variant="red"
-        title="Delete selected frame"
+        title="Delete selected social"
         onclick={handleDelete}
       >
         DEL
@@ -77,7 +77,7 @@
 {/if}
 
 <style>
-  .frame-controls {
+  .social-controls {
     position: fixed;
     transform: translateX(-50%);
     z-index: 900;
