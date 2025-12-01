@@ -1,7 +1,7 @@
 {
   "worldWidth": 2500,
-  "worldHeight": 800,
+  "worldHeight": 640,
   "playerStartX": 250,
-  "playerStartY": 640,
+  "playerStartY": 540,
   "placedItems": []
 }

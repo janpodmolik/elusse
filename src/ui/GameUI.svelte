@@ -5,7 +5,8 @@
     showControlsDialog, 
     isTouchDevice,
     hasPlayerMoved,
-    hasSelectedBackground
+    hasSelectedBackground,
+    gameFrameVisible
   } from '../stores';
   import { isBuilderMode } from '../stores/builderStores';
   import { localization } from '../data/localization';
@@ -14,6 +15,7 @@
   import PixelButton from './PixelButton.svelte';
   import DialogBubble from './DialogBubble.svelte';
   import FrameContent from './FrameContent.svelte';
+  import GameFrame from './GameFrame.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../utils/sceneManager';
 
   let dialogElement: HTMLDialogElement;
@@ -68,6 +70,11 @@
 {#if !$hasSelectedBackground}
   <BackgroundSelect />
 {:else}
+  <!-- Game Frame (only visible in play mode, not in builder) -->
+  {#if $gameFrameVisible && !$isBuilderMode}
+    <GameFrame />
+  {/if}
+
   <div class="game-ui-wrapper">
     <!-- Builder Mode UI -->
     {#if $isBuilderMode}

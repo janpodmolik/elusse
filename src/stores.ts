@@ -41,6 +41,14 @@ export const hasPlayerMoved = writable<boolean>(false);
 /** Background change trigger (increment to trigger reload in GameScene) */
 export const backgroundChangeCounter = writable<number>(0);
 
+// ==================== Game Frame Customization ====================
+
+/** Game frame border color (customizable) */
+export const gameFrameColor = writable<string>('#2a1a0a');
+
+/** Game frame visibility */
+export const gameFrameVisible = writable<boolean>(true);
+
 // ==================== Dialog System Stores ====================
 
 /** Currently active dialog zone (player is inside) */
@@ -82,6 +90,34 @@ export const gameCameraInfo = writable<{ scrollX: number; scrollY: number; zoom:
 /** Update game camera info (called from GameScene update) */
 export function setGameCameraInfo(scrollX: number, scrollY: number, zoom: number = 1): void {
   gameCameraInfo.set({ scrollX, scrollY, zoom });
+}
+
+// ==================== Game World Dimensions ====================
+
+/** Game world dimensions for frame overlay positioning */
+export const gameWorldDimensions = writable<{ 
+  worldWidth: number; 
+  worldHeight: number;
+  offsetX: number;
+  offsetY: number;
+}>({ 
+  worldWidth: 640, 
+  worldHeight: 640,
+  offsetX: 0,
+  offsetY: 0
+});
+
+/** Update game world dimensions (called from GameScene on create and resize) */
+export function setGameWorldDimensions(
+  worldWidth: number, 
+  worldHeight: number, 
+  viewportWidth: number, 
+  viewportHeight: number
+): void {
+  // Calculate offset when viewport is larger than world
+  const offsetX = Math.max(0, (viewportWidth - worldWidth) / 2);
+  const offsetY = Math.max(0, (viewportHeight - worldHeight) / 2);
+  gameWorldDimensions.set({ worldWidth, worldHeight, offsetX, offsetY });
 }
 
 // ==================== Frame Click Blocking ====================

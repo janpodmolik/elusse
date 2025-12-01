@@ -171,9 +171,9 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   update(): void {
-    // Update base layer tiling for infinite scrolling effect
+    // Update all parallax layers tiling for infinite scrolling effect
     if (this.parallaxLayers) {
-      updateParallaxTiling(this.parallaxLayers.baseLayer, this.cameras.main);
+      updateParallaxTiling(this.parallaxLayers, this.cameras.main);
     }
     
     // Update selection visuals and screen position (for UI overlay)
@@ -209,18 +209,12 @@ export class BuilderScene extends Phaser.Scene {
   /**
    * Handle window/canvas resize
    */
-  private handleResize(gameSize: Phaser.Structs.Size): void {
+  private handleResize(_gameSize: Phaser.Structs.Size): void {
     // Guard: only handle resize when scene is active
     if (!this.cameras?.main || !this.config) return;
     
     // Let camera controller handle zoom/bounds recalculation
     this.cameraController?.handleResize();
-    
-    // Update parallax base layer to cover new viewport
-    if (this.parallaxLayers?.baseLayer) {
-      const viewportHeight = Math.max(this.config.worldHeight, gameSize.height);
-      this.parallaxLayers.baseLayer.setSize(this.config.worldWidth, viewportHeight);
-    }
     
     // Update grid overlay if exists
     if (this.gridOverlay) {

@@ -25,6 +25,9 @@ export const DEPTH_LAYERS = {
   PLAYER: 10,
   ITEMS_FRONT: 15,
   
+  // Foreground parallax layers (in front of player)
+  FOREGROUND_LAYER_START: 50,
+  
   // UI overlays
   SELECTION_GRAPHICS: 999,
   GRID_OVERLAY: 1000,

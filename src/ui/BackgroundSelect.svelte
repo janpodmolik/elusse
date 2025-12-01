@@ -53,10 +53,16 @@
     height: 100%;
     background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     z-index: 2000;
     font-family: 'Press Start 2P', monospace;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Enable touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    pointer-events: auto;
   }
 
   .content {
@@ -64,7 +70,7 @@
     flex-direction: column;
     align-items: center;
     gap: 40px;
-    padding: 20px;
+    padding: 40px 20px;
   }
 
   .title {

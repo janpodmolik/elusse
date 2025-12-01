@@ -12,7 +12,7 @@ import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/bui
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
 import { clampPlayerY, getPlayerGroundY } from '../constants/playerConstants';
-import { isLoading, setActiveDialogZone, setPlayerScreenPosition, setGameCameraInfo } from '../stores';
+import { isLoading, setActiveDialogZone, setPlayerScreenPosition, setGameCameraInfo, setGameWorldDimensions } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
 
 export class GameScene extends Phaser.Scene {
@@ -164,7 +164,7 @@ export class GameScene extends Phaser.Scene {
 
       // Setup camera to follow player
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-      this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
+      this.setupCameraBounds();
       this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
       
       // Setup resize handler
@@ -228,20 +228,52 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Setup camera bounds with vertical centering when viewport is taller than world
+   */
+  private setupCameraBounds(): void {
+    const camera = this.cameras.main;
+    const viewportHeight = camera.height;
+    const viewportWidth = camera.width;
+    
+    // Calculate bounds - allow negative Y to center vertically when viewport > world
+    let boundsY = 0;
+    let boundsHeight = this.mapConfig.worldHeight;
+    
+    if (viewportHeight > this.mapConfig.worldHeight) {
+      // Viewport is taller than world - center vertically
+      boundsY = (this.mapConfig.worldHeight - viewportHeight) / 2;
+      boundsHeight = viewportHeight;
+    }
+    
+    // Similarly for X axis
+    let boundsX = 0;
+    let boundsWidth = this.mapConfig.worldWidth;
+    
+    if (viewportWidth > this.mapConfig.worldWidth) {
+      boundsX = (this.mapConfig.worldWidth - viewportWidth) / 2;
+      boundsWidth = viewportWidth;
+    }
+    
+    camera.setBounds(boundsX, boundsY, boundsWidth, boundsHeight);
+    
+    // Update game world dimensions for UI frame overlay
+    setGameWorldDimensions(
+      this.mapConfig.worldWidth,
+      this.mapConfig.worldHeight,
+      viewportWidth,
+      viewportHeight
+    );
+  }
+
+  /**
    * Handle window/canvas resize
    */
-  private handleResize(gameSize: Phaser.Structs.Size): void {
+  private handleResize(_gameSize: Phaser.Structs.Size): void {
     // Guard: only handle resize when scene is active
     if (!this.cameras?.main || !this.mapConfig) return;
     
-    // Update camera bounds
-    this.cameras.main.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
-    
-    // Update parallax base layer to cover new viewport
-    if (this.parallaxLayers?.baseLayer) {
-      const viewportHeight = Math.max(this.mapConfig.worldHeight, gameSize.height);
-      this.parallaxLayers.baseLayer.setSize(this.mapConfig.worldWidth, viewportHeight);
-    }
+    // Update camera bounds with vertical centering
+    this.setupCameraBounds();
   }
 
   shutdown(): void {
@@ -290,9 +322,9 @@ export class GameScene extends Phaser.Scene {
     // Check dialog zone collisions
     this.checkDialogZones();
 
-    // Update base layer tiling for infinite scrolling effect
+    // Update all parallax layers tiling for infinite scrolling effect
     if (this.parallaxLayers) {
-      updateParallaxTiling(this.parallaxLayers.baseLayer, this.cameras.main);
+      updateParallaxTiling(this.parallaxLayers, this.cameras.main);
     }
   }
   

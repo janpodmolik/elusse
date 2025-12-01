@@ -17,12 +17,6 @@ export function loadBackgroundAssets(
   config: BackgroundConfig
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    // Load base tileSprite layer (0.png)
-    scene.load.image(
-      `bg0-${config.folder}`,
-      `assets/backgrounds/${config.folder}/0.png`
-    );
-
     // Load parallax layers (1.png, 2.png, etc.)
     for (let i = 0; i < config.scrollFactors.length; i++) {
       const layerNum = i + 1;
