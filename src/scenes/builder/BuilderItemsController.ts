@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../PlacedItemManager';
-import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
+import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig, builderEditMode, clearSelection, isAssetPaletteOpen } from '../../stores/builderStores';
 import type { PlacedItem } from '../../data/mapConfig';
 import { PlacedItemFactory } from '../../data/mapConfig';
 import { EventBus, EVENTS, type AssetDroppedEvent } from '../../events/EventBus';
@@ -112,8 +112,10 @@ export class BuilderItemsController {
       // This correctly handles zoom and scroll
       const camera = this.scene.cameras.main;
       const worldPoint = camera.getWorldPoint(canvasX, canvasY);
-      const worldX = worldPoint.x;
-      const worldY = worldPoint.y;
+      
+      // Clamp to world bounds immediately
+      const worldX = Math.max(0, Math.min(this.worldWidth, worldPoint.x));
+      const worldY = Math.max(0, Math.min(this.worldHeight, worldPoint.y));
       
       // Get current depth layer preference
       let currentDepthLayer: 'behind' | 'front' = 'behind';
@@ -135,6 +137,8 @@ export class BuilderItemsController {
       addPlacedItem(newItem);
       this.itemManager.createItem(newItem);
       selectItem(newItem.id);
+      // Close asset palette after adding item
+      isAssetPaletteOpen.set(false);
     });
     
     // Store subscription for cleanup

@@ -10,7 +10,7 @@ import { isPointerOverUI, worldToScreen, screenToWorld as screenToWorldUtil } fr
 const ZONE_DEPTH = OVERLAY_DEPTH - 1;
 
 /** Minimum zone width in pixels */
-const MIN_ZONE_WIDTH = 50;
+const MIN_ZONE_WIDTH = 300;
 
 /** Default zone width when creating new zones */
 const DEFAULT_ZONE_WIDTH = 150;

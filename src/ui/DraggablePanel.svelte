@@ -61,15 +61,19 @@
   
   // Panel state
   let isMinimized = $state(startMinimized);
+  let isMaximized = $state(false);
   let position = $state({ x: 0, y: 0 });
   let size = $state({ width, height: height ?? 0 });
   let isDragging = $state(false);
   let isResizing = $state(false);
-  let resizeCorner = $state<'se' | 'sw'>('se');
+  let resizeCorner = $state<'ne' | 'nw' | 'se' | 'sw'>('se');
   let dragOffset = $state({ x: 0, y: 0 });
   let panelRef = $state<HTMLDivElement | null>(null);
   let initialized = $state(false);
   let zIndex = $state(globalZIndex);
+  
+  // Store previous state for restore after maximize
+  let preMaximizeState = $state<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Track previous position/size to avoid unnecessary saves
   let lastSavedState = $state<string>('');
@@ -80,6 +84,26 @@
     zIndex = globalZIndex;
   }
   
+  /** Clamp position to ensure panel is visible within viewport */
+  function clampToViewport(x: number, y: number, panelWidth: number): { x: number; y: number } {
+    const padding = 10;
+    const minHeaderVisible = 40; // At least header should be visible
+    
+    // Clamp X - ensure panel is not off-screen horizontally
+    let clampedX = x;
+    const maxX = window.innerWidth - panelWidth - padding;
+    if (clampedX > maxX) clampedX = Math.max(padding, maxX);
+    if (clampedX < padding) clampedX = padding;
+    
+    // Clamp Y - ensure at least header is visible
+    let clampedY = y;
+    const maxY = window.innerHeight - minHeaderVisible;
+    if (clampedY > maxY) clampedY = Math.max(padding, maxY);
+    if (clampedY < padding) clampedY = padding;
+    
+    return { x: clampedX, y: clampedY };
+  }
+  
   // Load saved position and size on mount (runs once)
   $effect(() => {
     if (typeof window === 'undefined' || initialized) return;
@@ -88,11 +112,21 @@
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        position = { x: parsed.x, y: parsed.y };
+        const panelWidth = (resizable && parsed.width) ? parsed.width : width;
+        
+        // Always clamp saved position to current viewport
+        const clamped = clampToViewport(parsed.x, parsed.y, panelWidth);
+        position = clamped;
+        
         if (resizable && parsed.width && parsed.height) {
           size = { width: parsed.width, height: parsed.height };
         }
-        lastSavedState = saved;
+        
+        // Update lastSavedState with clamped position
+        const state = resizable 
+          ? { x: clamped.x, y: clamped.y, width: size.width, height: size.height }
+          : { x: clamped.x, y: clamped.y };
+        lastSavedState = JSON.stringify(state);
       } catch {
         // Calculate from right edge
         position = { 
@@ -187,6 +221,53 @@
     onclose?.();
   }
   
+  /**
+   * Toggle maximize state - expands panel to fill available space
+   * or restores to previous size/position
+   */
+  function toggleMaximize() {
+    if (!resizable) return;
+    
+    if (isMaximized) {
+      // Restore previous state
+      if (preMaximizeState) {
+        position = { x: preMaximizeState.x, y: preMaximizeState.y };
+        size = { width: preMaximizeState.width, height: preMaximizeState.height };
+        preMaximizeState = null;
+      }
+      isMaximized = false;
+    } else {
+      // Save current state
+      preMaximizeState = { 
+        x: position.x, 
+        y: position.y, 
+        width: size.width, 
+        height: size.height 
+      };
+      
+      // Calculate maximum available size with some padding
+      const padding = 20;
+      const newWidth = Math.min(maxWidth, window.innerWidth - padding * 2);
+      const newHeight = Math.min(maxHeight, window.innerHeight - padding * 2);
+      
+      // Center the panel
+      const newX = Math.max(padding, (window.innerWidth - newWidth) / 2);
+      const newY = Math.max(padding, (window.innerHeight - newHeight) / 2);
+      
+      position = { x: newX, y: newY };
+      size = { width: newWidth, height: newHeight };
+      isMaximized = true;
+    }
+  }
+  
+  function handleHeaderDoubleClick(event: MouseEvent) {
+    // Don't trigger on buttons
+    const target = event.target as HTMLElement;
+    if (target.closest('button')) return;
+    
+    toggleMaximize();
+  }
+  
   function handleHeaderPointerDown(event: PointerEvent) {
     // Only drag from header, not from buttons
     const target = event.target as HTMLElement;
@@ -226,7 +307,7 @@
   }
   
   // Resize handlers
-  function handleResizePointerDown(corner: 'se' | 'sw') {
+  function handleResizePointerDown(corner: 'ne' | 'nw' | 'se' | 'sw') {
     return (event: PointerEvent) => {
       if (!resizable) return;
       
@@ -243,24 +324,38 @@
     
     const rect = panelRef.getBoundingClientRect();
     let newWidth: number;
-    let newHeight = event.clientY - rect.top;
+    let newHeight: number;
     let newX = position.x;
+    let newY = position.y;
     
-    if (resizeCorner === 'se') {
-      // Southeast corner - standard resize from right
+    // Calculate new dimensions based on corner
+    const isRight = resizeCorner === 'se' || resizeCorner === 'ne';
+    const isBottom = resizeCorner === 'se' || resizeCorner === 'sw';
+    
+    if (isRight) {
+      // Resize from right edge
       newWidth = event.clientX - rect.left;
     } else {
-      // Southwest corner - resize from left, adjust position
+      // Resize from left edge - adjust position
       newWidth = rect.right - event.clientX;
       newX = event.clientX;
+    }
+    
+    if (isBottom) {
+      // Resize from bottom edge
+      newHeight = event.clientY - rect.top;
+    } else {
+      // Resize from top edge - adjust position
+      newHeight = rect.bottom - event.clientY;
+      newY = event.clientY;
     }
     
     // Clamp to min/max bounds
     const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
     const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
     
-    // Adjust position if width was clamped for SW corner
-    if (resizeCorner === 'sw') {
+    // Adjust position if size was clamped for left/top edges
+    if (!isRight) {
       newX = rect.right - clampedWidth;
       // Don't allow panel to go off-screen left
       if (newX < 0) {
@@ -268,20 +363,43 @@
       }
     }
     
+    if (!isBottom) {
+      newY = rect.bottom - clampedHeight;
+      // Don't allow panel to go off-screen top
+      if (newY < 0) {
+        newY = 0;
+      }
+    }
+    
     // Clamp to viewport
-    const maxViewportWidth = resizeCorner === 'se' 
+    const maxViewportWidth = isRight 
       ? window.innerWidth - position.x - 10
       : rect.right - 10;
-    const maxViewportHeight = window.innerHeight - position.y - 10;
+    const maxViewportHeight = isBottom
+      ? window.innerHeight - position.y - 10
+      : rect.bottom - 10;
     
     const finalWidth = Math.min(clampedWidth, maxViewportWidth);
     const finalHeight = Math.min(clampedHeight, maxViewportHeight);
     
     size = { width: finalWidth, height: finalHeight };
     
-    // Update position for SW corner resize
-    if (resizeCorner === 'sw' && newWidth >= minWidth) {
-      position = { ...position, x: Math.max(0, newX) };
+    // Update position for left/top edge resizing
+    let positionChanged = false;
+    let finalX = position.x;
+    let finalY = position.y;
+    
+    if (!isRight && newWidth >= minWidth) {
+      finalX = Math.max(0, newX);
+      positionChanged = true;
+    }
+    if (!isBottom && newHeight >= minHeight) {
+      finalY = Math.max(0, newY);
+      positionChanged = true;
+    }
+    
+    if (positionChanged) {
+      position = { x: finalX, y: finalY };
     }
   }
   
@@ -303,6 +421,7 @@
   class="draggable-panel"
   data-ui
   class:minimized={isMinimized}
+  class:maximized={isMaximized}
   class:dragging={isDragging}
   class:resizing={isResizing}
   class:resizable
@@ -318,6 +437,7 @@
     onpointermove={handlePointerMove}
     onpointerup={handlePointerUp}
     onpointercancel={handlePointerUp}
+    ondblclick={handleHeaderDoubleClick}
   >
     <span class="panel-title">{title}</span>
     {#if headerExtra}
@@ -343,6 +463,33 @@
     </div>
     
     {#if resizable}
+      <!-- Top-left corner resize handle -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div 
+        class="resize-handle resize-handle-nw"
+        onpointerdown={handleResizePointerDown('nw')}
+        onpointermove={handleResizePointerMove}
+        onpointerup={handleResizePointerUp}
+        onpointercancel={handleResizePointerUp}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <path d="M9 9L1 1M5 1L1 1L1 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <!-- Top-right corner resize handle -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div 
+        class="resize-handle resize-handle-ne"
+        onpointerdown={handleResizePointerDown('ne')}
+        onpointermove={handleResizePointerMove}
+        onpointerup={handleResizePointerUp}
+        onpointercancel={handleResizePointerUp}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <path d="M1 9L9 1M5 1L9 1L9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <!-- Bottom-left corner resize handle -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div 
         class="resize-handle resize-handle-sw"
@@ -352,9 +499,10 @@
         onpointercancel={handleResizePointerUp}
       >
         <svg width="10" height="10" viewBox="0 0 10 10">
-          <path d="M1 1L9 9M1 5L5 9M1 9L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M9 1L1 9M1 5L1 9L5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
         </svg>
       </div>
+      <!-- Bottom-right corner resize handle -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div 
         class="resize-handle resize-handle-se"
@@ -364,7 +512,7 @@
         onpointercancel={handleResizePointerUp}
       >
         <svg width="10" height="10" viewBox="0 0 10 10">
-          <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M1 1L9 9M9 5L9 9L5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
         </svg>
       </div>
     {/if}
@@ -397,6 +545,11 @@
   .draggable-panel.minimized {
     min-height: auto;
     height: auto !important;
+  }
+  
+  .draggable-panel.maximized {
+    border-color: #88ddff;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
   }
   
   .draggable-panel.dragging,
@@ -444,6 +597,7 @@
     align-items: center;
     gap: 4px;
     margin-left: auto;
+    margin-right: 12px; /* Space for corner resize handle */
   }
   
   .minimize-btn {
@@ -521,7 +675,6 @@
   /* Resize handles */
   .resize-handle {
     position: absolute;
-    bottom: 0;
     width: 20px;
     height: 20px;
     display: flex;
@@ -540,15 +693,31 @@
   }
   
   .resize-handle-se {
+    bottom: 0;
     right: 0;
     cursor: se-resize;
     border-radius: 0 0 5px 0;
   }
   
   .resize-handle-sw {
+    bottom: 0;
     left: 0;
     cursor: sw-resize;
     border-radius: 0 0 0 5px;
+  }
+  
+  .resize-handle-ne {
+    top: 0;
+    right: 0;
+    cursor: ne-resize;
+    border-radius: 0 5px 0 0;
+  }
+  
+  .resize-handle-nw {
+    top: 0;
+    left: 0;
+    cursor: nw-resize;
+    border-radius: 5px 0 0 0;
   }
 
   /* Allow text selection in input fields inside panel */

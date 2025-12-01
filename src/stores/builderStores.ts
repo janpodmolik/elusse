@@ -671,6 +671,9 @@ export function deletePlacedFrame(id: string): void {
 
 /** Select a frame by ID */
 export function selectFrame(id: string | null): void {
+  // Close frame panel when changing selection (user can reopen with double-click or EDIT button)
+  isFramePanelOpen.set(false);
+  
   builderState.update(state => ({
     ...state,
     selectedFrameId: id,

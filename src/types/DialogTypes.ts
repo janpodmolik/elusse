@@ -55,7 +55,7 @@ export function generateZoneColor(): string {
 /**
  * Create a new empty dialog zone
  */
-export function createDialogZone(x: number, width: number = 200): DialogZone {
+export function createDialogZone(x: number, width: number = 300): DialogZone {
   return {
     id: generateZoneId(),
     x,

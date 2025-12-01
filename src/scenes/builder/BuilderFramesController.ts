@@ -278,12 +278,16 @@ export class BuilderFramesController {
       const camera = this.scene.cameras.main;
       const worldPoint = camera.getWorldPoint(canvasX, canvasY);
       
+      // Clamp to world bounds immediately
+      const clampedX = Math.max(0, Math.min(this.worldWidth, worldPoint.x));
+      const clampedY = Math.max(0, Math.min(this.worldHeight, worldPoint.y));
+      
       // Create new frame
       const newFrame: PlacedFrame = {
         id: generateFrameId(),
         frameKey,
-        x: Math.round(worldPoint.x),
-        y: Math.round(worldPoint.y),
+        x: Math.round(clampedX),
+        y: Math.round(clampedY),
         scale: getFrameScale(frameKey),
         depth: DEPTH_LAYERS.ITEMS_FRONT,
         rotation: 90, // Default to landscape mode
@@ -300,8 +304,6 @@ export class BuilderFramesController {
       addPlacedFrame(newFrame);
       this.createFrame(newFrame);
       selectFrame(newFrame.id);
-      // Open frame panel for the newly placed frame
-      openFramePanel();
     });
     
     this.unsubscribers.push(() => subscription.unsubscribe());

@@ -8,16 +8,16 @@
     if (!pos) return null;
     
     const padding = 10;
-    const buttonRowHeight = 40;
-    // 2 buttons (~85px each) + gaps + padding = ~190px
-    const controlsWidth = 190;
+    // 3 buttons stacked vertically (~120px total height)
+    const controlsHeight = 120;
+    const controlsWidth = 85;
     
     // Position near top of screen (zones are full height)
     let y = pos.screenY;
     
     // Clamp Y to stay within visible area
-    const minY = padding + buttonRowHeight;
-    const maxY = window.innerHeight - buttonRowHeight - padding;
+    const minY = padding + controlsHeight / 2;
+    const maxY = window.innerHeight - controlsHeight / 2 - padding;
     if (y < minY) y = minY;
     if (y > maxY) y = maxY;
     
@@ -92,8 +92,8 @@
   
   .controls-row {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     gap: 4px;
     padding: 4px;
     background: rgba(0, 0, 0, 0.6);

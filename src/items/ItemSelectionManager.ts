@@ -107,12 +107,21 @@ export class ItemSelectionManager {
       
       if (isDragging()) return;
       
-      // Check if clicking on any interactive sprite (item, frame, or player)
-      const hitSprite = this.scene.input.hitTestPointer(pointer).find(
-        obj => obj.type === 'Sprite' && (obj.getData('itemId') || obj.getData('frameId') || obj.getData('isPlayer'))
-      );
+      // Check if clicking on any interactive object (item, frame, player, or dialog zone handle)
+      const hitObjects = this.scene.input.hitTestPointer(pointer);
+      const hitInteractive = hitObjects.find(obj => {
+        // Check for sprites (items, frames, player)
+        if (obj.type === 'Sprite' && (obj.getData('itemId') || obj.getData('frameId') || obj.getData('isPlayer'))) {
+          return true;
+        }
+        // Check for dialog zone handles (Rectangle objects with zoneId)
+        if (obj.type === 'Rectangle' && obj.getData('zoneId')) {
+          return true;
+        }
+        return false;
+      });
       
-      if (!hitSprite) {
+      if (!hitInteractive) {
         clearSelection();
         this.clearVisuals();
       }

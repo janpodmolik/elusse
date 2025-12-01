@@ -1,12 +1,11 @@
 <script lang="ts">
   import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId, selectedDialogZoneId } from '../stores/builderStores';
-  import { switchToGame, resetBuilderZoom } from '../utils/sceneManager';
+  import { switchToGame } from '../utils/sceneManager';
   import { EventBus, EVENTS } from '../events/EventBus';
-  import AssetPalette from './AssetPalette.svelte';
-  import FramePalette from './FramePalette.svelte';
-  import PixelButton from './PixelButton.svelte';
-  import LandscapeHint from './LandscapeHint.svelte';
-  import DialogZonePanel from './DialogZonePanel.svelte';
+import AssetPalette from './AssetPalette.svelte';
+import FramePalette from './FramePalette.svelte';
+import PixelButton from './PixelButton.svelte';
+import DialogZonePanel from './DialogZonePanel.svelte';
   import FramePanel from './FramePanel.svelte';
   import FrameContent from './FrameContent.svelte';
   import TempZoneButton from './TempZoneButton.svelte';
@@ -35,10 +34,6 @@
 
   function handleSave() {
     switchToGame();
-  }
-  
-  function handleZoomReset() {
-    resetBuilderZoom();
   }
   
   function handleToggleGridSnapping() {
@@ -70,7 +65,6 @@
 <!-- FramePanel shows whenever a frame is selected, regardless of mode -->
 <FramePanel />
 <FrameContent />
-<LandscapeHint />
 
 <!-- Temporary zone button (shown on click in dialog mode) -->
 <TempZoneButton />
@@ -78,20 +72,11 @@
 <!-- Hint for dialog mode FIT view -->
 <DialogModeHint />
 
-<!-- Top-left: Save, Zoom, Snap buttons -->
+<!-- Top-left: Save, Snap buttons -->
 <FixedPosition position="top-left">
   <div class="left-buttons" class:hide-left={hideButtons}>
     <PixelButton variant="green" width="100px" onclick={handleSave}>
       SAVE
-    </PixelButton>
-    
-    <PixelButton 
-      variant="blue"
-      width="80px"
-      onclick={handleZoomReset}
-      title="Reset zoom to fit (F)"
-    >
-      FIT
     </PixelButton>
     
     <PixelButton 

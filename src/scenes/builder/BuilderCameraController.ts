@@ -40,6 +40,7 @@ export class BuilderCameraController {
   private targetZoom: number = 1;
   private minZoom: number = 0.1;  // Will be calculated dynamically
   private isAnimatingReset: boolean = false;
+  private zoomTargetWorldPoint: { x: number; y: number } | null = null; // World point to zoom towards
   
   // Pinch zoom state
   private pinchStartDistance: number = 0;
@@ -105,15 +106,6 @@ export class BuilderCameraController {
     // Center on world center
     this.camera.centerOn(this.worldWidth / 2, this.worldHeight / 2);
     
-    console.log('Setup camera:', {
-      minZoom: this.minZoom,
-      cameraSize: { w: this.camera.width, h: this.camera.height },
-      viewSize: { w: viewWidth, h: viewHeight },
-      worldSize: { w: this.worldWidth, h: this.worldHeight },
-      bounds: { x: boundsX, y: boundsY, w: boundsW, h: boundsH },
-      scroll: { x: this.camera.scrollX, y: this.camera.scrollY },
-    });
-    
     // Update store
     setBuilderZoomLevel(this.minZoom);
   }
@@ -166,60 +158,98 @@ export class BuilderCameraController {
 
   /**
    * Get scroll bounds based on current zoom
+   * @param forCentering - if true, returns bounds that force centering when view > world
    */
-  private getScrollBounds(): { minX: number; maxX: number; minY: number; maxY: number } {
+  private getScrollBounds(forCentering: boolean = true): { minX: number; maxX: number; minY: number; maxY: number } {
     const viewWidth = this.camera.width / this.currentZoom;
     const viewHeight = this.camera.height / this.currentZoom;
     
-    // When view is larger than world, lock scroll to center
-    // When view is smaller than world, allow scrolling within world bounds
-    if (viewWidth >= this.worldWidth && viewHeight >= this.worldHeight) {
-      // Both dimensions fit - lock to center
-      const centerX = (this.worldWidth - viewWidth) / 2;
-      const centerY = (this.worldHeight - viewHeight) / 2;
-      return { minX: centerX, maxX: centerX, minY: centerY, maxY: centerY };
+    let minX: number, maxX: number, minY: number, maxY: number;
+    
+    if (viewWidth > this.worldWidth) {
+      if (forCentering) {
+        // Lock to center
+        minX = maxX = (this.worldWidth - viewWidth) / 2;
+      } else {
+        // Allow freedom - world can be anywhere in view
+        minX = this.worldWidth - viewWidth;
+        maxX = 0;
+      }
+    } else {
+      minX = 0;
+      maxX = this.worldWidth - viewWidth;
     }
     
-    // At least one dimension needs scrolling
-    const minX = viewWidth > this.worldWidth ? (this.worldWidth - viewWidth) / 2 : 0;
-    const maxX = viewWidth > this.worldWidth ? minX : this.worldWidth - viewWidth;
-    const minY = viewHeight > this.worldHeight ? (this.worldHeight - viewHeight) / 2 : 0;
-    const maxY = viewHeight > this.worldHeight ? minY : this.worldHeight - viewHeight;
+    if (viewHeight > this.worldHeight) {
+      if (forCentering) {
+        minY = maxY = (this.worldHeight - viewHeight) / 2;
+      } else {
+        minY = this.worldHeight - viewHeight;
+        maxY = 0;
+      }
+    } else {
+      minY = 0;
+      maxY = this.worldHeight - viewHeight;
+    }
     
     return { minX, maxX, minY, maxY };
   }
 
   /**
-   * Clamp scroll position to valid bounds
+   * Clamp scroll position to valid bounds (forces centering when view > world)
    */
   private clampScroll(): void {
-    const bounds = this.getScrollBounds();
+    const bounds = this.getScrollBounds(true);
     this.camera.scrollX = Phaser.Math.Clamp(this.camera.scrollX, bounds.minX, bounds.maxX);
     this.camera.scrollY = Phaser.Math.Clamp(this.camera.scrollY, bounds.minY, bounds.maxY);
+  }
+  
+  /**
+   * Soft clamp - only prevents scrolling beyond world edges, doesn't force centering
+   */
+  private softClampScroll(): void {
+    const bounds = this.getScrollBounds(false);
+    this.camera.scrollX = Phaser.Math.Clamp(this.camera.scrollX, bounds.minX, bounds.maxX);
+    this.camera.scrollY = Phaser.Math.Clamp(this.camera.scrollY, bounds.minY, bounds.maxY);
+  }
+  
+  /**
+   * Apply pan delta from drag gesture
+   */
+  private applyPanDelta(currentX: number, currentY: number, startX: number, startY: number, cameraStartX: number, cameraStartY: number): void {
+    const bounds = this.getScrollBounds();
+    const deltaX = (currentX - startX) / this.currentZoom;
+    const deltaY = (currentY - startY) / this.currentZoom;
+    this.camera.scrollX = Phaser.Math.Clamp(cameraStartX - deltaX, bounds.minX, bounds.maxX);
+    this.camera.scrollY = Phaser.Math.Clamp(cameraStartY - deltaY, bounds.minY, bounds.maxY);
   }
 
   /**
    * Zoom towards a specific screen point (keeps that world point under cursor)
    */
   private zoomToPoint(screenX: number, screenY: number, newZoom: number): void {
-    // Get world point under cursor before zoom
-    const worldPointBefore = this.camera.getWorldPoint(screenX, screenY);
+    const worldPoint = this.camera.getWorldPoint(screenX, screenY);
+    this.zoomToWorldPoint(worldPoint.x, worldPoint.y, newZoom);
+  }
+  
+  /**
+   * Zoom towards a specific world point
+   */
+  private zoomToWorldPoint(worldX: number, worldY: number, newZoom: number): void {
+    const oldScrollX = this.camera.scrollX;
+    const oldScrollY = this.camera.scrollY;
+    const oldZoom = this.currentZoom;
     
     // Apply new zoom
     this.currentZoom = newZoom;
     this.camera.setZoom(newZoom);
-    
-    // Update camera bounds for new zoom level
     this.updateCameraBounds();
     
-    // Get world point under cursor after zoom
-    const worldPointAfter = this.camera.getWorldPoint(screenX, screenY);
+    // Calculate new scroll to keep world point at same screen position
+    this.camera.scrollX = worldX - (worldX - oldScrollX) * oldZoom / newZoom;
+    this.camera.scrollY = worldY - (worldY - oldScrollY) * oldZoom / newZoom;
     
-    // Adjust scroll to keep the same world point under cursor
-    this.camera.scrollX += worldPointBefore.x - worldPointAfter.x;
-    this.camera.scrollY += worldPointBefore.y - worldPointAfter.y;
-    
-    this.clampScroll();
+    this.softClampScroll();
     setBuilderZoomLevel(this.currentZoom);
   }
 
@@ -234,9 +264,12 @@ export class BuilderCameraController {
       const isZoomGesture = pointer.event.ctrlKey || (Math.abs(deltaX) < 5 && Math.abs(deltaY) > 0);
       
       if (isZoomGesture && !pointer.event.ctrlKey) {
-        // Mouse wheel zoom
+        // Mouse wheel zoom - store cursor world position for zoom target
         const zoomDelta = -deltaY * ZOOM_SPEED * 3; // Multiply for more responsive wheel
         this.targetZoom = Phaser.Math.Clamp(this.targetZoom + zoomDelta, this.minZoom, MAX_ZOOM);
+        // Store the world position under cursor to zoom towards
+        const worldPoint = this.camera.getWorldPoint(pointer.x, pointer.y);
+        this.zoomTargetWorldPoint = { x: worldPoint.x, y: worldPoint.y };
       } else if (pointer.event.ctrlKey) {
         // Trackpad pinch zoom (ctrlKey is set by browser for pinch)
         const zoomDelta = -deltaY * ZOOM_SPEED;
@@ -374,20 +407,7 @@ export class BuilderCameraController {
         
         // Apply touch pan
         if (this.isDraggingToScroll) {
-          const bounds = this.getScrollBounds();
-          const deltaX = (pointer.x - this.dragScrollStartX) / this.currentZoom;
-          const deltaY = (pointer.y - this.dragScrollStartY) / this.currentZoom;
-          
-          this.camera.scrollX = Phaser.Math.Clamp(
-            this.dragScrollCameraStartX - deltaX,
-            bounds.minX,
-            bounds.maxX
-          );
-          this.camera.scrollY = Phaser.Math.Clamp(
-            this.dragScrollCameraStartY - deltaY,
-            bounds.minY,
-            bounds.maxY
-          );
+          this.applyPanDelta(pointer.x, pointer.y, this.dragScrollStartX, this.dragScrollStartY, this.dragScrollCameraStartX, this.dragScrollCameraStartY);
         }
         return;
       }
@@ -396,22 +416,8 @@ export class BuilderCameraController {
       // Disable panning when dragging from palette or during reset
       if (isPaletteDragging() || this.isAnimatingReset) return;
       
-      const bounds = this.getScrollBounds();
-      
       if (this.isPanning) {
-        const deltaX = (pointer.x - this.panStartX) / this.currentZoom;
-        const deltaY = (pointer.y - this.panStartY) / this.currentZoom;
-        
-        this.camera.scrollX = Phaser.Math.Clamp(
-          this.cameraDragStartX - deltaX,
-          bounds.minX,
-          bounds.maxX
-        );
-        this.camera.scrollY = Phaser.Math.Clamp(
-          this.cameraDragStartY - deltaY,
-          bounds.minY,
-          bounds.maxY
-        );
+        this.applyPanDelta(pointer.x, pointer.y, this.panStartX, this.panStartY, this.cameraDragStartX, this.cameraDragStartY);
       } else if (pointer.leftButtonDown() && !this.isDraggingToScroll && !this.isDraggingObject()) {
         // Check if we've moved enough to start drag-and-scroll
         const isDraggingItem = this.scene.data.get('isDraggingItem') === true;
@@ -428,19 +434,7 @@ export class BuilderCameraController {
       }
       
       if (this.isDraggingToScroll) {
-        const deltaX = (pointer.x - this.dragScrollStartX) / this.currentZoom;
-        const deltaY = (pointer.y - this.dragScrollStartY) / this.currentZoom;
-        
-        this.camera.scrollX = Phaser.Math.Clamp(
-          this.dragScrollCameraStartX - deltaX,
-          bounds.minX,
-          bounds.maxX
-        );
-        this.camera.scrollY = Phaser.Math.Clamp(
-          this.dragScrollCameraStartY - deltaY,
-          bounds.minY,
-          bounds.maxY
-        );
+        this.applyPanDelta(pointer.x, pointer.y, this.dragScrollStartX, this.dragScrollStartY, this.dragScrollCameraStartX, this.dragScrollCameraStartY);
       }
     });
 
@@ -547,13 +541,6 @@ export class BuilderCameraController {
   }
 
   /**
-   * Check if pinch zoom is currently active
-   */
-  isPinchActive(): boolean {
-    return this.isPinching;
-  }
-
-  /**
    * Start pinch gesture tracking
    */
   private startPinch(): void {
@@ -583,8 +570,6 @@ export class BuilderCameraController {
     // Calculate zoom change
     const scale = currentDistance / this.pinchStartDistance;
     const newZoom = Phaser.Math.Clamp(this.pinchStartZoom * scale, this.minZoom, MAX_ZOOM);
-    
-    console.log('Pinch:', { scale, newZoom, currentDistance, startDistance: this.pinchStartDistance });
     
     // Apply zoom towards pinch midpoint
     this.targetZoom = newZoom;
@@ -638,8 +623,17 @@ export class BuilderCameraController {
       if (!this.isAnimatingReset && Math.abs(this.currentZoom - this.targetZoom) > 0.0001) {
         const newZoom = Phaser.Math.Linear(this.currentZoom, this.targetZoom, ZOOM_LERP);
         
-        // Zoom towards screen center for wheel zoom
-        this.zoomToPoint(this.camera.width / 2, this.camera.height / 2, newZoom);
+        // Zoom towards world point if available, otherwise screen center
+        if (this.zoomTargetWorldPoint) {
+          this.zoomToWorldPoint(this.zoomTargetWorldPoint.x, this.zoomTargetWorldPoint.y, newZoom);
+        } else {
+          this.zoomToPoint(this.camera.width / 2, this.camera.height / 2, newZoom);
+        }
+        
+        // Clear zoom target point when zoom is complete
+        if (Math.abs(this.currentZoom - this.targetZoom) < 0.001) {
+          this.zoomTargetWorldPoint = null;
+        }
       }
       
       // Ignore keyboard panning when typing
@@ -697,27 +691,6 @@ export class BuilderCameraController {
   private isDraggingObject(): boolean {
     return this.scene.data.get('isDraggingObject') === true || 
            this.scene.data.get('isDraggingItem') === true;
-  }
-
-  /**
-   * Get current zoom level (0 to 1, where minZoom is fit-to-screen and 1 is 1:1)
-   */
-  getZoomLevel(): number {
-    return this.currentZoom;
-  }
-
-  /**
-   * Get minimum zoom (fit-to-screen)
-   */
-  getMinZoom(): number {
-    return this.minZoom;
-  }
-
-  /**
-   * Check if currently at minimum zoom (fit view)
-   */
-  isAtMinZoom(): boolean {
-    return Math.abs(this.currentZoom - this.minZoom) < 0.001;
   }
 
   /**

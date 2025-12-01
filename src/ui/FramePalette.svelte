@@ -3,7 +3,7 @@
   import DraggablePanel from './DraggablePanel.svelte';
   import { FRAMES } from '../data/frames';
   import { EventBus, EVENTS } from '../events/EventBus';
-  import { builderEditMode, isFramePaletteOpen, openFramePanel } from '../stores/builderStores';
+  import { builderEditMode, isFramePaletteOpen } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
   
   const ACCENT_COLOR = '#9b59b6'; // Purple for frames
@@ -54,9 +54,8 @@
     const canvasY = rect.height / 2;
     
     EventBus.emit(EVENTS.FRAME_DROPPED, { frameKey, canvasX, canvasY });
-    // Close palette and open frame panel for the newly placed frame
+    // Close palette after placing frame
     isFramePaletteOpen.set(false);
-    openFramePanel();
   }
   
   // Setup canvas listeners on mount
