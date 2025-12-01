@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { updatePlayerPosition, builderEditMode } from '../../stores/builderStores';
+import { updatePlayerPosition, builderEditMode, selectPlayer, isPlayerSelected } from '../../stores/builderStores';
 import { setupSpriteInteraction } from '../../utils/spriteInteraction';
+import { get } from 'svelte/store';
 import {
   PLAYER_SPRITE,
   getPlayerGroundY,
@@ -11,6 +12,9 @@ import {
   DRAG_MARGIN_TOP,
   DRAG_TINT
 } from './builderConstants';
+
+// Selection highlight color (red for player)
+const SELECTION_TINT = 0xff4444;
 
 /**
  * BuilderPlayerController - Manages player sprite and interactions in builder mode
@@ -41,12 +45,14 @@ export class BuilderPlayerController {
     this.player = this.scene.add.sprite(startX, safeY, 'cat-idle-white', 0);
     this.player.setScale(PLAYER_SPRITE.SCALE);
     this.player.setDepth(PLAYER_SPRITE.DEPTH);
+    this.player.setData('isPlayer', true); // Mark as player for hit detection
 
     // Store player sprite in scene data for camera controller access
     this.scene.data.set('playerSprite', this.player);
 
     this.setupInteraction();
     this.setupEditModeSubscription();
+    this.setupSelectionSubscription();
 
     return this.player;
   }
@@ -72,6 +78,14 @@ export class BuilderPlayerController {
         // No maxY constraint - allow dragging below ground, will snap back in onDragEnd
       },
       callbacks: {
+        onSelect: () => {
+          // Select player when clicked
+          selectPlayer(true);
+        },
+        isSelected: () => {
+          // Check if player is currently selected
+          return get(isPlayerSelected);
+        },
         onDragStart: () => {
           this.player.setTint(DRAG_TINT);
           this.scene.data.set('isDraggingObject', true);
@@ -80,7 +94,8 @@ export class BuilderPlayerController {
           updatePlayerPosition(Math.round(x), Math.round(y));
         },
         onDragEnd: (_x, _y) => {
-          this.player.clearTint();
+          // Restore selection tint after drag
+          this.updateSelectionVisual(get(isPlayerSelected));
           this.scene.data.set('isDraggingObject', false);
           
           // Check if player is below ground line and correct if needed
@@ -99,6 +114,31 @@ export class BuilderPlayerController {
         }
       }
     });
+  }
+  
+  /**
+   * Subscribe to selection changes to show visual feedback
+   */
+  private setupSelectionSubscription(): void {
+    const unsubscribe = isPlayerSelected.subscribe(selected => {
+      this.updateSelectionVisual(selected);
+      // Sync to scene data for camera controller
+      this.scene.data.set('isPlayerSelected', selected);
+    });
+    this.unsubscribers.push(unsubscribe);
+  }
+  
+  /**
+   * Update visual selection state
+   */
+  private updateSelectionVisual(selected: boolean): void {
+    if (!this.player) return;
+    
+    if (selected) {
+      this.player.setTint(SELECTION_TINT);
+    } else {
+      this.player.clearTint();
+    }
   }
   
   /**

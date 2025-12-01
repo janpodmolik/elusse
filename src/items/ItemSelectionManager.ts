@@ -107,9 +107,9 @@ export class ItemSelectionManager {
       
       if (isDragging()) return;
       
-      // Check if clicking on any sprite with itemId
+      // Check if clicking on any interactive sprite (item, frame, or player)
       const hitSprite = this.scene.input.hitTestPointer(pointer).find(
-        obj => obj.type === 'Sprite' && obj.getData('itemId')
+        obj => obj.type === 'Sprite' && (obj.getData('itemId') || obj.getData('frameId') || obj.getData('isPlayer'))
       );
       
       if (!hitSprite) {

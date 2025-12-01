@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { setBuilderZoomLevel } from '../../stores/builderStores';
+import { setBuilderZoomLevel, setPinchingInBuilder } from '../../stores/builderStores';
 import { isTypingInTextField, isPaletteDragging, isPointerOverUI } from '../../utils/inputUtils';
 
 // Zoom constants
@@ -46,7 +46,15 @@ export class BuilderCameraController {
   private pinchStartZoom: number = 1;
   private activeTouches: Map<number, { x: number; y: number }> = new Map();
   private pinchEndTime: number = 0; // Timestamp when pinch ended
+  private isPinching: boolean = false; // Whether pinch is currently active
   private readonly PINCH_COOLDOWN = 150; // ms to ignore drag after pinch ends
+  
+  // Touch tap detection
+  private touchStartTime: number = 0;
+  private touchStartPos: { x: number; y: number } | null = null;
+  private touchOnSelectedSprite: boolean = false; // Whether touch started on a selected sprite
+  private readonly TAP_MAX_DURATION = 200; // ms - max time for a tap
+  private readonly TAP_MAX_DISTANCE = 10; // pixels - max movement for a tap
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -257,14 +265,37 @@ export class BuilderCameraController {
       // Track touch for pinch detection
       if (pointer.wasTouch) {
         this.activeTouches.set(pointer.id, { x: pointer.x, y: pointer.y });
-        console.log('Touch down:', pointer.id, 'Total touches:', this.activeTouches.size);
         
         // Start pinch when we have 2 touches
         if (this.activeTouches.size === 2) {
-          console.log('Starting pinch!');
+          this.isPinching = true;
           this.startPinch();
+          // Cancel any touch pan/drag that might have started
+          this.touchStartPos = null;
+          this.touchOnSelectedSprite = false;
+          this.scene.data.set('touchDraggingSprite', false);
           return;
         }
+        
+        // Single touch - record start for tap detection
+        // Don't start pan immediately, wait for movement
+        if (this.activeTouches.size === 1 && !this.isPinching) {
+          this.touchStartTime = Date.now();
+          this.touchStartPos = { x: pointer.x, y: pointer.y };
+          this.dragScrollStartX = pointer.x;
+          this.dragScrollStartY = pointer.y;
+          this.dragScrollCameraStartX = this.camera.scrollX;
+          this.dragScrollCameraStartY = this.camera.scrollY;
+          
+          // Check if touch is on a selected sprite - if so, allow drag instead of pan
+          // Store in scene data so spriteInteraction can check
+          this.touchOnSelectedSprite = this.isTouchOnSelectedSprite(pointer.worldX, pointer.worldY);
+          this.scene.data.set('touchDraggingSprite', false); // Will be set true if drag starts
+          this.scene.data.set('touchStartOnSelectedSprite', this.touchOnSelectedSprite);
+          this.scene.data.set('touchStartWorldX', pointer.worldX);
+          this.scene.data.set('touchStartWorldY', pointer.worldY);
+        }
+        return; // Don't process further for touch - wait for move/up
       }
       
       // Skip if pointer is over UI element
@@ -293,22 +324,75 @@ export class BuilderCameraController {
 
     // Pointer move - handle panning, drag-scroll, and pinch zoom
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      // Update touch position for pinch
-      if (pointer.wasTouch && this.activeTouches.has(pointer.id)) {
-        this.activeTouches.set(pointer.id, { x: pointer.x, y: pointer.y });
+      // Touch handling
+      if (pointer.wasTouch) {
+        // Update touch position
+        if (this.activeTouches.has(pointer.id)) {
+          this.activeTouches.set(pointer.id, { x: pointer.x, y: pointer.y });
+        }
         
-        // Handle pinch if we have 2 touches
-        if (this.activeTouches.size === 2) {
+        // Handle pinch if we have 2+ touches
+        if (this.activeTouches.size >= 2 && this.isPinching) {
           this.handlePinch();
           return;
         }
         
-        // Skip touch drag if we're in pinch cooldown (prevents jump when ending pinch)
-        if (Date.now() - this.pinchEndTime < this.PINCH_COOLDOWN) {
+        // Skip if pinching or in cooldown
+        if (this.isPinching || Date.now() - this.pinchEndTime < this.PINCH_COOLDOWN) {
           return;
         }
+        
+        // If sprite is being dragged by touch, don't do pan
+        if (this.scene.data.get('touchDraggingSprite')) {
+          return;
+        }
+        
+        // Single touch - check if we should start pan or sprite drag
+        if (this.touchStartPos && !this.isDraggingToScroll) {
+          const deltaX = Math.abs(pointer.x - this.touchStartPos.x);
+          const deltaY = Math.abs(pointer.y - this.touchStartPos.y);
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          
+          // Check if it's not a tap (moved too much)
+          if (distance > this.TAP_MAX_DISTANCE) {
+            // If touch started on selected sprite, let sprite handle drag
+            if (this.touchOnSelectedSprite) {
+              // Signal to spriteInteraction that drag should start
+              this.scene.data.set('touchDragStarted', true);
+              this.scene.data.set('touchDraggingSprite', true);
+              this.touchStartPos = null;
+              return;
+            }
+            
+            // Not over UI and not dragging object? Start pan
+            if (!isPointerOverUI() && !this.isDraggingObject() && !this.scene.data.get('isDraggingItem')) {
+              this.isDraggingToScroll = true;
+              this.touchStartPos = null; // No longer a potential tap
+            }
+          }
+        }
+        
+        // Apply touch pan
+        if (this.isDraggingToScroll) {
+          const bounds = this.getScrollBounds();
+          const deltaX = (pointer.x - this.dragScrollStartX) / this.currentZoom;
+          const deltaY = (pointer.y - this.dragScrollStartY) / this.currentZoom;
+          
+          this.camera.scrollX = Phaser.Math.Clamp(
+            this.dragScrollCameraStartX - deltaX,
+            bounds.minX,
+            bounds.maxX
+          );
+          this.camera.scrollY = Phaser.Math.Clamp(
+            this.dragScrollCameraStartY - deltaY,
+            bounds.minY,
+            bounds.maxY
+          );
+        }
+        return;
       }
       
+      // Desktop mouse handling
       // Disable panning when dragging from palette or during reset
       if (isPaletteDragging() || this.isAnimatingReset) return;
       
@@ -360,17 +444,50 @@ export class BuilderCameraController {
       }
     });
 
-    // Pointer up - stop panning/drag-scroll, end pinch
+    // Pointer up - stop panning/drag-scroll, end pinch, detect tap
     this.scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      // Remove touch from tracking
+      // Touch handling
       if (pointer.wasTouch) {
-        // If we were pinching (had 2 touches), record end time
-        if (this.activeTouches.size === 2) {
+        // End pinch if we had 2+ touches
+        if (this.isPinching) {
           this.pinchEndTime = Date.now();
+          this.isPinching = false;
+          setPinchingInBuilder(false);
         }
+        
+        // Check for tap (short touch without much movement)
+        if (this.touchStartPos && !this.isDraggingToScroll) {
+          const duration = Date.now() - this.touchStartTime;
+          const deltaX = Math.abs(pointer.x - this.touchStartPos.x);
+          const deltaY = Math.abs(pointer.y - this.touchStartPos.y);
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          
+          // It's a tap! Emit a synthetic tap event for sprites to handle
+          if (duration < this.TAP_MAX_DURATION && distance < this.TAP_MAX_DISTANCE) {
+            // Store tap info in scene data for sprites to check
+            this.scene.data.set('lastTapTime', Date.now());
+            this.scene.data.set('lastTapWorldX', pointer.worldX);
+            this.scene.data.set('lastTapWorldY', pointer.worldY);
+          }
+        }
+        
+        this.touchStartPos = null;
+        this.touchOnSelectedSprite = false;
         this.activeTouches.delete(pointer.id);
+        
+        // Reset touch drag state
+        this.scene.data.set('touchDraggingSprite', false);
+        this.scene.data.set('touchDragStarted', false);
+        this.scene.data.set('touchStartOnSelectedSprite', false);
+        
+        // Reset pan state
+        if (this.isDraggingToScroll) {
+          this.isDraggingToScroll = false;
+        }
+        return;
       }
       
+      // Desktop mouse handling
       if (!pointer.rightButtonDown() && !pointer.middleButtonDown()) {
         this.isPanning = false;
       }
@@ -385,8 +502,55 @@ export class BuilderCameraController {
     this.scene.input.on('pointerout', (pointer: Phaser.Input.Pointer) => {
       if (pointer.wasTouch) {
         this.activeTouches.delete(pointer.id);
+        this.touchStartPos = null;
+        this.touchOnSelectedSprite = false;
+        // End pinch if touch leaves
+        if (this.isPinching && this.activeTouches.size < 2) {
+          this.isPinching = false;
+          this.pinchEndTime = Date.now();
+          setPinchingInBuilder(false);
+        }
       }
     });
+  }
+
+  /**
+   * Check if a world position hits any currently selected sprite
+   */
+  private isTouchOnSelectedSprite(_worldX: number, _worldY: number): boolean {
+    // Check all interactive sprites under this position
+    const pointer = this.scene.input.activePointer;
+    const hitObjects = this.scene.input.hitTestPointer(pointer);
+    
+    // Get selected IDs from scene data
+    const selectedItemId = this.scene.data.get('selectedItemId');
+    const selectedFrameId = this.scene.data.get('selectedFrameId');
+    const isPlayerSelected = this.scene.data.get('isPlayerSelected');
+    
+    for (const obj of hitObjects) {
+      if (!(obj instanceof Phaser.GameObjects.Sprite)) continue;
+      
+      // Check if this is the selected item
+      const itemId = obj.getData('itemId');
+      if (itemId && itemId === selectedItemId) return true;
+      
+      // Check if this is part of a selected frame
+      const frameId = obj.getData('frameId');
+      if (frameId && frameId === selectedFrameId) return true;
+      
+      // Check if this is the player sprite and player is selected
+      const playerSprite = this.scene.data.get('playerSprite');
+      if (isPlayerSelected && obj === playerSprite) return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if pinch zoom is currently active
+   */
+  isPinchActive(): boolean {
+    return this.isPinching;
   }
 
   /**
@@ -399,6 +563,9 @@ export class BuilderCameraController {
     const [t1, t2] = touches;
     this.pinchStartDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
     this.pinchStartZoom = this.currentZoom;
+    
+    // Notify store that pinch is active (disables sprite interactions)
+    setPinchingInBuilder(true);
   }
 
   /**
@@ -528,7 +695,8 @@ export class BuilderCameraController {
    * Check if player or any object is being dragged
    */
   private isDraggingObject(): boolean {
-    return this.scene.data.get('isDraggingObject') === true;
+    return this.scene.data.get('isDraggingObject') === true || 
+           this.scene.data.get('isDraggingItem') === true;
   }
 
   /**

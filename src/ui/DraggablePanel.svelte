@@ -71,15 +71,18 @@
   let initialized = $state(false);
   let zIndex = $state(globalZIndex);
   
+  // Track previous position/size to avoid unnecessary saves
+  let lastSavedState = $state<string>('');
+  
   /** Bring this panel to front by incrementing global z-index */
   function bringToFront() {
     globalZIndex++;
     zIndex = globalZIndex;
   }
   
-  // Load saved position and size or calculate initial values
+  // Load saved position and size on mount (runs once)
   $effect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || initialized) return;
     
     const saved = localStorage.getItem(`panel-state-${panelId}`);
     if (saved) {
@@ -89,6 +92,7 @@
         if (resizable && parsed.width && parsed.height) {
           size = { width: parsed.width, height: parsed.height };
         }
+        lastSavedState = saved;
       } catch {
         // Calculate from right edge
         position = { 
@@ -106,13 +110,19 @@
     initialized = true;
   });
   
-  // Save position and size when they change
+  // Save position and size when they change (debounced to avoid loops)
   $effect(() => {
     if (!initialized) return;
     const state = resizable 
-      ? { ...position, width: size.width, height: size.height }
-      : position;
-    localStorage.setItem(`panel-state-${panelId}`, JSON.stringify(state));
+      ? { x: position.x, y: position.y, width: size.width, height: size.height }
+      : { x: position.x, y: position.y };
+    const stateStr = JSON.stringify(state);
+    
+    // Only save if actually changed (prevents infinite loop)
+    if (stateStr !== lastSavedState) {
+      lastSavedState = stateStr;
+      localStorage.setItem(`panel-state-${panelId}`, stateStr);
+    }
   });
   
   // Handle window resize - ensure panel stays visible
@@ -160,8 +170,9 @@
     
     window.addEventListener('resize', handleWindowResize);
     
-    // Also check on mount and when panel becomes visible
-    handleWindowResize();
+    // Note: Do NOT call handleWindowResize() here synchronously!
+    // That would cause infinite loop with position save effect.
+    // Window resize listener will handle edge cases when window actually resizes.
     
     return () => {
       window.removeEventListener('resize', handleWindowResize);

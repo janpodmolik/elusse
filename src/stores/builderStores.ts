@@ -28,6 +28,7 @@ interface BuilderState {
   editMode: BuilderEditMode;
   selectedDialogZoneId: string | null;
   selectedFrameId: string | null;
+  isPlayerSelected: boolean;
 }
 
 // ==================== Main State Store ====================
@@ -40,6 +41,7 @@ const initialState: BuilderState = {
   editMode: 'items',
   selectedDialogZoneId: null,
   selectedFrameId: null,
+  isPlayerSelected: false,
 };
 
 const builderState = writable<BuilderState>(initialState);
@@ -70,6 +72,14 @@ export const isDraggingInBuilder = writable<boolean>(false);
 /** Set dragging state (called from Phaser scene) */
 export function setDraggingInBuilder(isDragging: boolean): void {
   isDraggingInBuilder.set(isDragging);
+}
+
+/** Whether pinch zoom is active (disables all sprite interactions) */
+export const isPinchingInBuilder = writable<boolean>(false);
+
+/** Set pinching state (called from BuilderCameraController) */
+export function setPinchingInBuilder(isPinching: boolean): void {
+  isPinchingInBuilder.set(isPinching);
 }
 
 // ==================== Palette Open State ====================
@@ -130,6 +140,9 @@ export const dialogZones = derived(builderState, $state => $state.config?.dialog
 
 /** Currently selected frame ID */
 export const selectedFrameId = derived(builderState, $state => $state.selectedFrameId);
+
+/** Whether player sprite is selected */
+export const isPlayerSelected = derived(builderState, $state => $state.isPlayerSelected);
 
 /** All placed frames from config */
 export const placedFrames = derived(builderState, $state => $state.config?.placedFrames || []);
@@ -293,15 +306,30 @@ export function deletePlacedItem(id: string): void {
 export function selectItem(id: string | null): void {
   builderState.update(state => ({
     ...state,
-    selectedItemId: id
+    selectedItemId: id,
+    // Deselect player when selecting an item
+    isPlayerSelected: id ? false : state.isPlayerSelected
   }));
 }
 
-/** Clear current selection */
+/** Select player sprite */
+export function selectPlayer(selected: boolean): void {
+  builderState.update(state => ({
+    ...state,
+    isPlayerSelected: selected,
+    // Deselect item when selecting player
+    selectedItemId: selected ? null : state.selectedItemId
+  }));
+}
+
+/** Clear all selections (items, frames, dialogs, player) */
 export function clearSelection(): void {
   builderState.update(state => ({
     ...state,
-    selectedItemId: null
+    selectedItemId: null,
+    selectedFrameId: null,
+    selectedDialogZoneId: null,
+    isPlayerSelected: false
   }));
 }
 
@@ -357,6 +385,7 @@ export function enterBuilderMode(config: MapConfig): void {
     editMode: 'items',
     selectedDialogZoneId: null,
     selectedFrameId: null,
+    isPlayerSelected: false,
   });
   // Reset zoom state when entering builder (will be set properly by camera controller)
   builderZoomLevel.set(1);
@@ -644,6 +673,9 @@ export function deletePlacedFrame(id: string): void {
 export function selectFrame(id: string | null): void {
   builderState.update(state => ({
     ...state,
-    selectedFrameId: id
+    selectedFrameId: id,
+    // Deselect player and items when selecting a frame
+    isPlayerSelected: id ? false : state.isPlayerSelected,
+    selectedItemId: id ? null : state.selectedItemId
   }));
 }

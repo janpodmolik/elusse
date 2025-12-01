@@ -5,8 +5,9 @@
  */
 
 import Phaser from 'phaser';
-import { updatePlacedItem, selectItem } from '../stores/builderStores';
+import { updatePlacedItem, selectItem, selectedItemId } from '../stores/builderStores';
 import { setupSpriteInteraction } from '../utils/spriteInteraction';
+import { get } from 'svelte/store';
 
 export interface ItemDragCallbacks {
   onSelect?: (id: string) => void;
@@ -14,6 +15,9 @@ export interface ItemDragCallbacks {
   onDrag?: (id: string, x: number, y: number) => void;
   onDragEnd?: (id: string, x: number, yOffset: number) => void;
 }
+
+// Drag tint color (blue)
+const DRAG_TINT = 0x4a90e2;
 
 /**
  * ItemDragController - Manages item dragging in builder mode
@@ -68,16 +72,20 @@ export class ItemDragController {
           selectItem(id);
           this.callbacks.onSelect?.(id);
         },
+        isSelected: () => {
+          // Check if this item is currently selected
+          return get(selectedItemId) === id;
+        },
         onDragStart: () => {
           this.isDragging = true;
-          sprite.setTint(0x4a90e2);
+          sprite.setTint(DRAG_TINT); // Blue drag tint
           this.callbacks.onDragStart?.(id);
         },
         onDrag: (x, y) => {
           this.callbacks.onDrag?.(id, x, y);
         },
         onDragEnd: (x, y) => {
-          sprite.clearTint();
+          sprite.clearTint(); // Just clear drag tint
           this.isDragging = false;
           
           const worldX = Math.round(x);

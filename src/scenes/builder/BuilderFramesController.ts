@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
+import { get } from 'svelte/store';
 import type { PlacedFrame } from '../../types/FrameTypes';
 import { generateFrameId, DEFAULT_FRAME_COLOR, DEFAULT_FRAME_SCALE } from '../../types/FrameTypes';
 import { selectedFrameId, deletePlacedFrame, addPlacedFrame, selectFrame, builderEditMode, placedFrames, updatePlacedFrame, updateDraggingFramePosition, clearDraggingFramePosition, openFramePanel, updateSelectedFrameScreenPosition } from '../../stores/builderStores';
 import { EventBus, EVENTS, type FrameDroppedEvent } from '../../events/EventBus';
-import { isTypingInTextField, isPointerOverUI, worldToScreen } from '../../utils/inputUtils';
+import { isTypingInTextField, worldToScreen } from '../../utils/inputUtils';
 import { getFrameScale, getFrameDimensions } from '../../data/frames';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
 import { type FrameContainer, drawFrameBackground } from '../../utils/frameUtils';
 import { setupSpriteInteraction, DoubleClickDetector } from '../../utils/spriteInteraction';
+import { DRAG_TINT } from './builderConstants';
 
 /**
  * BuilderFramesController - Manages placed frames and their interactions
@@ -52,7 +54,8 @@ export class BuilderFramesController {
       existingFrames.forEach(frame => this.createFrame(frame));
     }
     
-    this.setupBackgroundDeselect();
+    // Note: Background deselect is handled by ItemSelectionManager.setupBackgroundDeselect
+    // which calls clearSelection() - this clears all selections including frames
     this.setupStoreSubscriptions();
     this.setupFrameDropListener();
     this.setupDeleteKeys();
@@ -90,6 +93,7 @@ export class BuilderFramesController {
     sprite.setDepth(depth);
     sprite.setOrigin(0.5, 0.5);
     sprite.setRotation(rotation);
+    sprite.setData('frameId', frameData.id); // Store frame ID for touch detection
     
     // Store frame container (text is rendered via Svelte overlay)
     const container: FrameContainer = { sprite, background, data: frameData };
@@ -164,12 +168,19 @@ export class BuilderFramesController {
           selectFrame(frameId);
           this.updateSelectionVisuals();
         },
+        isSelected: () => {
+          // Check if this frame is currently selected
+          return get(selectedFrameId) === frameId;
+        },
         onDoubleClick: () => {
           if (this.doubleClickDetector.check(frameId)) {
             openFramePanel();
             return true; // Prevent drag start
           }
           return false;
+        },
+        onDragStart: () => {
+          sprite.setTint(DRAG_TINT);
         },
         onDrag: (x, y) => {
           // Move background along with sprite
@@ -179,6 +190,8 @@ export class BuilderFramesController {
           updateDraggingFramePosition(frameId, x, y);
         },
         onDragEnd: (x, y) => {
+          // Clear drag tint
+          sprite.clearTint();
           // Clear dragging position
           clearDraggingFramePosition(frameId);
           // Update store with new position
@@ -190,36 +203,6 @@ export class BuilderFramesController {
     });
     
     this.cleanupFunctions.set(frameId, cleanup);
-  }
-
-  /**
-   * Setup click on empty space to deselect
-   */
-  private setupBackgroundDeselect(): void {
-    this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Skip if pointer is over UI element
-      if (isPointerOverUI()) return;
-      
-      // Only in frames or items mode (frames are interactive in both)
-      let currentMode = 'items';
-      const unsub = builderEditMode.subscribe(m => currentMode = m);
-      unsub();
-      if (currentMode !== 'frames' && currentMode !== 'items') return;
-      
-      // Skip if clicking on a frame
-      const clickedObjects = this.scene.input.hitTestPointer(pointer);
-      const clickedFrame = clickedObjects.some(obj => {
-        for (const [_, frame] of this.frames) {
-          if (frame.sprite === obj) return true;
-        }
-        return false;
-      });
-      
-      if (!clickedFrame) {
-        selectFrame(null);
-        this.updateSelectionVisuals();
-      }
-    });
   }
 
   private setupStoreSubscriptions(): void {
@@ -424,7 +407,8 @@ export class BuilderFramesController {
   setInteractiveEnabled(enabled: boolean): void {
     this.frames.forEach(({ sprite, background }) => {
       if (enabled) {
-        sprite.setInteractive({ draggable: true, useHandCursor: true });
+        // Re-enable without overwriting the interactive config set by setupSpriteInteraction
+        sprite.setInteractive();
         sprite.setAlpha(1);
         background.setAlpha(1);
       } else {
