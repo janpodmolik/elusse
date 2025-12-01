@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, isSocialPaletteOpen, toggleAssetPalette, toggleFramePalette, toggleSocialPalette, selectedItemId, selectedFrameId, selectedDialogZoneId, selectedSocialId } from '../stores/builderStores';
+  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isItemPaletteOpen, isFramePaletteOpen, isSocialPaletteOpen, toggleItemPalette, toggleFramePalette, toggleSocialPalette, selectedItemId, selectedFrameId, selectedDialogZoneId, selectedSocialId } from '../stores/builderStores';
   import { switchToGame } from '../utils/sceneManager';
   import { EventBus, EVENTS } from '../events/EventBus';
-import AssetPalette from './AssetPalette.svelte';
+import ItemPalette from './ItemPalette.svelte';
 import FramePalette from './FramePalette.svelte';
 import SocialsPalette from './SocialsPalette.svelte';
 import PixelButton from './PixelButton.svelte';
@@ -62,7 +62,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
 
 <!-- Conditional panels based on mode -->
 {#if $builderEditMode === 'items'}
-  <AssetPalette />
+  <ItemPalette />
 {:else if $builderEditMode === 'dialogs'}
   <DialogZonePanel />
 {:else if $builderEditMode === 'frames'}
@@ -99,23 +99,23 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   </div>
 </FixedPosition>
 
-<!-- Top-right: Mode selection buttons (ASSETS, FRAMES, DIALOGS) -->
+<!-- Top-right: Mode selection buttons (ITEMS, FRAMES, DIALOGS) -->
 <FixedPosition position="top-right">
   <div class="right-buttons" class:hide-right={hideButtons}>
     <VStack align="end">
       <PixelButton 
-      variant={$builderEditMode === 'items' && $isAssetPaletteOpen ? 'orange' : 'blue'}
+      variant={$builderEditMode === 'items' && $isItemPaletteOpen ? 'orange' : 'blue'}
       onclick={() => {
         if ($builderEditMode === 'items') {
-          toggleAssetPalette();
+          toggleItemPalette();
         } else {
           setBuilderEditMode('items');
-          isAssetPaletteOpen.set(true);
+          isItemPaletteOpen.set(true);
         }
       }}
-      title="Edit assets/items"
+      title="Edit items"
     >
-      ASSETS
+      ITEMS
     </PixelButton>
 
     <PixelButton 

@@ -1,25 +1,25 @@
 /**
- * Asset definition for placeable items in the game
+ * Item definition for placeable items in the game
  */
-export interface AssetDefinition {
-  /** Unique identifier for the asset */
+export interface ItemDefinition {
+  /** Unique identifier for the item */
   key: string;
   /** Display name in UI */
   name: string;
-  /** Path to the asset file (relative to public/) */
+  /** Path to the item file (relative to public/) */
   path: string;
   /** Default scale factor when placed in scene */
   scale: number;
   /** Optional category for grouping in UI */
   category?: string;
-  /** Whether this asset supports physics body (can block player) */
+  /** Whether this item supports physics body (can block player) */
   supportsPhysics?: boolean;
 }
 
 /**
- * Central registry of all available assets
+ * Central registry of all available items
  */
-export const ASSETS: AssetDefinition[] = [
+export const ITEMS: ItemDefinition[] = [
   {
     key: 'tent',
     name: 'Tent',
@@ -75,29 +75,29 @@ export const ASSETS: AssetDefinition[] = [
 ];
 
 /**
- * Get asset definition by key
+ * Get item definition by key
  */
-export function getAsset(key: string): AssetDefinition | undefined {
-  return ASSETS.find(asset => asset.key === key);
+export function getItem(key: string): ItemDefinition | undefined {
+  return ITEMS.find(item => item.key === key);
 }
 
 /**
- * Get default scale for an asset
+ * Get default scale for an item
  */
-export function getAssetScale(key: string): number {
-  return getAsset(key)?.scale || 1;
+export function getItemScale(key: string): number {
+  return getItem(key)?.scale || 1;
 }
 
 /**
- * Get all assets in a specific category
+ * Get all items in a specific category
  */
-export function getAssetsByCategory(category: string): AssetDefinition[] {
-  return ASSETS.filter(asset => asset.category === category);
+export function getItemsByCategory(category: string): ItemDefinition[] {
+  return ITEMS.filter(item => item.category === category);
 }
 
 /**
- * Check if an asset supports physics body
+ * Check if an item supports physics body
  */
-export function assetSupportsPhysics(key: string): boolean {
-  return getAsset(key)?.supportsPhysics ?? false;
+export function itemSupportsPhysics(key: string): boolean {
+  return getItem(key)?.supportsPhysics ?? false;
 }

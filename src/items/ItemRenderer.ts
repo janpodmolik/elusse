@@ -4,7 +4,7 @@
 
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
-import { ASSETS } from '../data/assets';
+import { ITEMS } from '../data/items';
 
 /**
  * ItemRenderer - Factory for creating and updating item sprites
@@ -22,8 +22,8 @@ export class ItemRenderer {
    * Preload all item assets
    */
   static preloadAssets(scene: Phaser.Scene): void {
-    ASSETS.forEach(asset => {
-      scene.load.image(asset.key, asset.path);
+    ITEMS.forEach(item => {
+      scene.load.image(item.key, item.path);
     });
   }
 

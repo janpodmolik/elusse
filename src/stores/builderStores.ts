@@ -87,8 +87,8 @@ export function setPinchingInBuilder(isPinching: boolean): void {
 
 // ==================== Palette Open State ====================
 
-/** Whether asset palette is open */
-export const isAssetPaletteOpen = writable<boolean>(false);
+/** Whether item palette is open */
+export const isItemPaletteOpen = writable<boolean>(false);
 
 /** Whether frame palette is open */
 export const isFramePaletteOpen = writable<boolean>(false);
@@ -102,9 +102,9 @@ export const isSocialPaletteOpen = writable<boolean>(false);
 /** Whether social panel is explicitly open (set by double-click, not single click) */
 export const isSocialPanelOpen = writable<boolean>(false);
 
-/** Toggle asset palette */
-export function toggleAssetPalette(): void {
-  isAssetPaletteOpen.update(open => !open);
+/** Toggle item palette */
+export function toggleItemPalette(): void {
+  isItemPaletteOpen.update(open => !open);
 }
 
 /** Toggle frame palette */

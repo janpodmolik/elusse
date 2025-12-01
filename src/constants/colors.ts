@@ -54,7 +54,7 @@ export const ACCENT_COLORS = {
  * Each type has unique color to distinguish them visually
  */
 export const SELECTION_COLORS = {
-  /** Items (assets) - Blue */
+  /** Items - Blue */
   ITEM: {
     css: ACCENT_COLORS.BLUE,
     hex: hexToNumber(ACCENT_COLORS.BLUE),

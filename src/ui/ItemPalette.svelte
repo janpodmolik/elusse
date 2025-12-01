@@ -1,15 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import DraggablePanel from './DraggablePanel.svelte';
-  import { ASSETS } from '../data/assets';
+  import { ITEMS } from '../data/items';
   import { EventBus, EVENTS } from '../events/EventBus';
-  import { builderEditMode, isAssetPaletteOpen } from '../stores/builderStores';
+  import { builderEditMode, isItemPaletteOpen } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
   
-  const ACCENT_COLOR = '#4a90e2'; // Blue for assets
+  const ACCENT_COLOR = '#4a90e2'; // Blue for items
   const NARROW_SCREEN_THRESHOLD = 600; // px - close palette after adding item on narrow screens
   
-  const assets = ASSETS;
+  const items = ITEMS;
   
   /** Check if screen is narrow (portrait mobile) */
   function isNarrowScreen(): boolean {
@@ -19,12 +19,12 @@
   /** Close palette if on narrow screen */
   function closeOnNarrowScreen() {
     if (isNarrowScreen()) {
-      isAssetPaletteOpen.set(false);
+      isItemPaletteOpen.set(false);
     }
   }
   
   // Drag state
-  let draggedAsset = $state<string | null>(null);
+  let draggedItem = $state<string | null>(null);
   let touchDragElement = $state<HTMLElement | null>(null);
   
   // Create drag handlers using shared utility
@@ -36,9 +36,9 @@
       eventName: EVENTS.ASSET_DROPPED,
       onDrop: closeOnNarrowScreen,
     },
-    () => ({ draggedKey: draggedAsset, touchDragElement }),
+    () => ({ draggedKey: draggedItem, touchDragElement }),
     (updates) => {
-      if ('draggedKey' in updates) draggedAsset = updates.draggedKey ?? null;
+      if ('draggedKey' in updates) draggedItem = updates.draggedKey ?? null;
       if ('touchDragElement' in updates) touchDragElement = updates.touchDragElement ?? null;
     }
   );
@@ -48,11 +48,11 @@
   }
   
   function closePalette() {
-    isAssetPaletteOpen.set(false);
+    isItemPaletteOpen.set(false);
   }
   
-  /** Double-click to place asset in center of screen */
-  function handleDoubleClick(assetKey: string) {
+  /** Double-click to place item in center of screen */
+  function handleDoubleClick(itemKey: string) {
     // Get canvas element to find its center
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
@@ -63,7 +63,7 @@
     const canvasX = rect.width / 2;
     const canvasY = rect.height / 2;
     
-    EventBus.emit(EVENTS.ASSET_DROPPED, { assetKey, canvasX, canvasY });
+    EventBus.emit(EVENTS.ASSET_DROPPED, { assetKey: itemKey, canvasX, canvasY });
     closeOnNarrowScreen();
   }
   
@@ -78,10 +78,10 @@
   });
 </script>
 
-{#if $isAssetPaletteOpen && $builderEditMode === 'items'}
+{#if $isItemPaletteOpen && $builderEditMode === 'items'}
   <DraggablePanel 
-    panelId="asset-palette"
-    title="Assets"
+    panelId="item-palette"
+    title="Items"
     initialRight={10}
     initialTop={60}
     width={280}
@@ -105,24 +105,24 @@
       onpointerdown={stopMouseDown}
     >
       <div class="palette-grid">
-        {#each assets as asset}
+        {#each items as item}
           <div 
             class="palette-item"
             data-ui
-            class:dragging={draggedAsset === asset.key}
+            class:dragging={draggedItem === item.key}
             draggable="true"
-            ondragstart={(e) => dragHandlers.onDragStart(e, asset.key)}
+            ondragstart={(e) => dragHandlers.onDragStart(e, item.key)}
             ondragend={dragHandlers.onDragEnd}
-            ontouchstart={(e) => dragHandlers.onTouchStart(e, asset.key)}
-            ondblclick={() => handleDoubleClick(asset.key)}
-            title="{asset.name} (double-click to place)"
+            ontouchstart={(e) => dragHandlers.onTouchStart(e, item.key)}
+            ondblclick={() => handleDoubleClick(item.key)}
+            title="{item.name} (double-click to place)"
             role="button"
             tabindex="0"
             style:--accent-color={ACCENT_COLOR}
           >
             <img 
-              src={asset.path} 
-              alt={asset.name}
+              src={item.path} 
+              alt={item.name}
               class="item-preview"
             />
           </div>

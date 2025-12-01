@@ -1,11 +1,11 @@
 <script lang="ts">
   import { selectedItemId, selectedItem, selectedItemPhysicsEnabled, selectedItemFlipX, itemDepthLayer, selectedItemScreenPosition, builderEditMode, toggleItemDepthLayer, updateItemDepth, updateItemPhysics, updateItemFlipX, deletePlacedItem, clearSelection, isDraggingInBuilder } from '../stores/builderStores';
   import { getItemDepth } from '../constants/depthLayers';
-  import { assetSupportsPhysics } from '../data/assets';
+  import { itemSupportsPhysics } from '../data/items';
   import PixelButton from './PixelButton.svelte';
   
   // Check if selected item supports physics
-  let canHavePhysics = $derived($selectedItem ? assetSupportsPhysics($selectedItem.assetKey) : false);
+  let canHavePhysics = $derived($selectedItem ? itemSupportsPhysics($selectedItem.assetKey) : false);
   
   // Calculate final position with edge clamping
   let controlsPosition = $derived.by(() => {

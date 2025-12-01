@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../PlacedItemManager';
-import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig, builderEditMode, clearSelection, isAssetPaletteOpen } from '../../stores/builderStores';
+import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig, builderEditMode, clearSelection, isItemPaletteOpen } from '../../stores/builderStores';
 import type { PlacedItem } from '../../data/mapConfig';
 import { PlacedItemFactory } from '../../data/mapConfig';
 import { EventBus, EVENTS, type AssetDroppedEvent } from '../../events/EventBus';
@@ -137,8 +137,8 @@ export class BuilderItemsController {
       addPlacedItem(newItem);
       this.itemManager.createItem(newItem);
       selectItem(newItem.id);
-      // Close asset palette after adding item
-      isAssetPaletteOpen.set(false);
+      // Close item palette after adding item
+      isItemPaletteOpen.set(false);
     });
     
     // Store subscription for cleanup

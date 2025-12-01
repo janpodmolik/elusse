@@ -17,7 +17,7 @@ let _isPointerOverUI = false;
 
 /**
  * Set the palette dragging state
- * Called from AssetPalette and FramePalette during drag operations
+ * Called from ItemPalette and FramePalette during drag operations
  */
 export function setPaletteDragging(isDragging: boolean): void {
   _isPaletteDragging = isDragging;

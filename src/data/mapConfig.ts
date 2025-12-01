@@ -3,7 +3,7 @@
  * Defines structure for JSON-based map configuration
  */
 
-import { getAssetScale } from './assets';
+import { getItemScale } from './items';
 import { getItemDepth } from '../constants/depthLayers';
 import type { DialogZone } from '../types/DialogTypes';
 import type { PlacedFrame } from '../types/FrameTypes';
@@ -93,7 +93,7 @@ export const PlacedItemFactory = {
       assetKey,
       x: Math.round(x),
       y: 0, // Always 0, position is calculated from yOffset
-      scale: scale ?? getAssetScale(assetKey),
+      scale: scale ?? getItemScale(assetKey),
       depth: getItemDepth(depthLayer),
       yOffset: Math.round(yOffset),
     };
