@@ -46,9 +46,9 @@ export class BuilderScene extends Phaser.Scene {
     return this.itemsController?.getManager();
   }
   
-  /** Toggle camera zoom between fit-all and normal */
-  public toggleZoom(): void {
-    this.cameraController?.toggleZoomToFit();
+  /** Reset camera zoom to fit-to-screen */
+  public resetZoom(): void {
+    this.cameraController?.resetToFit();
   }
 
   constructor() {
@@ -193,7 +193,6 @@ export class BuilderScene extends Phaser.Scene {
   
   /** Navigate camera to a position (called from minimap click) */
   private navigateToPosition(x: number, y: number): void {
-    if (this.cameraController.getIsZoomedOut()) return;
     this.cameraController.centerOn(x, y);
   }
   
@@ -204,10 +203,8 @@ export class BuilderScene extends Phaser.Scene {
     // Guard: only handle resize when scene is active
     if (!this.cameras?.main || !this.config) return;
     
-    // Update camera bounds (unless zoomed out)
-    if (!this.cameraController?.getIsZoomedOut()) {
-      this.cameras.main.setBounds(0, 0, this.config.worldWidth, this.config.worldHeight);
-    }
+    // Let camera controller handle zoom/bounds recalculation
+    this.cameraController?.handleResize();
     
     // Update parallax base layer to cover new viewport
     if (this.parallaxLayers?.baseLayer) {

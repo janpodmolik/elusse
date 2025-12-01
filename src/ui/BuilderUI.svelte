@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { isBuilderZoomedOut, builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId, selectedDialogZoneId } from '../stores/builderStores';
-  import { switchToGame, toggleBuilderZoom } from '../utils/sceneManager';
+  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, isAssetPaletteOpen, isFramePaletteOpen, toggleAssetPalette, toggleFramePalette, selectedItemId, selectedFrameId, selectedDialogZoneId } from '../stores/builderStores';
+  import { switchToGame, resetBuilderZoom } from '../utils/sceneManager';
   import { EventBus, EVENTS } from '../events/EventBus';
   import AssetPalette from './AssetPalette.svelte';
   import FramePalette from './FramePalette.svelte';
   import PixelButton from './PixelButton.svelte';
-  import BuilderMinimap from './BuilderMinimap.svelte';
   import LandscapeHint from './LandscapeHint.svelte';
   import DialogZonePanel from './DialogZonePanel.svelte';
   import FramePanel from './FramePanel.svelte';
@@ -38,8 +37,8 @@
     switchToGame();
   }
   
-  function handleZoomToggle() {
-    toggleBuilderZoom();
+  function handleZoomReset() {
+    resetBuilderZoom();
   }
   
   function handleToggleGridSnapping() {
@@ -71,7 +70,6 @@
 <!-- FramePanel shows whenever a frame is selected, regardless of mode -->
 <FramePanel />
 <FrameContent />
-<BuilderMinimap />
 <LandscapeHint />
 
 <!-- Temporary zone button (shown on click in dialog mode) -->
@@ -88,12 +86,12 @@
     </PixelButton>
     
     <PixelButton 
-      variant={$isBuilderZoomedOut ? 'orange' : 'blue'}
+      variant="blue"
       width="80px"
-      onclick={handleZoomToggle}
-      title="Toggle zoom (F)"
+      onclick={handleZoomReset}
+      title="Reset zoom to fit (F)"
     >
-      {$isBuilderZoomedOut ? '1:1' : 'FIT'}
+      FIT
     </PixelButton>
     
     <PixelButton 

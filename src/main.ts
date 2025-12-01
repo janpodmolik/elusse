@@ -43,6 +43,9 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  input: {
+    activePointers: 3, // Enable multi-touch (needed for pinch-to-zoom)
+  },
   physics: {
     default: 'arcade',
     arcade: {

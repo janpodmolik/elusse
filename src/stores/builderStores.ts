@@ -358,8 +358,8 @@ export function enterBuilderMode(config: MapConfig): void {
     selectedDialogZoneId: null,
     selectedFrameId: null,
   });
-  // Reset zoom state when entering builder
-  isBuilderZoomedOut.set(false);
+  // Reset zoom state when entering builder (will be set properly by camera controller)
+  builderZoomLevel.set(1);
 }
 
 /** Exit builder mode (preserves config for potential return) */
@@ -382,7 +382,7 @@ export function exitBuilderMode(): void {
     };
   });
   // Reset zoom state when exiting builder
-  isBuilderZoomedOut.set(false);
+  builderZoomLevel.set(1);
 }
 
 /**
@@ -396,12 +396,12 @@ export function getBuilderConfig(): MapConfig | null {
 
 // ==================== Zoom State (separate for performance) ====================
 
-/** Whether builder camera is zoomed out to show full map */
-export const isBuilderZoomedOut = writable<boolean>(false);
+/** Current builder camera zoom level (minZoom = fit-to-screen, 1 = 1:1 pixels) */
+export const builderZoomLevel = writable<number>(1);
 
-/** Set zoom state (called from BuilderCameraController) */
-export function setBuilderZoom(isZoomedOut: boolean): void {
-  isBuilderZoomedOut.set(isZoomedOut);
+/** Set zoom level (called from BuilderCameraController) */
+export function setBuilderZoomLevel(level: number): void {
+  builderZoomLevel.set(level);
 }
 
 // ==================== Camera Info (for minimap) ====================

@@ -11,6 +11,11 @@
   font-family: 'Press Start 2P', cursive;
 }
 
+/* Prevent browser default gestures on canvas (pinch-to-zoom, etc.) */
+#game-container canvas {
+  touch-action: none;
+}
+
 /* Re-enable pointer events on interactive elements */
 #game-ui button,
 #game-ui dialog,

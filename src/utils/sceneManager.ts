@@ -94,16 +94,16 @@ export function switchToGame(): boolean {
 }
 
 /**
- * Toggle builder camera zoom (fit-all / normal)
+ * Reset builder camera zoom to fit-to-screen
  */
-export function toggleBuilderZoom(): void {
+export function resetBuilderZoom(): void {
   if (!gameInstance) return;
   
   try {
     const builderScene = gameInstance.scene.getScene(SCENE_KEYS.BUILDER) as BuilderScene;
-    builderScene?.toggleZoom();
+    builderScene?.resetZoom();
   } catch (error) {
-    console.error('Failed to toggle zoom:', error);
+    console.error('Failed to reset zoom:', error);
   }
 }
 
