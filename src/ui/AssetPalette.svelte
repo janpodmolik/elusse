@@ -207,14 +207,20 @@
     }
     
     .palette-grid {
-      gap: 6px;
-      padding: 8px;
+      gap: 4px;
+      padding: 6px;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     }
     
     .palette-item {
-      padding: 6px;
-      border-width: 2px;
-      box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-width: 1px;
+      box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    .item-preview {
+      width: 70%;
+      height: 70%;
     }
   }
 </style>

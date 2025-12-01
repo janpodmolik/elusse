@@ -58,7 +58,7 @@
   >
     <div class="controls-row">
       <PixelButton
-        variant="orange"
+        variant="pink"
         title="Edit social settings (or double-click)"
         onclick={handleEdit}
       >

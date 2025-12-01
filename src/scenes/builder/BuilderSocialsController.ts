@@ -6,6 +6,7 @@ import { selectedSocialId, deletePlacedSocial, addPlacedSocial, selectSocial, bu
 import { EventBus, EVENTS, type SocialDroppedEvent } from '../../events/EventBus';
 import { isTypingInTextField, worldToScreen } from '../../utils/inputUtils';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
+import { SELECTION_COLORS } from '../../constants/colors';
 import { setupSpriteInteraction, DoubleClickDetector } from '../../utils/spriteInteraction';
 import { DRAG_TINT } from './builderConstants';
 
@@ -323,27 +324,14 @@ export class BuilderSocialsController {
       socialHeight: bounds.height * camera.zoom
     });
     
-    // Draw selection rectangle - Orange color for socials
-    this.selectionGraphics.lineStyle(3, 0xe67e22, 1);
+    // Draw selection rectangle - Pink color for socials (from centralized colors)
+    this.selectionGraphics.lineStyle(3, SELECTION_COLORS.SOCIAL.hex, 1);
     this.selectionGraphics.strokeRect(
       bounds.x - 4,
       bounds.y - 4,
       bounds.width + 8,
       bounds.height + 8
     );
-    
-    // Draw corner handles
-    const handleSize = 8;
-    this.selectionGraphics.fillStyle(0xe67e22, 1);
-    
-    // Top-left
-    this.selectionGraphics.fillRect(bounds.x - 4 - handleSize/2, bounds.y - 4 - handleSize/2, handleSize, handleSize);
-    // Top-right
-    this.selectionGraphics.fillRect(bounds.right + 4 - handleSize/2, bounds.y - 4 - handleSize/2, handleSize, handleSize);
-    // Bottom-left
-    this.selectionGraphics.fillRect(bounds.x - 4 - handleSize/2, bounds.bottom + 4 - handleSize/2, handleSize, handleSize);
-    // Bottom-right
-    this.selectionGraphics.fillRect(bounds.right + 4 - handleSize/2, bounds.bottom + 4 - handleSize/2, handleSize, handleSize);
   }
 
   /**

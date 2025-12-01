@@ -7,6 +7,7 @@ import { EventBus, EVENTS, type FrameDroppedEvent } from '../../events/EventBus'
 import { isTypingInTextField, worldToScreen } from '../../utils/inputUtils';
 import { getFrameScale, getFrameDimensions } from '../../data/frames';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
+import { SELECTION_COLORS } from '../../constants/colors';
 import { type FrameContainer, drawFrameBackground } from '../../utils/frameUtils';
 import { setupSpriteInteraction, DoubleClickDetector } from '../../utils/spriteInteraction';
 import { DRAG_TINT } from './builderConstants';
@@ -373,27 +374,14 @@ export class BuilderFramesController {
       frameHeight: bounds.height * camera.zoom
     });
     
-    // Draw selection rectangle
-    this.selectionGraphics.lineStyle(3, 0x9b59b6, 1); // Purple color for frames
+    // Draw selection rectangle - Purple color for frames (from centralized colors)
+    this.selectionGraphics.lineStyle(3, SELECTION_COLORS.FRAME.hex, 1);
     this.selectionGraphics.strokeRect(
       bounds.x - 4,
       bounds.y - 4,
       bounds.width + 8,
       bounds.height + 8
     );
-    
-    // Draw corner handles
-    const handleSize = 8;
-    this.selectionGraphics.fillStyle(0x9b59b6, 1);
-    
-    // Top-left
-    this.selectionGraphics.fillRect(bounds.x - 4 - handleSize/2, bounds.y - 4 - handleSize/2, handleSize, handleSize);
-    // Top-right
-    this.selectionGraphics.fillRect(bounds.right + 4 - handleSize/2, bounds.y - 4 - handleSize/2, handleSize, handleSize);
-    // Bottom-left
-    this.selectionGraphics.fillRect(bounds.x - 4 - handleSize/2, bounds.bottom + 4 - handleSize/2, handleSize, handleSize);
-    // Bottom-right
-    this.selectionGraphics.fillRect(bounds.right + 4 - handleSize/2, bounds.bottom + 4 - handleSize/2, handleSize, handleSize);
   }
 
   /**

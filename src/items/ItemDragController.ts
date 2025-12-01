@@ -7,6 +7,7 @@
 import Phaser from 'phaser';
 import { updatePlacedItem, selectItem, selectedItemId } from '../stores/builderStores';
 import { setupSpriteInteraction } from '../utils/spriteInteraction';
+import { DRAG_TINT } from '../constants/colors';
 import { get } from 'svelte/store';
 
 export interface ItemDragCallbacks {
@@ -15,9 +16,6 @@ export interface ItemDragCallbacks {
   onDrag?: (id: string, x: number, y: number) => void;
   onDragEnd?: (id: string, x: number, yOffset: number) => void;
 }
-
-// Drag tint color (blue)
-const DRAG_TINT = 0x4a90e2;
 
 /**
  * ItemDragController - Manages item dragging in builder mode

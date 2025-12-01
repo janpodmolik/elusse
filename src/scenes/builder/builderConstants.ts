@@ -6,6 +6,7 @@
  */
 
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
+import { DRAG_TINT as CENTRALIZED_DRAG_TINT } from '../../constants/colors';
 
 // Re-export player constants for convenience
 export { GROUND_HEIGHT, PLAYER_SPRITE, PLAYER_SIZE } from '../../constants/playerConstants';
@@ -34,5 +35,5 @@ export const DRAG_MARGIN_HORIZONTAL = 50;
 export const DRAG_MARGIN_TOP = 50;
 export const DRAG_MARGIN_BOTTOM = 10;
 
-// Visual feedback
-export const DRAG_TINT = 0x4a90e2;  // Blue accent
+// Visual feedback - use centralized color
+export const DRAG_TINT = CENTRALIZED_DRAG_TINT;

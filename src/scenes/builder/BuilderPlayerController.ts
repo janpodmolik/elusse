@@ -7,14 +7,15 @@ import {
   getPlayerGroundY,
   isPlayerBelowGround,
 } from '../../constants/playerConstants';
+import { SELECTION_COLORS } from '../../constants/colors';
 import {
   DRAG_MARGIN_HORIZONTAL,
   DRAG_MARGIN_TOP,
   DRAG_TINT
 } from './builderConstants';
 
-// Selection highlight color (red for player)
-const SELECTION_TINT = 0xff4444;
+// Selection highlight color - Green for player (from centralized colors)
+const SELECTION_TINT = SELECTION_COLORS.PLAYER.hex;
 
 /**
  * BuilderPlayerController - Manages player sprite and interactions in builder mode

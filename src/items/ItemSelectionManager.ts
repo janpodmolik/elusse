@@ -5,6 +5,7 @@
 
 import Phaser from 'phaser';
 import { DEPTH_LAYERS } from '../constants/depthLayers';
+import { SELECTION_COLORS } from '../constants/colors';
 import { clearSelection } from '../stores/builderStores';
 import { isPointerOverUI } from '../utils/inputUtils';
 
@@ -14,8 +15,10 @@ import { isPointerOverUI } from '../utils/inputUtils';
  * When adding a new interactive object type (like socials, stickers, etc.):
  * 1. Add the data key here
  * 2. In your controller, use sprite.setData('yourKey', id)
+ * 3. In builderStores, sync the selection to scene.data.set('yourKey', id)
  * 
  * This prevents the "forgot to add key" bug that happens when the check is buried in code.
+ * All places that need to check for interactive objects will use this registry.
  */
 export const INTERACTIVE_DATA_KEYS = {
   ITEM: 'itemId',
@@ -25,21 +28,72 @@ export const INTERACTIVE_DATA_KEYS = {
   ZONE: 'zoneId',  // Used for Rectangle objects (dialog zone handles)
 } as const;
 
+/**
+ * SELECTED_DATA_KEYS - Maps interactive data keys to their corresponding scene.data selection keys
+ * 
+ * Used by isTouchOnSelectedSprite to check if a sprite is currently selected.
+ * When adding a new interactive object type, add mapping here too.
+ */
+export const SELECTED_DATA_KEYS: Record<string, string> = {
+  [INTERACTIVE_DATA_KEYS.ITEM]: 'selectedItemId',
+  [INTERACTIVE_DATA_KEYS.FRAME]: 'selectedFrameId',
+  [INTERACTIVE_DATA_KEYS.SOCIAL]: 'selectedSocialId',
+  [INTERACTIVE_DATA_KEYS.PLAYER]: 'isPlayerSelected',
+  // ZONE uses different selection mechanism (selectedDialogZoneId)
+} as const;
+
+/**
+ * Check if a hit object is currently selected
+ * Uses centralized SELECTED_DATA_KEYS to avoid missing new object types
+ */
+export function isObjectSelected(obj: Phaser.GameObjects.GameObject, scene: Phaser.Scene): boolean {
+  if (!(obj instanceof Phaser.GameObjects.Sprite)) return false;
+  
+  // Check each interactive data key
+  for (const [dataKey, selectedKey] of Object.entries(SELECTED_DATA_KEYS)) {
+    const objectId = obj.getData(dataKey);
+    if (objectId) {
+      // Special case for player (boolean check)
+      if (dataKey === INTERACTIVE_DATA_KEYS.PLAYER) {
+        const isPlayerSelected = scene.data.get(selectedKey);
+        const playerSprite = scene.data.get('playerSprite');
+        if (isPlayerSelected && obj === playerSprite) return true;
+      } else {
+        // Normal ID comparison
+        const selectedId = scene.data.get(selectedKey);
+        if (objectId === selectedId) return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Check if any of the hit objects under a pointer is currently selected
+ * Uses centralized registry - no need to update when adding new object types
+ */
+export function isTouchOnSelectedSprite(scene: Phaser.Scene, pointer: Phaser.Input.Pointer): boolean {
+  const hitObjects = scene.input.hitTestPointer(pointer);
+  
+  for (const obj of hitObjects) {
+    if (isObjectSelected(obj, scene)) return true;
+  }
+  
+  return false;
+}
+
 export interface SelectionStyle {
   lineWidth: number;
   lineColor: number;
   lineAlpha: number;
-  handleSize: number;
-  handleColor: number;
   padding: number;
 }
 
 const DEFAULT_STYLE: SelectionStyle = {
   lineWidth: 3,
-  lineColor: 0x4a90e2,
+  lineColor: SELECTION_COLORS.ITEM.hex,
   lineAlpha: 1,
-  handleSize: 8,
-  handleColor: 0x4a90e2,
   padding: 5,
 };
 
@@ -83,7 +137,7 @@ export class ItemSelectionManager {
     if (!sprite || !this.selectedId) return;
     
     const bounds = sprite.getBounds();
-    const { lineWidth, lineColor, lineAlpha, handleSize, handleColor, padding } = this.style;
+    const { lineWidth, lineColor, lineAlpha, padding } = this.style;
     
     // Draw selection rectangle
     this.graphics.lineStyle(lineWidth, lineColor, lineAlpha);
@@ -93,18 +147,6 @@ export class ItemSelectionManager {
       bounds.width + padding * 2,
       bounds.height + padding * 2
     );
-    
-    // Draw corner handles
-    this.graphics.fillStyle(handleColor, 1);
-    
-    // Top-left
-    this.graphics.fillCircle(bounds.x, bounds.y, handleSize);
-    // Top-right
-    this.graphics.fillCircle(bounds.x + bounds.width, bounds.y, handleSize);
-    // Bottom-left
-    this.graphics.fillCircle(bounds.x, bounds.y + bounds.height, handleSize);
-    // Bottom-right
-    this.graphics.fillCircle(bounds.x + bounds.width, bounds.y + bounds.height, handleSize);
   }
 
   /**

@@ -5,8 +5,9 @@
   import { EventBus, EVENTS } from '../events/EventBus';
   import { builderEditMode, isSocialPaletteOpen } from '../stores/builderStores';
   import { createPaletteDragHandlers } from '../utils/paletteDrag';
+  import { SELECTION_COLORS } from '../constants/colors';
   
-  const ACCENT_COLOR = '#e67e22'; // Orange for socials
+  const ACCENT_COLOR = SELECTION_COLORS.SOCIAL.css;
   
   const socials = SOCIALS;
   
@@ -211,20 +212,25 @@
     }
     
     .palette-grid {
-      gap: 6px;
-      padding: 8px;
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 4px;
+      padding: 6px;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
     }
     
     .palette-item {
-      padding: 6px;
-      border-width: 2px;
-      box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-width: 1px;
+      box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
     }
     
     .item-preview {
-      width: 40px;
-      height: 40px;
+      width: 28px;
+      height: 28px;
+    }
+    
+    .item-name {
+      font-size: 5px;
+      margin-top: 2px;
     }
   }
 </style>

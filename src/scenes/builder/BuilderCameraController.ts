@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { setBuilderZoomLevel, setPinchingInBuilder } from '../../stores/builderStores';
 import { isTypingInTextField, isPaletteDragging, isPointerOverUI } from '../../utils/inputUtils';
+import { isTouchOnSelectedSprite } from '../../items/ItemSelectionManager';
 
 // Zoom constants
 const MAX_ZOOM = 1;           // Maximum zoom (1:1 pixels)
@@ -321,8 +322,8 @@ export class BuilderCameraController {
           this.dragScrollCameraStartY = this.camera.scrollY;
           
           // Check if touch is on a selected sprite - if so, allow drag instead of pan
-          // Store in scene data so spriteInteraction can check
-          this.touchOnSelectedSprite = this.isTouchOnSelectedSprite(pointer.worldX, pointer.worldY);
+          // Uses centralized isTouchOnSelectedSprite from ItemSelectionManager
+          this.touchOnSelectedSprite = isTouchOnSelectedSprite(this.scene, pointer);
           this.scene.data.set('touchDraggingSprite', false); // Will be set true if drag starts
           this.scene.data.set('touchStartOnSelectedSprite', this.touchOnSelectedSprite);
           this.scene.data.set('touchStartWorldX', pointer.worldX);
@@ -506,38 +507,6 @@ export class BuilderCameraController {
         }
       }
     });
-  }
-
-  /**
-   * Check if a world position hits any currently selected sprite
-   */
-  private isTouchOnSelectedSprite(_worldX: number, _worldY: number): boolean {
-    // Check all interactive sprites under this position
-    const pointer = this.scene.input.activePointer;
-    const hitObjects = this.scene.input.hitTestPointer(pointer);
-    
-    // Get selected IDs from scene data
-    const selectedItemId = this.scene.data.get('selectedItemId');
-    const selectedFrameId = this.scene.data.get('selectedFrameId');
-    const isPlayerSelected = this.scene.data.get('isPlayerSelected');
-    
-    for (const obj of hitObjects) {
-      if (!(obj instanceof Phaser.GameObjects.Sprite)) continue;
-      
-      // Check if this is the selected item
-      const itemId = obj.getData('itemId');
-      if (itemId && itemId === selectedItemId) return true;
-      
-      // Check if this is part of a selected frame
-      const frameId = obj.getData('frameId');
-      if (frameId && frameId === selectedFrameId) return true;
-      
-      // Check if this is the player sprite and player is selected
-      const playerSprite = this.scene.data.get('playerSprite');
-      if (isPlayerSelected && obj === playerSprite) return true;
-    }
-    
-    return false;
   }
 
   /**

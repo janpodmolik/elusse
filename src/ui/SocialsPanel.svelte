@@ -4,8 +4,9 @@
   import { SOCIALS } from '../data/socials';
   import PixelButton from './PixelButton.svelte';
   import DraggablePanel from './DraggablePanel.svelte';
+  import { SELECTION_COLORS } from '../constants/colors';
   
-  const ACCENT_COLOR = '#e67e22'; // Orange for socials
+  const ACCENT_COLOR = SELECTION_COLORS.SOCIAL.css;
   
   // Get the selected social
   let currentSocial = $derived($selectedSocial);
@@ -99,7 +100,7 @@
     showClose={true}
     onclose={handleClose}
   >
-    <div class="panel-content">
+    <div class="panel-content" style="--accent-color: {ACCENT_COLOR}">
       <!-- Social Size (S/M/L) -->
       <div class="social-size-row">
         <div class="social-size-section">
@@ -172,7 +173,7 @@
       </div>
       
       <div class="panel-footer">
-        <PixelButton variant="orange" onclick={handleClose}>
+        <PixelButton variant="pink" onclick={handleClose}>
           CONFIRM
         </PixelButton>
         <PixelButton variant="red" onclick={handleDelete}>
@@ -241,13 +242,13 @@
   }
   
   .size-btn:hover {
-    border-color: #e67e22;
-    background: rgba(230, 126, 34, 0.2);
+    border-color: var(--accent-color);
+    background: rgba(233, 30, 143, 0.2);
   }
   
   .size-btn.active {
-    background: #e67e22;
-    border-color: #e67e22;
+    background: var(--accent-color);
+    border-color: var(--accent-color);
   }
   
   .url-section {
@@ -276,11 +277,11 @@
   
   .url-section input:focus {
     outline: none;
-    border-color: #e67e22;
+    border-color: var(--accent-color);
   }
   
   .url-preview {
-    color: #e67e22;
+    color: var(--accent-color);
     font-size: 9px;
     text-decoration: none;
     align-self: flex-start;
@@ -311,7 +312,7 @@
   }
   
   .style-button:hover {
-    border-color: #e67e22;
+    border-color: var(--accent-color);
   }
   
   .style-preview {
@@ -353,13 +354,13 @@
   }
   
   .style-item:hover {
-    border-color: #e67e22;
-    background: rgba(230, 126, 34, 0.2);
+    border-color: var(--accent-color);
+    background: rgba(233, 30, 143, 0.2);
   }
   
   .style-item.selected {
-    border-color: #e67e22;
-    background: rgba(230, 126, 34, 0.3);
+    border-color: var(--accent-color);
+    background: rgba(233, 30, 143, 0.3);
   }
   
   .style-item img {

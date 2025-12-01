@@ -1,7 +1,7 @@
 <script lang="ts">
   interface Props {
     onclick?: (event: MouseEvent) => void;
-    variant?: 'default' | 'green' | 'blue' | 'orange' | 'red' | 'purple' | 'cyan';
+    variant?: 'default' | 'green' | 'blue' | 'orange' | 'red' | 'purple' | 'cyan' | 'pink';
     disabled?: boolean;
     title?: string;
     width?: string;
@@ -25,7 +25,8 @@
     orange: { base: '#ffa500', hover: '#ff8c00', active: '#e67e00' },
     red: { base: '#e74c3c', hover: '#c0392b', active: '#a02e22' },
     purple: { base: '#9b59b6', hover: '#8e44ad', active: '#7d3c98' },
-    cyan: { base: '#17a2b8', hover: '#138496', active: '#0f6674' }
+    cyan: { base: '#17a2b8', hover: '#138496', active: '#0f6674' },
+    pink: { base: '#e91e8f', hover: '#c9177a', active: '#a31265' }
   };
   
   // Use $derived for reactive color computation when variant changes

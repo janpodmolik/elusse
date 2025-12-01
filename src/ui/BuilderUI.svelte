@@ -134,7 +134,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
     </PixelButton>
 
     <PixelButton 
-      variant={$builderEditMode === 'socials' && $isSocialPaletteOpen ? 'orange' : 'orange'}
+      variant={$builderEditMode === 'socials' && $isSocialPaletteOpen ? 'orange' : 'pink'}
       onclick={() => {
         if ($builderEditMode === 'socials') {
           toggleSocialPalette();
