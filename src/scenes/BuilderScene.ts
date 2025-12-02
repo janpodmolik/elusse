@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
 import { backgroundManager } from '../data/background';
-import { AVAILABLE_SKINS } from '../data/skinConfig';
+import { preloadSpritesheetSkins, loadGifSkins, createAllSkinAnimations } from '../utils/skinLoader';
 import type { MapConfig } from '../data/mapConfig';
 import { BuilderCameraController } from './builder/BuilderCameraController';
 import { BuilderPlayerController } from './builder/BuilderPlayerController';
@@ -63,17 +63,8 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load player sprites for all available skins
-    AVAILABLE_SKINS.forEach(skin => {
-      this.load.spritesheet(`cat-idle-${skin.id}`, `assets/skins/${skin.folder}/Idle.png`, {
-        frameWidth: 48,
-        frameHeight: 48,
-      });
-      this.load.spritesheet(`cat-walk-${skin.id}`, `assets/skins/${skin.folder}/Walk.png`, {
-        frameWidth: 48,
-        frameHeight: 48,
-      });
-    });
+    // Load player sprites for PNG skins (GIF skins loaded async in create)
+    preloadSpritesheetSkins(this);
     
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
@@ -88,6 +79,20 @@ export class BuilderScene extends Phaser.Scene {
   create(): void {
     // Reset shutdown guard for scene restart
     this.isShuttingDown = false;
+    
+    // Start async initialization
+    this.initializeScene();
+  }
+  
+  /**
+   * Async scene initialization for loading GIF skins
+   */
+  private async initializeScene(): Promise<void> {
+    // Load GIF skins (PNG skins already loaded in preload)
+    await loadGifSkins(this);
+    
+    // Create animations for all skins (both PNG and GIF)
+    createAllSkinAnimations(this);
     
     // Set world bounds
     this.physics.world.setBounds(0, 0, this.config.worldWidth, this.config.worldHeight);

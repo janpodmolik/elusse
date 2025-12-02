@@ -36,7 +36,9 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   });
 
   function handleSave() {
-    switchToGame();
+    console.log('[BuilderUI] handleSave called, switching to game...');
+    const result = switchToGame();
+    console.log('[BuilderUI] switchToGame result:', result);
   }
   
   function handleToggleGridSnapping() {

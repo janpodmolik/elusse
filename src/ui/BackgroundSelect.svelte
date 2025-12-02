@@ -3,7 +3,7 @@
   import { AVAILABLE_SKINS, skinManager, type SkinConfig } from '../data/skinConfig';
   import { hasSelectedBackground, currentBackground, currentSkin } from '../stores';
   import { startGameScene } from '../utils/sceneManager';
-  import { onMount } from 'svelte';
+  import { parseGIF, decompressFrames } from 'gifuct-js';
 
   const backgrounds = AVAILABLE_BACKGROUNDS;
   const skins = AVAILABLE_SKINS;
@@ -11,17 +11,21 @@
   // Track selected skin (preselect cat_orange)
   let selectedSkinId = $state(skinManager.getSkinId());
   
-  // Canvas refs for skin thumbnails
-  let canvasRefs: Record<string, HTMLCanvasElement> = {};
+  // Canvas refs for skin thumbnails - use $state for Svelte 5 reactivity
+  let canvasRefs: Record<string, HTMLCanvasElement | null> = $state({});
   
-  onMount(() => {
-    // Load and render skin thumbnails
-    skins.forEach(skin => {
-      loadSkinThumbnail(skin);
-    });
+  // Load thumbnails when canvas refs are available
+  $effect(() => {
+    // Check if all canvas refs are ready
+    const allRefsReady = skins.every(skin => canvasRefs[skin.id]);
+    if (allRefsReady) {
+      skins.forEach(skin => {
+        loadSkinThumbnail(skin);
+      });
+    }
   });
   
-  /** Load first frame of Idle.png and render to canvas */
+  /** Load first frame and render to canvas - supports both PNG and GIF */
   async function loadSkinThumbnail(skin: SkinConfig): Promise<void> {
     const canvas = canvasRefs[skin.id];
     if (!canvas) return;
@@ -29,8 +33,57 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    if (skin.format === 'gif') {
+      // Load GIF and extract first frame
+      await loadGifThumbnail(skin, canvas, ctx);
+    } else {
+      // Load PNG spritesheet
+      loadPngThumbnail(skin, canvas, ctx);
+    }
+  }
+  
+  /** Load first frame from GIF */
+  async function loadGifThumbnail(skin: SkinConfig, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): Promise<void> {
+    try {
+      const response = await fetch(`./assets/skins/${skin.folder}/idle.gif`);
+      const arrayBuffer = await response.arrayBuffer();
+      const gif = parseGIF(arrayBuffer);
+      const frames = decompressFrames(gif, true);
+      
+      if (frames.length === 0) return;
+      
+      const frame = frames[0];
+      const imageData = ctx.createImageData(frame.dims.width, frame.dims.height);
+      imageData.data.set(frame.patch);
+      
+      // Create temp canvas for the frame
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = gif.lsd.width;
+      tempCanvas.height = gif.lsd.height;
+      const tempCtx = tempCanvas.getContext('2d')!;
+      
+      const patchCanvas = document.createElement('canvas');
+      patchCanvas.width = frame.dims.width;
+      patchCanvas.height = frame.dims.height;
+      const patchCtx = patchCanvas.getContext('2d')!;
+      patchCtx.putImageData(imageData, 0, 0);
+      tempCtx.drawImage(patchCanvas, frame.dims.left, frame.dims.top);
+      
+      // Draw to main canvas scaled up
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      const offsetX = Math.floor((canvas.width - gif.lsd.width * 2) / 2);
+      const offsetY = Math.floor((canvas.height - gif.lsd.height * 2) / 2);
+      ctx.drawImage(tempCanvas, offsetX, offsetY, gif.lsd.width * 2, gif.lsd.height * 2);
+    } catch (error) {
+      console.error(`Failed to load GIF thumbnail for ${skin.id}:`, error);
+    }
+  }
+  
+  /** Load first frame from PNG spritesheet */
+  function loadPngThumbnail(skin: SkinConfig, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
     const img = new Image();
-    img.src = `./assets/skins/${skin.folder}/Idle.png`;
+    img.src = `./assets/skins/${skin.folder}/idle.png`;
     
     img.onload = () => {
       // Clear canvas

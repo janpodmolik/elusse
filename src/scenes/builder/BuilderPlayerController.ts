@@ -46,7 +46,7 @@ export class BuilderPlayerController {
     
     // Get selected skin from skinManager
     const skinId = skinManager.getSkinId();
-    this.player = this.scene.add.sprite(startX, safeY, `cat-idle-${skinId}`, 0);
+    this.player = this.scene.add.sprite(startX, safeY, `${skinId}-idle`, 0);
     this.player.setScale(PLAYER_SPRITE.SCALE);
     this.player.setDepth(PLAYER_SPRITE.DEPTH);
     this.player.setData('isPlayer', true); // Mark as player for hit detection

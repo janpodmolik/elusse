@@ -21,14 +21,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Get the selected skin from skinManager
     const initialSkinId: string = skinManager.getSkinId();
-    super(scene, x, y, `cat-idle-${initialSkinId}`);
+    super(scene, x, y, `${initialSkinId}-idle`);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Initialize animation manager
+    // Initialize animation manager (animations already created by skinLoader)
     this.animations = new PlayerAnimations(scene, initialSkinId);
-    this.animations.createAll();
 
     // Initialize input controller
     this.inputController = new PlayerInputController({
@@ -54,22 +53,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.animations.handleSkinChange(this, newSkinId);
   }
 
-  private updateJumpAnimation(velocityY: number): void {
-    const { animation, rotation, flipMultiplier } = this.animations.getJumpAnimationState(velocityY);
-    
-    if (this.anims.currentAnim?.key !== animation) {
-      this.play(animation);
-    }
-    
-    // Apply rotation based on flip direction
-    const rotationValue = this.flipX ? rotation * flipMultiplier : -rotation * flipMultiplier;
-    this.setAngle(rotationValue);
-  }
-
   update(): void {
     const input = this.inputController.getInputState();
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    const onGround = body && (body.blocked.down || body.touching.down);
 
     // Track first input
     if (this.inputController.hasAnyInput() && !this.hasReceivedInput) {
@@ -86,39 +71,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (input.left) {
       this.setVelocityX(-MOVEMENT_CONFIG.SPEED);
       this.setFlipX(true);
-      if (onGround) this.animState = 'running';
+      this.animState = 'running';
     } else if (input.right) {
       this.setVelocityX(MOVEMENT_CONFIG.SPEED);
       this.setFlipX(false);
-      if (onGround) this.animState = 'running';
+      this.animState = 'running';
     } else {
       this.setVelocityX(0);
-      if (onGround) this.animState = 'idle';
-    }
-
-    // Apply jump
-    if (input.jump && onGround) {
-      this.setVelocityY(MOVEMENT_CONFIG.JUMP_STRENGTH);
-      this.animState = 'jumping';
-    }
-
-    // Update animation state when airborne
-    if (!onGround && body && body.velocity.y !== 0) {
-      this.animState = 'jumping';
+      this.animState = 'idle';
     }
 
     // Play appropriate animation
     switch (this.animState) {
       case 'idle':
         this.animations.play(this, 'idle');
-        this.setAngle(0);
         break;
       case 'running':
-        this.animations.play(this, 'walk');
-        this.setAngle(0);
-        break;
-      case 'jumping':
-        this.updateJumpAnimation(body.velocity.y);
+        this.animations.play(this, 'run');
         break;
     }
   }

@@ -29,7 +29,8 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     name: 'FOREST BIRCH',
     folder: 'forest_birch',
     // forest_birch has layers 1-5 (5 parallax layers)
-    scrollFactors: [0.75, 0.8, 0.85, 0.9, 1.0],
+    scrollFactors: [0.75, 0.8, 0.85, 0.95, 1.0],
+    foregroundLayers: 1,
   },
   {
     name: 'FOREST FANTASY',

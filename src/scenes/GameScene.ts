@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
-import { AVAILABLE_SKINS } from '../data/skinConfig';
+import { preloadSpritesheetSkins, loadGifSkins, createAllSkinAnimations } from '../utils/skinLoader';
 import { backgroundManager } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
@@ -45,6 +45,9 @@ export class GameScene extends Phaser.Scene {
   
   // Init data stored for async loading
   private initData?: { useBuilderConfig?: boolean };
+  
+  // Initialization flag to prevent update() before async init completes
+  private isInitialized: boolean = false;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -53,20 +56,13 @@ export class GameScene extends Phaser.Scene {
   init(data?: { useBuilderConfig?: boolean }): void {
     // Store init data for async processing in create()
     this.initData = data;
+    // Reset initialization flag
+    this.isInitialized = false;
   }
 
   preload(): void {
-    // Load player sprite sheets for all available skins
-    AVAILABLE_SKINS.forEach(skin => {
-      this.load.spritesheet(`cat-idle-${skin.id}`, `assets/skins/${skin.folder}/Idle.png`, {
-        frameWidth: 48,
-        frameHeight: 48,
-      });
-      this.load.spritesheet(`cat-walk-${skin.id}`, `assets/skins/${skin.folder}/Walk.png`, {
-        frameWidth: 48,
-        frameHeight: 48,
-      });
-    });
+    // Load player sprite sheets for PNG skins (GIF skins loaded async in create)
+    preloadSpritesheetSkins(this);
 
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
@@ -79,6 +75,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Register shutdown handler for proper cleanup when scene stops
+    this.events.on('shutdown', this.shutdown, this);
+    
     // Start async initialization
     this.initializeScene();
   }
@@ -92,6 +91,12 @@ export class GameScene extends Phaser.Scene {
     isLoading.set(true);
     
     try {
+      // Load GIF skins (PNG skins already loaded in preload)
+      await loadGifSkins(this);
+      
+      // Create animations for all skins (both PNG and GIF)
+      createAllSkinAnimations(this);
+      
       // Load map configuration asynchronously
       await this.loadMapConfiguration();
       
@@ -169,6 +174,9 @@ export class GameScene extends Phaser.Scene {
       
       // Setup resize handler
       this.scale.on('resize', this.handleResize, this);
+      
+      // Mark as initialized - safe to call update()
+      this.isInitialized = true;
     } catch (error) {
       console.error('[GameScene] Failed to initialize scene:', error);
       // Show error state to user - could emit event or set error store
@@ -289,6 +297,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    // Mark as not initialized to stop update() calls
+    this.isInitialized = false;
+    
     // Remove resize listener
     this.scale.off('resize', this.handleResize, this);
     
@@ -318,7 +329,7 @@ export class GameScene extends Phaser.Scene {
 
   update(): void {
     // Guard against update being called before async initialization completes
-    if (!this.player) return;
+    if (!this.isInitialized || !this.player) return;
     
     this.player.update();
     

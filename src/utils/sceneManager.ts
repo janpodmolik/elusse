@@ -71,21 +71,26 @@ export function switchToBuilder(mapConfig: MapConfig): boolean {
  * Switch from BuilderScene to GameScene
  */
 export function switchToGame(): boolean {
+  console.log('[SceneManager] switchToGame called');
   if (!gameInstance) {
     console.error('Scene manager not initialized');
     return false;
   }
 
   try {
+    console.log('[SceneManager] Stopping builder scene...');
     // Stop builder scene
     gameInstance.scene.stop(SCENE_KEYS.BUILDER);
     
+    console.log('[SceneManager] Exiting builder mode...');
     // Exit builder mode
     exitBuilderMode();
     
+    console.log('[SceneManager] Starting game scene...');
     // Start game scene with builder config
     gameInstance.scene.start(SCENE_KEYS.GAME, { useBuilderConfig: true });
     
+    console.log('[SceneManager] switchToGame completed successfully');
     return true;
   } catch (error) {
     console.error('Failed to switch to game:', error);
