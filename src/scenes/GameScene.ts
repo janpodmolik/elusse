@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
-import { AVAILABLE_SKINS } from '../data/catSkin';
+import { AVAILABLE_SKINS } from '../data/skinConfig';
 import { backgroundManager } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
@@ -56,13 +56,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load cat sprite sheets for all available skins
+    // Load player sprite sheets for all available skins
     AVAILABLE_SKINS.forEach(skin => {
-      this.load.spritesheet(`cat-idle-${skin}`, `assets/sprites/${skin}/Idle.png`, {
+      this.load.spritesheet(`cat-idle-${skin.id}`, `assets/skins/${skin.folder}/Idle.png`, {
         frameWidth: 48,
         frameHeight: 48,
       });
-      this.load.spritesheet(`cat-walk-${skin}`, `assets/sprites/${skin}/Walk.png`, {
+      this.load.spritesheet(`cat-walk-${skin.id}`, `assets/skins/${skin.folder}/Walk.png`, {
         frameWidth: 48,
         frameHeight: 48,
       });

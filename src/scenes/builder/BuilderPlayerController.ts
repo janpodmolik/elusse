@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { updatePlayerPosition, builderEditMode, selectPlayer, isPlayerSelected } from '../../stores/builderStores';
 import { setupSpriteInteraction } from '../../utils/spriteInteraction';
 import { get } from 'svelte/store';
+import { skinManager } from '../../data/skinConfig';
 import {
   PLAYER_SPRITE,
   getPlayerGroundY,
@@ -43,7 +44,9 @@ export class BuilderPlayerController {
     // Ensure player starts on ground, not floating or underground
     const safeY = Math.min(startY, getPlayerGroundY(this.worldHeight));
     
-    this.player = this.scene.add.sprite(startX, safeY, 'cat-idle-white', 0);
+    // Get selected skin from skinManager
+    const skinId = skinManager.getSkinId();
+    this.player = this.scene.add.sprite(startX, safeY, `cat-idle-${skinId}`, 0);
     this.player.setScale(PLAYER_SPRITE.SCALE);
     this.player.setDepth(PLAYER_SPRITE.DEPTH);
     this.player.setData('isPlayer', true); // Mark as player for hit detection

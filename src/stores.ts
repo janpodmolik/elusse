@@ -17,8 +17,8 @@ import { getZoneText } from './types/DialogTypes';
 /** Current language (cs/en) */
 export const currentLanguage = writable<'cs' | 'en'>('cs');
 
-/** Current cat skin (orange/white) */
-export const currentSkin = writable<'orange' | 'white'>('orange');
+/** Current player skin ID */
+export const currentSkin = writable<string>('cat_orange');
 
 /** Current background name */
 export const currentBackground = writable<string>('Forest');

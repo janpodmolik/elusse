@@ -8,7 +8,7 @@
  */
 
 import Phaser from 'phaser';
-import { catSkinManager, CatSkin } from '../data/catSkin';
+import { type SkinConfig, AVAILABLE_SKINS, DEFAULT_SKIN_ID } from '../data/skinConfig';
 
 // Jump animation constants
 export const JUMP_ANIMATION_CONFIG = {
@@ -25,20 +25,18 @@ export type AnimationState = 'idle' | 'running' | 'jumping';
  */
 export class PlayerAnimations {
   private scene: Phaser.Scene;
-  private currentSkin: CatSkin;
+  private currentSkinId: string;
   
-  constructor(scene: Phaser.Scene, initialSkin: CatSkin = 'white') {
+  constructor(scene: Phaser.Scene, initialSkinId: string = DEFAULT_SKIN_ID) {
     this.scene = scene;
-    this.currentSkin = initialSkin;
+    this.currentSkinId = initialSkinId;
   }
 
   /**
    * Create all animations for all available skins
    */
   createAll(): void {
-    const skins = catSkinManager.getAllSkins();
-    
-    skins.forEach(skin => {
+    AVAILABLE_SKINS.forEach(skin => {
       this.createAnimationsForSkin(skin);
     });
   }
@@ -46,24 +44,25 @@ export class PlayerAnimations {
   /**
    * Create animations for a specific skin
    */
-  private createAnimationsForSkin(skin: CatSkin): void {
+  private createAnimationsForSkin(skin: SkinConfig): void {
     const scene = this.scene;
+    const skinId = skin.id;
     
     // Idle animation (4 frames)
-    if (!scene.anims.exists(`cat-idle-${skin}`)) {
+    if (!scene.anims.exists(`cat-idle-${skinId}`)) {
       scene.anims.create({
-        key: `cat-idle-${skin}`,
-        frames: scene.anims.generateFrameNumbers(`cat-idle-${skin}`, { start: 0, end: 3 }),
+        key: `cat-idle-${skinId}`,
+        frames: scene.anims.generateFrameNumbers(`cat-idle-${skinId}`, { start: 0, end: 3 }),
         frameRate: 6,
         repeat: -1
       });
     }
 
     // Walk animation (6 frames)
-    if (!scene.anims.exists(`cat-walk-${skin}`)) {
+    if (!scene.anims.exists(`cat-walk-${skinId}`)) {
       scene.anims.create({
-        key: `cat-walk-${skin}`,
-        frames: scene.anims.generateFrameNumbers(`cat-walk-${skin}`, { start: 0, end: 5 }),
+        key: `cat-walk-${skinId}`,
+        frames: scene.anims.generateFrameNumbers(`cat-walk-${skinId}`, { start: 0, end: 5 }),
         frameRate: 12,
         repeat: -1
       });
@@ -71,17 +70,17 @@ export class PlayerAnimations {
 
     // Jump animations (single frames from walk spritesheet)
     const jumpAnimations = [
-      { key: `cat-jump-up-${skin}`, frame: 2 },
-      { key: `cat-jump-peak-up-${skin}`, frame: 3 },
-      { key: `cat-jump-peak-down-${skin}`, frame: 3 },
-      { key: `cat-jump-down-${skin}`, frame: 4 },
+      { key: `cat-jump-up-${skinId}`, frame: 2 },
+      { key: `cat-jump-peak-up-${skinId}`, frame: 3 },
+      { key: `cat-jump-peak-down-${skinId}`, frame: 3 },
+      { key: `cat-jump-down-${skinId}`, frame: 4 },
     ];
 
     jumpAnimations.forEach(({ key, frame }) => {
       if (!scene.anims.exists(key)) {
         scene.anims.create({
           key,
-          frames: [{ key: `cat-walk-${skin}`, frame }],
+          frames: [{ key: `cat-walk-${skinId}`, frame }],
           frameRate: 1,
           repeat: 0
         });
@@ -90,24 +89,24 @@ export class PlayerAnimations {
   }
 
   /**
-   * Get current skin
+   * Get current skin ID
    */
-  getSkin(): CatSkin {
-    return this.currentSkin;
+  getSkinId(): string {
+    return this.currentSkinId;
   }
 
   /**
-   * Set current skin
+   * Set current skin ID
    */
-  setSkin(skin: CatSkin): void {
-    this.currentSkin = skin;
+  setSkinId(skinId: string): void {
+    this.currentSkinId = skinId;
   }
 
   /**
    * Get animation key for current skin
    */
   getAnimationKey(type: 'idle' | 'walk' | 'jump-up' | 'jump-peak-up' | 'jump-peak-down' | 'jump-down'): string {
-    return `cat-${type}-${this.currentSkin}`;
+    return `cat-${type}-${this.currentSkinId}`;
   }
 
   /**
@@ -156,16 +155,16 @@ export class PlayerAnimations {
   /**
    * Handle skin change - update animation on sprite
    */
-  handleSkinChange(sprite: Phaser.GameObjects.Sprite, newSkin: CatSkin): void {
-    const oldSkin = this.currentSkin;
-    this.currentSkin = newSkin;
+  handleSkinChange(sprite: Phaser.GameObjects.Sprite, newSkinId: string): void {
+    const oldSkinId = this.currentSkinId;
+    this.currentSkinId = newSkinId;
     
     // Get current animation type and replay with new skin
     const currentAnim = sprite.anims.currentAnim?.key;
     if (currentAnim) {
       // Extract animation type (e.g., "idle", "walk", "jump-up")
-      const animType = currentAnim.replace(`cat-`, '').replace(`-${oldSkin}`, '');
-      const newAnimKey = `cat-${animType}-${newSkin}`;
+      const animType = currentAnim.replace(`cat-`, '').replace(`-${oldSkinId}`, '');
+      const newAnimKey = `cat-${animType}-${newSkinId}`;
       
       if (this.scene.anims.exists(newAnimKey)) {
         sprite.play(newAnimKey);

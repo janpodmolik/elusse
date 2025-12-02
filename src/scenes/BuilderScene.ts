@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
 import { backgroundManager } from '../data/background';
+import { AVAILABLE_SKINS } from '../data/skinConfig';
 import type { MapConfig } from '../data/mapConfig';
 import { BuilderCameraController } from './builder/BuilderCameraController';
 import { BuilderPlayerController } from './builder/BuilderPlayerController';
@@ -62,10 +63,16 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load player sprites (white skin)
-    this.load.spritesheet('cat-idle-white', 'assets/sprites/white/Idle.png', {
-      frameWidth: 48,
-      frameHeight: 48,
+    // Load player sprites for all available skins
+    AVAILABLE_SKINS.forEach(skin => {
+      this.load.spritesheet(`cat-idle-${skin.id}`, `assets/skins/${skin.folder}/Idle.png`, {
+        frameWidth: 48,
+        frameHeight: 48,
+      });
+      this.load.spritesheet(`cat-walk-${skin.id}`, `assets/skins/${skin.folder}/Walk.png`, {
+        frameWidth: 48,
+        frameHeight: 48,
+      });
     });
     
     // Load UI assets for placed items

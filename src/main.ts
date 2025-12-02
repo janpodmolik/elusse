@@ -5,7 +5,7 @@ import { mount } from 'svelte';
 import GameUI from './ui/GameUI.svelte';
 import { currentLanguage, currentSkin, currentBackground, isTouchDevice, showControlsDialog } from './stores';
 import { localization } from './data/localization';
-import { catSkinManager } from './data/catSkin';
+import { skinManager } from './data/skinConfig';
 import { backgroundManager } from './data/background';
 import { initSceneManager } from './utils/sceneManager';
 import { initUIInputBlocking } from './utils/inputUtils';
@@ -28,7 +28,7 @@ mount(GameUI, {
 
 // Initialize stores with saved values from localStorage
 currentLanguage.set(localization.getLanguage());
-currentSkin.set(catSkinManager.getSkin());
+currentSkin.set(skinManager.getSkinId());
 currentBackground.set(backgroundManager.getCurrentConfig().name);
 
 const config: Phaser.Types.Core.GameConfig = {

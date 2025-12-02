@@ -1,14 +1,60 @@
 <script lang="ts">
   import { AVAILABLE_BACKGROUNDS, backgroundManager } from '../data/background';
-  import { hasSelectedBackground, currentBackground } from '../stores';
+  import { AVAILABLE_SKINS, skinManager, type SkinConfig } from '../data/skinConfig';
+  import { hasSelectedBackground, currentBackground, currentSkin } from '../stores';
   import { startGameScene } from '../utils/sceneManager';
+  import { onMount } from 'svelte';
 
   const backgrounds = AVAILABLE_BACKGROUNDS;
+  const skins = AVAILABLE_SKINS;
+  
+  // Track selected skin (preselect cat_orange)
+  let selectedSkinId = $state(skinManager.getSkinId());
+  
+  // Canvas refs for skin thumbnails
+  let canvasRefs: Record<string, HTMLCanvasElement> = {};
+  
+  onMount(() => {
+    // Load and render skin thumbnails
+    skins.forEach(skin => {
+      loadSkinThumbnail(skin);
+    });
+  });
+  
+  /** Load first frame of Idle.png and render to canvas */
+  async function loadSkinThumbnail(skin: SkinConfig): Promise<void> {
+    const canvas = canvasRefs[skin.id];
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const img = new Image();
+    img.src = `./assets/skins/${skin.folder}/Idle.png`;
+    
+    img.onload = () => {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw first 48x48 frame, scaled up
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        img,
+        0, 0, 48, 48,  // Source: first frame
+        0, 0, canvas.width, canvas.height  // Dest: fill canvas
+      );
+    };
+  }
 
   /** Get preview image path for a background */
   function getPreviewPath(folder: string): string {
     // Use relative path that works with Vite's base URL configuration
     return `./assets/backgrounds/${folder}/preview.png`;
+  }
+  
+  function selectSkin(skinId: string) {
+    selectedSkinId = skinId;
+    skinManager.setSkin(skinId);
+    currentSkin.set(skinId);
   }
 
   function selectBackground(index: number) {
@@ -21,6 +67,29 @@
 
 <div class="background-select-screen">
   <div class="content">
+    <h1 class="title">SELECT CHARACTER</h1>
+    
+    <div class="skins-grid">
+      {#each skins as skin}
+        <button
+          class="skin-card"
+          class:selected={selectedSkinId === skin.id}
+          onclick={() => selectSkin(skin.id)}
+          type="button"
+        >
+          <div class="skin-preview-container">
+            <canvas 
+              bind:this={canvasRefs[skin.id]}
+              width="96"
+              height="96"
+              class="skin-preview"
+            ></canvas>
+          </div>
+          <span class="skin-name">{skin.name}</span>
+        </button>
+      {/each}
+    </div>
+    
     <h1 class="title">SELECT BACKGROUND</h1>
     
     <div class="backgrounds-grid">
@@ -89,6 +158,62 @@
     max-width: 900px;
   }
 
+  .skins-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    max-width: 700px;
+  }
+
+  .skin-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 4px solid #666;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+
+  .skin-card:hover {
+    transform: scale(1.05);
+    border-color: #888;
+  }
+
+  .skin-card.selected {
+    border-color: #4ae24a;
+    box-shadow: 0 0 20px rgba(74, 226, 74, 0.4);
+  }
+
+  .skin-card:active {
+    transform: scale(0.95);
+  }
+
+  .skin-preview-container {
+    width: 96px;
+    height: 96px;
+    overflow: hidden;
+    border: 2px solid #333;
+    background: #1a1a2e;
+  }
+
+  .skin-preview {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .skin-name {
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  }
+
   .background-card {
     display: flex;
     flex-direction: column;
@@ -139,6 +264,23 @@
       font-size: 16px;
     }
 
+    .skins-grid {
+      gap: 15px;
+    }
+
+    .skin-card {
+      padding: 10px;
+    }
+
+    .skin-preview-container {
+      width: 72px;
+      height: 72px;
+    }
+
+    .skin-name {
+      font-size: 6px;
+    }
+
     .backgrounds-grid {
       gap: 20px;
     }
@@ -160,6 +302,11 @@
   @media (max-width: 480px) {
     .title {
       font-size: 14px;
+    }
+
+    .skin-preview-container {
+      width: 56px;
+      height: 56px;
     }
 
     .preview-container {

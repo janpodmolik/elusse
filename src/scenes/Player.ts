@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CatSkin } from '../data/catSkin';
+import { skinManager } from '../data/skinConfig';
 import { hasPlayerMoved } from '../stores';
 import { PLAYER_SPRITE } from '../constants/playerConstants';
 import { PlayerAnimations, PlayerInputController, MOVEMENT_CONFIG, type AnimationState } from '../entities';
@@ -19,14 +19,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private hasReceivedInput: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    const initialSkin: CatSkin = 'white';
-    super(scene, x, y, `cat-idle-${initialSkin}`);
+    // Get the selected skin from skinManager
+    const initialSkinId: string = skinManager.getSkinId();
+    super(scene, x, y, `cat-idle-${initialSkinId}`);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
     // Initialize animation manager
-    this.animations = new PlayerAnimations(scene, initialSkin);
+    this.animations = new PlayerAnimations(scene, initialSkinId);
     this.animations.createAll();
 
     // Initialize input controller
@@ -49,8 +50,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.animations.play(this, 'idle');
   }
 
-  public changeSkin(newSkin: CatSkin): void {
-    this.animations.handleSkinChange(this, newSkin);
+  public changeSkin(newSkinId: string): void {
+    this.animations.handleSkinChange(this, newSkinId);
   }
 
   private updateJumpAnimation(velocityY: number): void {
