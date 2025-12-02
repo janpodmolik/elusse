@@ -1,7 +1,7 @@
 /**
  * Parallax Background Helper
  * Shared logic for creating parallax backgrounds in both GameScene and BuilderScene
- * Ensures consistency across play and builder modes
+ * Uses TileSprites for infinite horizontal scrolling effect
  */
 
 import Phaser from 'phaser';
@@ -14,12 +14,13 @@ export interface ParallaxLayers {
 }
 
 /**
- * Creates parallax background layers for a scene
+ * Creates parallax background layers for a scene using TileSprites
+ * 
  * @param scene - The Phaser scene to add layers to
  * @param worldWidth - Width of the game world
  * @param worldHeight - Height of the game world
  * @param config - Background configuration with folder and scroll factors
- * @returns Object containing base layer and parallax layers
+ * @returns Object containing background and foreground layer arrays
  */
 export function createParallaxBackground(
   scene: Phaser.Scene,
@@ -27,7 +28,7 @@ export function createParallaxBackground(
   worldHeight: number,
   config: BackgroundConfig
 ): ParallaxLayers {
-  // Create parallax layers (1-6) with different scroll factors using TileSprites for horizontal tiling
+  // Create parallax layers with TileSprites for horizontal tiling
   const bgLayers: Phaser.GameObjects.TileSprite[] = [];
   const fgLayers: Phaser.GameObjects.TileSprite[] = [];
   

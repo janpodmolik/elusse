@@ -112,12 +112,23 @@ export function setGameWorldDimensions(
   worldWidth: number, 
   worldHeight: number, 
   viewportWidth: number, 
-  viewportHeight: number
+  viewportHeight: number,
+  zoom: number = 1
 ): void {
-  // Calculate offset when viewport is larger than world
-  const offsetX = Math.max(0, (viewportWidth - worldWidth) / 2);
-  const offsetY = Math.max(0, (viewportHeight - worldHeight) / 2);
-  gameWorldDimensions.set({ worldWidth, worldHeight, offsetX, offsetY });
+  // Calculate scaled world size
+  const scaledWorldWidth = worldWidth * zoom;
+  const scaledWorldHeight = worldHeight * zoom;
+  
+  // Calculate offset when viewport is larger than scaled world
+  const offsetX = Math.max(0, (viewportWidth - scaledWorldWidth) / 2);
+  const offsetY = Math.max(0, (viewportHeight - scaledWorldHeight) / 2);
+  
+  gameWorldDimensions.set({ 
+    worldWidth: scaledWorldWidth, 
+    worldHeight: scaledWorldHeight, 
+    offsetX, 
+    offsetY 
+  });
 }
 
 // ==================== Frame Click Blocking ====================

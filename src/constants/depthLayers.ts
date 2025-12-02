@@ -3,18 +3,18 @@
  * All depth values should be referenced from here to ensure consistency
  * 
  * Depth order (lower = further back):
- * - Background layers: -100 to -90
+ * - Background layers: -99 onwards (up to -90)
  * - Ground reference: -1
  * - Items behind player: 5
  * - Player: 10
  * - Items in front of player: 15
+ * - Foreground layers: 50 onwards
  * - Selection graphics: 999
  * - Grid overlay: 1000
  */
 
 export const DEPTH_LAYERS = {
-  // Background parallax layers
-  BACKGROUND_BASE: -100,
+  // Background parallax layers (starting depth, each layer increments by 1)
   BACKGROUND_LAYER_START: -99,
   
   // Ground reference (builder mode)

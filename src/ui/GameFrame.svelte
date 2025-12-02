@@ -17,7 +17,20 @@
     width: ${dimensions.worldWidth}px;
     height: ${dimensions.worldHeight}px;
   `;
+  
+  // Calculate mask overlay positions (to hide content outside game area)
+  // These are solid overlays that cover everything outside the game frame
+  $: maskTop = dimensions.offsetY;
+  $: maskLeft = dimensions.offsetX;
+  $: maskRight = dimensions.offsetX + dimensions.worldWidth;
+  $: maskBottom = dimensions.offsetY + dimensions.worldHeight;
 </script>
+
+<!-- Masking overlays to hide content outside game area -->
+<div class="game-mask mask-top" style="height: {maskTop}px; background: {frameColor};"></div>
+<div class="game-mask mask-bottom" style="top: {maskBottom}px; background: {frameColor};"></div>
+<div class="game-mask mask-left" style="top: {maskTop}px; height: {dimensions.worldHeight}px; width: {maskLeft}px; background: {frameColor};"></div>
+<div class="game-mask mask-right" style="top: {maskTop}px; height: {dimensions.worldHeight}px; left: {maskRight}px; background: {frameColor};"></div>
 
 <div class="game-frame" style="--frame-thickness: {FRAME_THICKNESS}px; --frame-color: {frameColor}; {frameStyle}">
   <!-- Top border -->
@@ -178,5 +191,36 @@
       var(--frame-color) 50%,
       color-mix(in srgb, var(--frame-color) 85%, white) 100%
     );
+  }
+
+  /* Masking overlays to clip content outside game area */
+  .game-mask {
+    position: fixed;
+    pointer-events: none;
+    z-index: 99; /* Just below the frame (z-index: 100) */
+  }
+
+  .mask-top {
+    top: 0;
+    left: 0;
+    right: 0;
+    /* height set via style attribute */
+  }
+
+  .mask-bottom {
+    /* top set via style attribute */
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .mask-left {
+    left: 0;
+    /* top, height, width set via style attribute */
+  }
+
+  .mask-right {
+    /* top, height, left set via style attribute */
+    right: 0;
   }
 </style>

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
 import { AVAILABLE_SKINS } from '../data/catSkin';
-import { backgroundManager, AVAILABLE_BACKGROUNDS } from '../data/background';
+import { backgroundManager } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
 import { PlacedItemManager } from './PlacedItemManager';
@@ -213,7 +213,7 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private async loadBackgroundIfNeeded(config: typeof AVAILABLE_BACKGROUNDS[0]): Promise<boolean> {
+  private async loadBackgroundIfNeeded(config: import('../data/background').BackgroundConfig): Promise<boolean> {
     // Skip if already loaded
     if (this.loadedBackgrounds.has(config.folder)) {
       return true;
@@ -228,30 +228,41 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Setup camera bounds with vertical centering when viewport is taller than world
+   * Setup camera bounds with zoom adjustment to always show full world height
    */
   private setupCameraBounds(): void {
     const camera = this.cameras.main;
     const viewportHeight = camera.height;
     const viewportWidth = camera.width;
     
+    // Calculate zoom to ensure full world height is always visible
+    // If viewport is shorter than world, we need to zoom out
+    const zoomToFitHeight = viewportHeight / this.mapConfig.worldHeight;
+    const zoom = Math.min(1, zoomToFitHeight); // Never zoom in beyond 1x
+    
+    camera.setZoom(zoom);
+    
+    // Effective viewport size after zoom
+    const effectiveViewportHeight = viewportHeight / zoom;
+    const effectiveViewportWidth = viewportWidth / zoom;
+    
     // Calculate bounds - allow negative Y to center vertically when viewport > world
     let boundsY = 0;
     let boundsHeight = this.mapConfig.worldHeight;
     
-    if (viewportHeight > this.mapConfig.worldHeight) {
+    if (effectiveViewportHeight > this.mapConfig.worldHeight) {
       // Viewport is taller than world - center vertically
-      boundsY = (this.mapConfig.worldHeight - viewportHeight) / 2;
-      boundsHeight = viewportHeight;
+      boundsY = (this.mapConfig.worldHeight - effectiveViewportHeight) / 2;
+      boundsHeight = effectiveViewportHeight;
     }
     
     // Similarly for X axis
     let boundsX = 0;
     let boundsWidth = this.mapConfig.worldWidth;
     
-    if (viewportWidth > this.mapConfig.worldWidth) {
-      boundsX = (this.mapConfig.worldWidth - viewportWidth) / 2;
-      boundsWidth = viewportWidth;
+    if (effectiveViewportWidth > this.mapConfig.worldWidth) {
+      boundsX = (this.mapConfig.worldWidth - effectiveViewportWidth) / 2;
+      boundsWidth = effectiveViewportWidth;
     }
     
     camera.setBounds(boundsX, boundsY, boundsWidth, boundsHeight);
@@ -261,7 +272,8 @@ export class GameScene extends Phaser.Scene {
       this.mapConfig.worldWidth,
       this.mapConfig.worldHeight,
       viewportWidth,
-      viewportHeight
+      viewportHeight,
+      zoom
     );
   }
 
