@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Interactive Portfolio - Pixel Platformer</title>
+  <title>Character Builder - Elusse</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -15,39 +15,29 @@
     }
     
     body {
-      background: #000;
+      background: #1a1a2e;
       font-family: 'Press Start 2P', cursive;
       overflow: hidden;
       margin: 0;
       padding: 0;
       width: 100vw;
       height: 100vh;
-      height: 100dvh; /* Dynamic viewport height - respektuje toolbar na mobilech */
+      height: 100dvh;
     }
     
-    #game-container {
+    #builder-root {
       width: 100%;
       height: 100%;
     }
-    
-    canvas {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
-    }
   </style>
-  <script type="module" crossorigin src="/elusse/assets/main-BIbGAjh9.js"></script>
+  <script type="module" crossorigin src="/elusse/assets/builder-rX5Rsbtx.js"></script>
   <link rel="modulepreload" crossorigin href="/elusse/assets/phaser-DFK5Ua9d.js">
   <link rel="modulepreload" crossorigin href="/elusse/assets/PixelButton-ypFl9ESv.js">
   <link rel="stylesheet" crossorigin href="/elusse/assets/PixelButton-B8sDzDOO.css">
-  <link rel="stylesheet" crossorigin href="/elusse/assets/main-AUNdok5X.css">
+  <link rel="stylesheet" crossorigin href="/elusse/assets/builder-ByzBijl_.css">
 </head>
 <body>
-  <!-- Game Canvas -->
-  <div id="game-container"></div>
-  
-  <!-- UI Overlay (Svelte will mount here) -->
-  <div id="game-ui"></div>
+  <div id="builder-root"></div>
   
 </body>
 </html>
