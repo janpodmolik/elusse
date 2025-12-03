@@ -28,10 +28,12 @@ const DEFAULT_FRAME_HEIGHT = 48;
  * Get the asset path for a skin
  */
 export function getSkinAssetPath(skin: SkinConfig): string {
+  // Base path includes static/ for static skins
+  const basePath = `assets/skins/static/${skin.folder}`;
   if (skin.variant) {
-    return `assets/skins/${skin.folder}/${skin.variant}`;
+    return `${basePath}/${skin.variant}`;
   }
-  return `assets/skins/${skin.folder}`;
+  return basePath;
 }
 
 /**

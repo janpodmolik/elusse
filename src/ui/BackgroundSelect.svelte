@@ -3,6 +3,11 @@
   import { AVAILABLE_SKINS, skinManager, type SkinConfig, getSkinAssetPath } from '../data/skinConfig';
   import { hasSelectedBackground, currentBackground, currentSkin } from '../stores';
   import { startGameScene } from '../utils/sceneManager';
+  import PixelButton from './PixelButton.svelte';
+
+  function goToBuilder() {
+    window.location.href = './builder.html';
+  }
 
   const backgrounds = AVAILABLE_BACKGROUNDS;
   const skins = AVAILABLE_SKINS;
@@ -128,6 +133,12 @@
       {/each}
     </div>
     
+    <div class="builder-link">
+      <PixelButton variant="purple" onclick={goToBuilder}>
+        ✨ CHARACTER BUILDER
+      </PixelButton>
+    </div>
+    
     <h1 class="title">SELECT BACKGROUND</h1>
     
     <div class="backgrounds-grid">
@@ -202,6 +213,10 @@
     gap: 20px;
     justify-content: center;
     max-width: 700px;
+  }
+
+  .builder-link {
+    margin: -20px 0;
   }
 
   .skin-card {
