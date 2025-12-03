@@ -3,7 +3,10 @@
   import { AVAILABLE_SKINS, skinManager, type SkinConfig, getSkinAssetPath } from '../data/skinConfig';
   import { hasSelectedBackground, currentBackground, currentSkin } from '../stores';
   import { startGameScene } from '../utils/sceneManager';
-  import PixelButton from './PixelButton.svelte';
+  import { getSavedCharacterSelection } from '../scenes/ModularPlayer';
+
+  // Special ID for custom modular character
+  const CUSTOM_SKIN_ID = 'custom';
 
   function goToBuilder() {
     window.location.href = './builder.html';
@@ -12,8 +15,17 @@
   const backgrounds = AVAILABLE_BACKGROUNDS;
   const skins = AVAILABLE_SKINS;
   
-  // Track selected skin (preselect cat_orange)
-  let selectedSkinId = $state(skinManager.getSkinId());
+  // Check if we have a saved custom character
+  const hasCustomCharacter = getSavedCharacterSelection() !== null;
+  
+  // Check if modular player was previously selected
+  const wasModularSelected = localStorage.getItem('useModularPlayer') === 'true';
+  
+  // Track selected skin - respect previous selection
+  // If modular was selected AND we have a custom character, show custom as selected
+  let selectedSkinId = $state(
+    (wasModularSelected && hasCustomCharacter) ? CUSTOM_SKIN_ID : skinManager.getSkinId()
+  );
   
   // Canvas refs for skin thumbnails (for skins without preview.png)
   let canvasRefs: Record<string, HTMLCanvasElement | null> = $state({});
@@ -87,9 +99,27 @@
   }
   
   function selectSkin(skinId: string) {
-    selectedSkinId = skinId;
-    skinManager.setSkin(skinId);
-    currentSkin.set(skinId);
+    if (skinId === CUSTOM_SKIN_ID) {
+      // If no custom character exists, go to builder
+      if (!hasCustomCharacter) {
+        goToBuilder();
+        return;
+      }
+      // Otherwise just select custom
+      selectedSkinId = CUSTOM_SKIN_ID;
+      // Clear the static skin selection to use modular
+      localStorage.setItem('useModularPlayer', 'true');
+      currentSkin.set(CUSTOM_SKIN_ID);
+    } else {
+      selectedSkinId = skinId;
+      skinManager.setSkin(skinId);
+      localStorage.setItem('useModularPlayer', 'false');
+      currentSkin.set(skinId);
+    }
+  }
+  
+  function editCustomCharacter() {
+    goToBuilder();
   }
 
   function selectBackground(index: number) {
@@ -131,12 +161,34 @@
           <span class="skin-name">{skin.name}</span>
         </button>
       {/each}
-    </div>
-    
-    <div class="builder-link">
-      <PixelButton variant="purple" onclick={goToBuilder}>
-        ✨ CHARACTER BUILDER
-      </PixelButton>
+      
+      <!-- Custom Character Card -->
+      <div class="skin-card-wrapper">
+        <button
+          class="skin-card custom-card"
+          class:selected={selectedSkinId === CUSTOM_SKIN_ID}
+          onclick={() => selectSkin(CUSTOM_SKIN_ID)}
+          type="button"
+        >
+          <div class="skin-preview-container custom-preview">
+            {#if hasCustomCharacter}
+              <span class="custom-icon">👤</span>
+            {:else}
+              <span class="custom-icon">✨</span>
+            {/if}
+          </div>
+          <span class="skin-name">CUSTOM</span>
+        </button>
+        {#if hasCustomCharacter && selectedSkinId === CUSTOM_SKIN_ID}
+          <button 
+            class="edit-btn"
+            onclick={editCustomCharacter}
+            type="button"
+          >
+            EDIT
+          </button>
+        {/if}
+      </div>
     </div>
     
     <h1 class="title">SELECT BACKGROUND</h1>
@@ -215,8 +267,12 @@
     max-width: 700px;
   }
 
-  .builder-link {
-    margin: -20px 0;
+  .skin-card-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
 
   .skin-card {
@@ -272,6 +328,46 @@
     font-size: 8px;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  /* Custom character card styles */
+  .custom-card {
+    border-color: #9b59b6;
+  }
+
+  .custom-card:hover {
+    border-color: #b978d4;
+  }
+
+  .custom-card.selected {
+    border-color: #9b59b6;
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+  }
+
+  .custom-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #2c1a4a 0%, #1a1a3a 100%);
+  }
+
+  .custom-icon {
+    font-size: 40px;
+  }
+
+  .edit-btn {
+    padding: 4px 8px;
+    background: #9b59b6;
+    border: 2px solid #7d3c98;
+    color: white;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+
+  .edit-btn:hover {
+    background: #b978d4;
   }
 
   .background-card {

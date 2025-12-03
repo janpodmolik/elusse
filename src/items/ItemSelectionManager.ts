@@ -42,12 +42,33 @@ export const SELECTED_DATA_KEYS: Record<string, string> = {
   // ZONE uses different selection mechanism (selectedDialogZoneId)
 } as const;
 
+type DataEnabledGameObject = Phaser.GameObjects.GameObject & {
+  getData: (key: string) => unknown;
+};
+
+function hasDataComponent(obj: Phaser.GameObjects.GameObject): obj is DataEnabledGameObject {
+  return typeof (obj as DataEnabledGameObject).getData === 'function';
+}
+
+function hasInteractiveData(obj: Phaser.GameObjects.GameObject): boolean {
+  if (!hasDataComponent(obj)) return false;
+
+  if (obj.type === 'Rectangle') {
+    return Boolean(obj.getData(INTERACTIVE_DATA_KEYS.ZONE));
+  }
+
+  return Object.values(INTERACTIVE_DATA_KEYS).some(key => {
+    if (key === INTERACTIVE_DATA_KEYS.ZONE) return false;
+    return Boolean(obj.getData(key));
+  });
+}
+
 /**
  * Check if a hit object is currently selected
  * Uses centralized SELECTED_DATA_KEYS to avoid missing new object types
  */
 export function isObjectSelected(obj: Phaser.GameObjects.GameObject, scene: Phaser.Scene): boolean {
-  if (!(obj instanceof Phaser.GameObjects.Sprite)) return false;
+  if (!hasDataComponent(obj)) return false;
   
   // Check each interactive data key
   for (const [dataKey, selectedKey] of Object.entries(SELECTED_DATA_KEYS)) {
@@ -56,7 +77,7 @@ export function isObjectSelected(obj: Phaser.GameObjects.GameObject, scene: Phas
       // Special case for player (boolean check)
       if (dataKey === INTERACTIVE_DATA_KEYS.PLAYER) {
         const isPlayerSelected = scene.data.get(selectedKey);
-        const playerSprite = scene.data.get('playerSprite');
+        const playerSprite = scene.data.get('playerSprite') as Phaser.GameObjects.GameObject | undefined;
         if (isPlayerSelected && obj === playerSprite) return true;
       } else {
         // Normal ID comparison
@@ -173,17 +194,7 @@ export class ItemSelectionManager {
       // Check if clicking on any interactive object
       // Uses centralized INTERACTIVE_DATA_KEYS to avoid forgetting new object types
       const hitObjects = this.scene.input.hitTestPointer(pointer);
-      const hitInteractive = hitObjects.find(obj => {
-        // Check all registered sprite data keys
-        if (obj.type === 'Sprite') {
-          return Object.values(INTERACTIVE_DATA_KEYS).some(key => obj.getData(key));
-        }
-        // Check for Rectangle objects (dialog zone handles use zoneId)
-        if (obj.type === 'Rectangle') {
-          return obj.getData(INTERACTIVE_DATA_KEYS.ZONE);
-        }
-        return false;
-      });
+      const hitInteractive = hitObjects.find(obj => hasInteractiveData(obj));
       
       if (!hitInteractive) {
         clearSelection();

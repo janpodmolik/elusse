@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
+import { ModularPlayer, getSavedCharacterSelection } from './ModularPlayer';
 import { preloadSkins, createAllSkinAnimations } from '../utils/skinLoader';
 import { backgroundManager } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
@@ -11,12 +12,17 @@ import { loadMapConfig, MapConfig } from '../data/mapConfig';
 import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { GroundManager } from './shared/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { clampPlayerY, getPlayerGroundY } from '../constants/playerConstants';
+import { getModularPlayerGroundY, getPlayerGroundY } from '../constants/playerConstants';
 import { isLoading, setActiveDialogZone, setPlayerScreenPosition, setGameCameraInfo, setGameWorldDimensions } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
+import type { ModularCharacterSelection } from '../data/modularConfig';
+import type { IPlayer } from '../entities';
 
 export class GameScene extends Phaser.Scene {
-  private player!: Player;
+  // Unified player interface - works with both Player and ModularPlayer
+  private player: IPlayer | null = null;
+  private useModularPlayer: boolean = false;
+  private savedCharacterSelection: ModularCharacterSelection | null = null;
 
   // Map configuration (loaded from JSON)
   private mapConfig!: MapConfig;
@@ -58,11 +64,22 @@ export class GameScene extends Phaser.Scene {
     this.initData = data;
     // Reset initialization flag
     this.isInitialized = false;
+    
+    // Check if user selected custom character in BackgroundSelect
+    const useModularSetting = localStorage.getItem('useModularPlayer');
+    
+    // Check if we have a saved modular character
+    this.savedCharacterSelection = getSavedCharacterSelection();
+    
+    // Use modular player if explicitly selected AND we have character data
+    this.useModularPlayer = useModularSetting === 'true' && this.savedCharacterSelection !== null;
   }
 
   preload(): void {
-    // Load player sprite sheets
-    preloadSkins(this);
+    // Load player sprite sheets (for legacy Player)
+    if (!this.useModularPlayer) {
+      preloadSkins(this);
+    }
 
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
@@ -91,8 +108,15 @@ export class GameScene extends Phaser.Scene {
     isLoading.set(true);
     
     try {
-      // Create animations for all skins
-      createAllSkinAnimations(this);
+      // Create animations for legacy skins (if not using modular)
+      if (!this.useModularPlayer) {
+        createAllSkinAnimations(this);
+      }
+      
+      // Load modular character assets if needed
+      if (this.useModularPlayer && this.savedCharacterSelection) {
+        await ModularPlayer.preloadCharacter(this, this.savedCharacterSelection);
+      }
       
       // Load map configuration asynchronously
       await this.loadMapConfiguration();
@@ -111,11 +135,30 @@ export class GameScene extends Phaser.Scene {
       });
 
       // Create player - ensure they start on ground, not floating or underground
-      const playerY = clampPlayerY(this.mapConfig.playerStartY, this.mapConfig.worldHeight);
-      this.player = new Player(this, this.mapConfig.playerStartX, playerY);
-
-      // Add collision between player and ground
-      GroundManager.addPlayerCollision(this, this.player, ground);
+      if (this.useModularPlayer && this.savedCharacterSelection) {
+        // Use modular character - calculate proper Y for center origin
+        const modularGroundY = getModularPlayerGroundY(this.mapConfig.worldHeight);
+        const playerY = Math.min(this.mapConfig.playerStartY, modularGroundY);
+        
+        const modularPlayer = new ModularPlayer(
+          this, 
+          this.mapConfig.playerStartX, 
+          playerY, 
+          this.savedCharacterSelection
+        );
+        modularPlayer.buildCharacter();
+        this.player = modularPlayer;
+        // Add collision between modular player and ground
+        GroundManager.addPlayerCollision(this, modularPlayer, ground);
+      } else {
+        // Use legacy player
+        const staticGroundY = getPlayerGroundY(this.mapConfig.worldHeight);
+        const playerY = Math.min(this.mapConfig.playerStartY, staticGroundY);
+        const staticPlayer = new Player(this, this.mapConfig.playerStartX, playerY);
+        this.player = staticPlayer;
+        // Add collision between player and ground
+        GroundManager.addPlayerCollision(this, staticPlayer, ground);
+      }
 
       // Initialize placed items system (read-only mode for game scene)
       this.itemManager = new PlacedItemManager(
@@ -133,8 +176,8 @@ export class GameScene extends Phaser.Scene {
       
       // Add collision between player and physics-enabled items
       const itemPhysicsGroup = this.itemManager.getPhysicsGroup();
-      if (itemPhysicsGroup) {
-        this.physics.add.collider(this.player, itemPhysicsGroup);
+      if (itemPhysicsGroup && this.player) {
+        this.physics.add.collider(this.player.getGameObject(), itemPhysicsGroup);
       }
       
       // Initialize frame manager for clickable frames
@@ -165,7 +208,9 @@ export class GameScene extends Phaser.Scene {
       this.unsubscribers.push(unsubDialogZones);
 
       // Setup camera to follow player
-      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+      if (this.player) {
+        this.cameras.main.startFollow(this.player.getGameObject(), true, 0.1, 0.1);
+      }
       this.setupCameraBounds();
       this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
       
@@ -328,19 +373,21 @@ export class GameScene extends Phaser.Scene {
     // Guard against update being called before async initialization completes
     if (!this.isInitialized || !this.player) return;
     
+    // Update player and get position via unified interface
     this.player.update();
+    const { x: playerX, y: playerY } = this.player.getPosition();
     
     // Update player screen position for UI (dialog bubbles)
     const camera = this.cameras.main;
-    const screenX = this.player.x - camera.scrollX;
-    const screenY = this.player.y - camera.scrollY;
+    const screenX = playerX - camera.scrollX;
+    const screenY = playerY - camera.scrollY;
     setPlayerScreenPosition(screenX, screenY);
     
     // Update camera info for frame text overlay
     setGameCameraInfo(camera.scrollX, camera.scrollY, camera.zoom);
     
     // Check dialog zone collisions
-    this.checkDialogZones();
+    this.checkDialogZonesForPosition(playerX);
 
     // Update all parallax layers tiling for infinite scrolling effect
     if (this.parallaxLayers) {
@@ -349,10 +396,9 @@ export class GameScene extends Phaser.Scene {
   }
   
   /**
-   * Check if player is inside any dialog zone and update active dialog
+   * Check dialog zones for a given X position
    */
-  private checkDialogZones(): void {
-    const playerX = this.player.x;
+  private checkDialogZonesForPosition(playerX: number): void {
     
     // Find zone player is currently in (if any)
     let activeZone: DialogZone | null = null;

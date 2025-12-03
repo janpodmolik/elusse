@@ -1,8 +1,22 @@
 import Phaser from 'phaser';
 import { skinManager, getSkinScale, AVAILABLE_SKINS } from '../data/skinConfig';
 import { hasPlayerMoved } from '../stores';
-import { PLAYER_SPRITE } from '../constants/playerConstants';
-import { PlayerAnimations, PlayerInputController, MOVEMENT_CONFIG, type AnimationState } from '../entities';
+import { 
+  PLAYER_SPRITE,
+  getPlayerGroundY,
+  getStaticPlayerPhysicsBody,
+  STATIC_SELECTION_RATIOS,
+} from '../constants/playerConstants';
+import { 
+  PlayerAnimations, 
+  PlayerInputController, 
+  MOVEMENT_CONFIG, 
+  type AnimationState,
+  type IPlayer,
+  type PlayerType,
+  type Position,
+  type HitBounds,
+} from '../entities';
 
 /**
  * Player - Main player character sprite
@@ -10,8 +24,10 @@ import { PlayerAnimations, PlayerInputController, MOVEMENT_CONFIG, type Animatio
  * Uses composition with:
  * - PlayerAnimations for animation management
  * - PlayerInputController for keyboard/touch input
+ * 
+ * Implements IPlayer interface for unified player abstraction.
  */
-export class Player extends Phaser.Physics.Arcade.Sprite {
+export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   private animations: PlayerAnimations;
   private inputController: PlayerInputController;
   private animState: AnimationState = 'idle';
@@ -46,19 +62,119 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const frameWidth = this.currentSkin.frameWidth ?? 48;
     const frameHeight = this.currentSkin.frameHeight ?? 48;
     
-    // Physics body size (before scale) - small hitbox at feet
-    // Adjust offset based on frame dimensions
-    const bodyWidth = Math.round(frameWidth * 0.33);
-    const bodyHeight = Math.round(frameHeight * 0.25);
-    const offsetX = Math.round((frameWidth - bodyWidth) / 2);
-    const offsetY = Math.round(frameHeight * 0.75);
-    this.setSize(bodyWidth, bodyHeight);
-    this.setOffset(offsetX, offsetY);
+    // Physics body size - small hitbox at feet (shared calculation)
+    const physicsBody = getStaticPlayerPhysicsBody(frameWidth, frameHeight);
+    this.setSize(physicsBody.width, physicsBody.height);
+    this.setOffset(physicsBody.offsetX, physicsBody.offsetY);
     this.setScale(scale);
     this.setDepth(PLAYER_SPRITE.DEPTH);
 
     // Start with idle animation
     this.animations.play(this, 'idle');
+  }
+  
+  // ========== IPlayer Implementation ==========
+  
+  /**
+   * Get current world position
+   */
+  getPosition(): Position {
+    return { x: this.x, y: this.y };
+  }
+  
+  /**
+   * Set world position (IPlayer interface version)
+   * Note: This shadows Phaser's setPosition but with void return for interface compatibility
+   */
+  setPlayerPosition(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
+  }
+  
+  /**
+   * Get the Y coordinate for standing on ground
+   */
+  getGroundY(worldHeight: number): number {
+    return getPlayerGroundY(worldHeight);
+  }
+  
+  /**
+   * Get player type for positioning calculations
+   */
+  getPlayerType(): PlayerType {
+    return 'static';
+  }
+  
+  /**
+   * Get world-space hit bounds for selection/interaction
+   * Static player uses origin (0, 0) at top-left
+   */
+  getHitBounds(): HitBounds {
+    const scale = getSkinScale(this.currentSkin);
+    const frameWidth = (this.currentSkin.frameWidth ?? 48) * scale;
+    const frameHeight = (this.currentSkin.frameHeight ?? 48) * scale;
+    const selectionWidth = frameWidth * STATIC_SELECTION_RATIOS.WIDTH;
+    const offsetX = (frameWidth - selectionWidth) / 2;
+    const originX = this.originX ?? 0.5;
+    const originY = this.originY ?? 0.5;
+    const baseX = this.x - (frameWidth * originX);
+    const baseY = this.y - (frameHeight * originY);
+    
+    return {
+      x: baseX + offsetX,
+      y: baseY,
+      width: selectionWidth,
+      height: frameHeight,
+    };
+  }
+  
+  /**
+   * Set facing direction
+   */
+  setFacing(direction: 'left' | 'right'): void {
+    const facingLeft = this.currentSkin.facingLeft ?? false;
+    if (direction === 'left') {
+      this.setFlipX(!facingLeft);
+    } else {
+      this.setFlipX(facingLeft);
+    }
+  }
+  
+  /**
+   * Play animation by name
+   */
+  playAnimation(animName: string): void {
+    if (animName === 'idle' || animName === 'run') {
+      this.animations.play(this, animName);
+    }
+  }
+  
+  /**
+   * Apply tint color
+   */
+  setTint(tint: number): this {
+    return super.setTint(tint);
+  }
+  
+  /**
+   * Clear tint
+   */
+  clearTint(): this {
+    return super.clearTint();
+  }
+  
+  /**
+   * Set alpha/opacity
+   */
+  setAlpha(alpha: number): this {
+    return super.setAlpha(alpha);
+  }
+  
+  /**
+   * Get underlying Phaser game object
+   */
+  getGameObject(): Phaser.GameObjects.Sprite {
+    return this;
   }
 
   public changeSkin(newSkinId: string): void {
@@ -113,10 +229,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Play appropriate animation
     switch (this.animState) {
       case 'idle':
-        this.animations.play(this, 'idle');
+        this.playAnimation('idle');
         break;
       case 'running':
-        this.animations.play(this, 'run');
+        this.playAnimation('run');
         break;
     }
   }

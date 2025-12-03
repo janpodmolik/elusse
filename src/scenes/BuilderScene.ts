@@ -87,7 +87,7 @@ export class BuilderScene extends Phaser.Scene {
   /**
    * Scene initialization
    */
-  private initializeScene(): void {
+  private async initializeScene(): Promise<void> {
     // Create animations for all skins
     createAllSkinAnimations(this);
     
@@ -114,7 +114,8 @@ export class BuilderScene extends Phaser.Scene {
     // Create ground visual reference
     this.createGroundReference();
 
-    // Create player sprite
+    // Preload modular character if needed, then create player
+    await this.playerController.preload();
     this.playerController.create(this.config.playerStartX, this.config.playerStartY);
     
     // Create placed items manager

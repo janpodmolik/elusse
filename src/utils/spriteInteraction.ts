@@ -30,7 +30,7 @@ export interface DragConstraints {
 }
 
 export interface SpriteInteractionConfig {
-  sprite: Phaser.GameObjects.Sprite;
+  sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Container;
   scene: Phaser.Scene;
   callbacks?: DragCallbacks;
   constraints?: DragConstraints;
@@ -39,6 +39,10 @@ export interface SpriteInteractionConfig {
   /** Optional custom hit area rectangle */
   hitArea?: Phaser.Geom.Rectangle;
 }
+
+type InteractiveInputObject = Phaser.Types.Input.InteractiveObject & {
+  useHandCursor?: boolean;
+};
 
 /**
  * Double-click detector for consistent double-click behavior
@@ -106,12 +110,12 @@ export function setupSpriteInteraction(config: SpriteInteractionConfig): () => v
 
   // Make sprite interactive with optional custom hit area
   if (hitArea) {
-    sprite.setInteractive({
-      hitArea,
-      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-      useHandCursor: true,
-      cursor
-    });
+    sprite.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+    if (sprite.input) {
+      const interactiveInput = sprite.input as InteractiveInputObject;
+      interactiveInput.cursor = cursor;
+      interactiveInput.useHandCursor = true;
+    }
   } else {
     sprite.setInteractive({ useHandCursor: true, cursor });
   }
@@ -158,13 +162,19 @@ export function setupSpriteInteraction(config: SpriteInteractionConfig): () => v
     }
     
     // Skip if pinch zoom is active (shouldn't happen on desktop, but just in case)
-    if (get(isPinchingInBuilder)) return;
+    if (get(isPinchingInBuilder)) {
+      return;
+    }
     
     // Skip if pointer is over UI element
-    if (isPointerOverUI()) return;
+    if (isPointerOverUI()) {
+      return;
+    }
     
     // Skip if already dragging something
-    if (isDragging) return;
+    if (isDragging) {
+      return;
+    }
     
     // Check for double-click FIRST - if returns true, don't start drag or select
     if (callbacks.onDoubleClick?.()) {

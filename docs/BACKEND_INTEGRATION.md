@@ -129,6 +129,69 @@ CREATE TABLE user_preferences (
 
 ---
 
+### CharacterSaveData (Modular Character System)
+
+Nový modulární systém postavy umožňuje kombinovat více vrstev (skin, vlasy, oblečení).
+
+```typescript
+interface CharacterSaveData {
+  version: number;               // Schema verze (aktuálně 1)
+  gender: 'male' | 'female';     // Pohlaví postavy
+  skin: string | null;           // ID skin itemu (např. 'male-skin-Basic')
+  hair: string | null;           // ID hair itemu (např. 'male-hair-Mohawk')
+  clothing: string[];            // Array clothing item IDs
+  createdAt?: string;            // ISO timestamp
+  updatedAt?: string;            // ISO timestamp
+}
+```
+
+**Příklad:**
+```json
+{
+  "version": 1,
+  "gender": "male",
+  "skin": "male-skin-Basic",
+  "hair": "male-hair-Mohawk",
+  "clothing": [
+    "male-clothing-Green_Underwear",
+    "male-clothing-Blue_Jeans", 
+    "male-clothing-Red_Tshirt"
+  ],
+  "updatedAt": "2025-12-03T10:30:00.000Z"
+}
+```
+
+**SQL:**
+```sql
+-- Rozšíření user_preferences o character data
+ALTER TABLE user_preferences 
+ADD COLUMN character_data JSONB DEFAULT NULL;
+
+-- Nebo samostatná tabulka pro více postav
+CREATE TABLE user_characters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(50) NOT NULL DEFAULT 'Default',
+  character_data JSONB NOT NULL,
+  is_active BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_characters_user_id ON user_characters(user_id);
+```
+
+**Clothing Item ID formát:**
+- `{gender}-clothing-{filename_without_extension}`
+- Příklad: `male-clothing-Blue_Jeans` → soubor `public/assets/skins/modular/male/clothing/legs/Blue_Jeans.png`
+
+**Validace na backendu:**
+- Ověřit že všechny item IDs existují v konfiguraci
+- Ověřit že items odpovídají zvolenému genderu
+- Ověřit že každá subcategory má max 1 item
+
+---
+
 ### Scene
 
 Hlavní entita — reprezentuje jednu uživatelskou scénu.

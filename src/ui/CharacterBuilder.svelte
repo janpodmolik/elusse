@@ -203,7 +203,9 @@
   
   function handleSaveAndPlay() {
     saveSelection();
-    // Navigate to main game
+    // Mark that we want to use the modular player
+    localStorage.setItem('useModularPlayer', 'true');
+    // Navigate back to character/background selection
     window.location.href = '/';
   }
   
@@ -229,7 +231,7 @@
   <header class="header">
     <h1>Character Builder</h1>
     <PixelButton variant="green" onclick={handleSaveAndPlay}>
-      PLAY
+      SAVE & PLAY
     </PixelButton>
   </header>
   

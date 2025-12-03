@@ -99,10 +99,11 @@ export const GroundManager = {
 
   /**
    * Add collision between player and ground
+   * Supports both Sprite (static player) and Container (modular player)
    */
   addPlayerCollision(
     scene: Phaser.Scene,
-    player: Phaser.Physics.Arcade.Sprite,
+    player: Phaser.Physics.Arcade.Sprite | Phaser.GameObjects.Container,
     ground: Phaser.GameObjects.Rectangle
   ): Phaser.Physics.Arcade.Collider {
     return scene.physics.add.collider(player, ground);

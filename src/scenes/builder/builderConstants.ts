@@ -37,3 +37,22 @@ export const DRAG_MARGIN_BOTTOM = 10;
 
 // Visual feedback - use centralized color
 export const DRAG_TINT = CENTRALIZED_DRAG_TINT;
+
+// Debug mode - enable hit area visualization in development
+// Uses try-catch to handle cases where import.meta.env is not available
+const isDevelopment = (): boolean => {
+  try {
+    // Vite provides import.meta.env
+    return (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? false;
+  } catch {
+    return false;
+  }
+};
+
+// Debug flags - all gated behind development mode
+export const DEBUG_HIT_AREAS = isDevelopment();
+export const DEBUG_INTERACTION = false; // Set to true when debugging interaction issues
+export const DEBUG_HIT_AREA_COLOR = 0x00ff00;
+export const DEBUG_HIT_AREA_ALPHA = 0.3;
+export const DEBUG_HIT_AREA_STROKE_WIDTH = 2;
+export const DEBUG_HIT_AREA_STROKE_ALPHA = 0.8;
