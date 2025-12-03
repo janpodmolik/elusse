@@ -67,6 +67,13 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.7, 0.75, 0.8, 0.85, 0.9, 1.0, 1.0],
     foregroundLayers: 2,
   },
+  {
+    name: 'FOREST DEAD',
+    folder: 'forest_dead',
+    // forest_dead has layers 1-6 (6 parallax layers, last 1 is foreground)
+    scrollFactors: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
+    foregroundLayers: 1,
+  },
 ];
 
 class BackgroundManager {
