@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { updatePlayerPosition, builderEditMode, selectPlayer, isPlayerSelected } from '../../stores/builderStores';
 import { setupSpriteInteraction } from '../../utils/spriteInteraction';
 import { get } from 'svelte/store';
-import { skinManager } from '../../data/skinConfig';
+import { skinManager, getSkinScale, AVAILABLE_SKINS } from '../../data/skinConfig';
 import {
   PLAYER_SPRITE,
   getPlayerGroundY,
@@ -46,8 +46,11 @@ export class BuilderPlayerController {
     
     // Get selected skin from skinManager
     const skinId = skinManager.getSkinId();
+    const skin = AVAILABLE_SKINS.find(s => s.id === skinId) ?? AVAILABLE_SKINS[0];
+    const scale = getSkinScale(skin);
+    
     this.player = this.scene.add.sprite(startX, safeY, `${skinId}-idle`, 0);
-    this.player.setScale(PLAYER_SPRITE.SCALE);
+    this.player.setScale(scale);
     this.player.setDepth(PLAYER_SPRITE.DEPTH);
     this.player.setData('isPlayer', true); // Mark as player for hit detection
 

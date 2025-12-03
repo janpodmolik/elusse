@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
-import { preloadSpritesheetSkins, loadGifSkins, createAllSkinAnimations } from '../utils/skinLoader';
+import { preloadSkins, createAllSkinAnimations } from '../utils/skinLoader';
 import { backgroundManager } from '../data/background';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
@@ -61,8 +61,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load player sprite sheets for PNG skins (GIF skins loaded async in create)
-    preloadSpritesheetSkins(this);
+    // Load player sprite sheets
+    preloadSkins(this);
 
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
@@ -91,10 +91,7 @@ export class GameScene extends Phaser.Scene {
     isLoading.set(true);
     
     try {
-      // Load GIF skins (PNG skins already loaded in preload)
-      await loadGifSkins(this);
-      
-      // Create animations for all skins (both PNG and GIF)
+      // Create animations for all skins
       createAllSkinAnimations(this);
       
       // Load map configuration asynchronously

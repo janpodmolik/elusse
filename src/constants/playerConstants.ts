@@ -3,35 +3,80 @@
  * 
  * Centralized player sprite configuration used across GameScene and BuilderScene.
  * Ensures consistency in player size, scale, and positioning calculations.
+ * 
+ * Note: Player scale is now dynamic based on skin frame dimensions.
+ * Use getPlayerScale() and getPlayerSize() for current skin values.
  */
 
 import { DEPTH_LAYERS } from './depthLayers';
+import { skinManager, getSkinScale, getSkinFrameDimensions, TARGET_PLAYER_HEIGHT, type SkinConfig, AVAILABLE_SKINS } from '../data/skinConfig';
 
 // ============================================================================
-// Sprite Configuration
+// Sprite Configuration (static/default values for reference)
 // ============================================================================
 
-/** Original sprite frame dimensions (before scaling) */
+/** Default sprite configuration (for cat/dog skins) */
 export const PLAYER_SPRITE = {
-  /** Width of single animation frame */
+  /** Default width of single animation frame */
   FRAME_WIDTH: 48,
-  /** Height of single animation frame */
+  /** Default height of single animation frame */
   FRAME_HEIGHT: 48,
-  /** Scale multiplier for rendering */
+  /** Default scale multiplier for rendering (48 * 5 = 240px) */
   SCALE: 5,
   /** Depth layer for rendering order */
   DEPTH: DEPTH_LAYERS.PLAYER,
 } as const;
 
-/** Calculated player dimensions after scaling */
+/** Target rendered height for all player sprites */
+export const PLAYER_TARGET_HEIGHT = TARGET_PLAYER_HEIGHT;
+
+/** Calculated player dimensions after scaling (based on target height) */
 export const PLAYER_SIZE = {
-  /** Scaled width: FRAME_WIDTH * SCALE */
-  WIDTH: PLAYER_SPRITE.FRAME_WIDTH * PLAYER_SPRITE.SCALE,
-  /** Scaled height: FRAME_HEIGHT * SCALE */
-  HEIGHT: PLAYER_SPRITE.FRAME_HEIGHT * PLAYER_SPRITE.SCALE,
-  /** Half of scaled height (for center-to-bottom calculations) */
-  HALF_HEIGHT: (PLAYER_SPRITE.FRAME_HEIGHT * PLAYER_SPRITE.SCALE) / 2,
+  /** Target rendered height (same for all skins) */
+  HEIGHT: TARGET_PLAYER_HEIGHT,
+  /** Half of target height (for center-to-bottom calculations) */
+  HALF_HEIGHT: TARGET_PLAYER_HEIGHT / 2,
 } as const;
+
+// ============================================================================
+// Dynamic Helpers (skin-dependent)
+// ============================================================================
+
+/**
+ * Get current skin configuration
+ */
+export function getCurrentSkin(): SkinConfig {
+  const skinId = skinManager.getSkinId();
+  return AVAILABLE_SKINS.find(s => s.id === skinId) ?? AVAILABLE_SKINS[0];
+}
+
+/**
+ * Get scale for current skin
+ */
+export function getPlayerScale(): number {
+  return getSkinScale(getCurrentSkin());
+}
+
+/**
+ * Get frame dimensions for current skin
+ */
+export function getPlayerFrameDimensions(): { width: number; height: number } {
+  return getSkinFrameDimensions(getCurrentSkin());
+}
+
+/**
+ * Get rendered size for current skin (after scaling)
+ */
+export function getPlayerSize(): { width: number; height: number; halfHeight: number } {
+  const skin = getCurrentSkin();
+  const scale = getSkinScale(skin);
+  const { width, height } = getSkinFrameDimensions(skin);
+  return {
+    width: width * scale,
+    height: height * scale,
+    halfHeight: (height * scale) / 2,
+  };
+}
 
 // ============================================================================
 // Ground Configuration

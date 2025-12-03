@@ -1,35 +1,68 @@
 // Player skin configuration
-// Supports multiple character types (cat, dog) with different color variants
-// Supports both PNG spritesheets and GIF animations
+// Supports multiple character types with different color variants
+// All skins use PNG spritesheets (horizontal strip format)
 
-export type SkinFormat = 'spritesheet' | 'gif';
+// Target rendered height for all player sprites (before any additional scaling)
+export const TARGET_PLAYER_HEIGHT = 240;
 
 export interface SkinConfig {
   id: string;           // Unique identifier, matches folder name
   name: string;         // Display name for UI
   folder: string;       // Asset folder name (same as id)
   character: 'cat' | 'dog' | 'human';  // Character type for animation grouping
-  format: SkinFormat;   // Asset format: 'spritesheet' (PNG) or 'gif'
-  // Optional frame rate overrides for GIF skins (if GIF delays are wrong)
-  frameRates?: {
+  variant?: string;     // Subfolder for sprite variant (e.g., 'basic')
+  frameWidth?: number;  // Sprite frame width (default: 48)
+  frameHeight?: number; // Sprite frame height (default: 48)
+  facingLeft?: boolean; // True if sprite faces left by default (inverts flipX logic)
+  frameRates?: {        // Optional frame rate overrides
     idle?: number;
     run?: number;
   };
 }
 
+// Default frame dimensions (for cat/dog sprites)
+const DEFAULT_FRAME_WIDTH = 48;
+const DEFAULT_FRAME_HEIGHT = 48;
+
+/**
+ * Get the asset path for a skin
+ */
+export function getSkinAssetPath(skin: SkinConfig): string {
+  if (skin.variant) {
+    return `assets/skins/${skin.folder}/${skin.variant}`;
+  }
+  return `assets/skins/${skin.folder}`;
+}
+
+/**
+ * Get the scale factor for a skin to achieve TARGET_PLAYER_HEIGHT
+ */
+export function getSkinScale(skin: SkinConfig): number {
+  const frameHeight = skin.frameHeight ?? DEFAULT_FRAME_HEIGHT;
+  return TARGET_PLAYER_HEIGHT / frameHeight;
+}
+
+/**
+ * Get frame dimensions for a skin
+ */
+export function getSkinFrameDimensions(skin: SkinConfig): { width: number; height: number } {
+  return {
+    width: skin.frameWidth ?? DEFAULT_FRAME_WIDTH,
+    height: skin.frameHeight ?? DEFAULT_FRAME_HEIGHT,
+  };
+}
+
 export const AVAILABLE_SKINS: SkinConfig[] = [
-  { id: 'cat_blue', name: 'BLUE CAT', folder: 'cat_blue', character: 'cat', format: 'spritesheet' },
-  { id: 'cat_orange', name: 'ORANGE CAT', folder: 'cat_orange', character: 'cat', format: 'spritesheet' },
-  { id: 'cat_white', name: 'WHITE CAT', folder: 'cat_white', character: 'cat', format: 'spritesheet' },
-  { id: 'dog_blue', name: 'BLUE DOG', folder: 'dog_blue', character: 'dog', format: 'spritesheet' },
-  { id: 'dog_yellow', name: 'YELLOW DOG', folder: 'dog_yellow', character: 'dog', format: 'spritesheet' },
-  { id: 'cowboy_girl', name: 'COWBOY GIRL', folder: 'cowboy_girl', character: 'human', format: 'gif', frameRates: { idle: 8, run: 12 } },
-  { id: 'student_med', name: 'MED STUDENT', folder: 'student_med', character: 'human', format: 'gif', frameRates: { idle: 8, run: 12 } },
-  { id: 'knight', name: 'KNIGHT', folder: 'knight', character: 'human', format: 'gif', frameRates: { idle: 8, run: 12 } },
+  // { id: 'cat_blue', name: 'BLUE CAT', folder: 'cat_blue', character: 'cat' },
+  // { id: 'cat_orange', name: 'ORANGE CAT', folder: 'cat_orange', character: 'cat' },
+  // { id: 'cat_white', name: 'WHITE CAT', folder: 'cat_white', character: 'cat' },
+  // { id: 'dog_blue', name: 'BLUE DOG', folder: 'dog_blue', character: 'dog' },
+  // { id: 'dog_yellow', name: 'YELLOW DOG', folder: 'dog_yellow', character: 'dog' },
+  { id: 'succubus', name: 'SUCCUBUS', folder: 'succubus', variant: 'basic', character: 'human', frameWidth: 156, frameHeight: 72, facingLeft: true, frameRates: { idle: 8, run: 12 } },
 ];
 
 // Default skin ID
-export const DEFAULT_SKIN_ID = 'cat_orange';
+export const DEFAULT_SKIN_ID = 'succubus';
 
 class SkinManager {
   private currentSkinId: string = DEFAULT_SKIN_ID;

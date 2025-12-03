@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { loadBackgroundAssets } from './BackgroundLoader';
 import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
 import { backgroundManager } from '../data/background';
-import { preloadSpritesheetSkins, loadGifSkins, createAllSkinAnimations } from '../utils/skinLoader';
+import { preloadSkins, createAllSkinAnimations } from '../utils/skinLoader';
 import type { MapConfig } from '../data/mapConfig';
 import { BuilderCameraController } from './builder/BuilderCameraController';
 import { BuilderPlayerController } from './builder/BuilderPlayerController';
@@ -63,8 +63,8 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load player sprites for PNG skins (GIF skins loaded async in create)
-    preloadSpritesheetSkins(this);
+    // Load player sprite sheets
+    preloadSkins(this);
     
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
@@ -85,13 +85,10 @@ export class BuilderScene extends Phaser.Scene {
   }
   
   /**
-   * Async scene initialization for loading GIF skins
+   * Scene initialization
    */
-  private async initializeScene(): Promise<void> {
-    // Load GIF skins (PNG skins already loaded in preload)
-    await loadGifSkins(this);
-    
-    // Create animations for all skins (both PNG and GIF)
+  private initializeScene(): void {
+    // Create animations for all skins
     createAllSkinAnimations(this);
     
     // Set world bounds

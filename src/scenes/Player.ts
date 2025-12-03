@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { skinManager } from '../data/skinConfig';
+import { skinManager, getSkinScale, AVAILABLE_SKINS } from '../data/skinConfig';
 import { hasPlayerMoved } from '../stores';
 import { PLAYER_SPRITE } from '../constants/playerConstants';
 import { PlayerAnimations, PlayerInputController, MOVEMENT_CONFIG, type AnimationState } from '../entities';
@@ -17,6 +17,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private animState: AnimationState = 'idle';
   private hasNotifiedMovement: boolean = false;
   private hasReceivedInput: boolean = false;
+  private currentSkin: typeof AVAILABLE_SKINS[0];
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Get the selected skin from skinManager
@@ -38,11 +39,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Setup physics
     this.setCollideWorldBounds(true);
     this.setBounce(0);
+    
+    // Get skin-specific scale
+    this.currentSkin = AVAILABLE_SKINS.find(s => s.id === initialSkinId) ?? AVAILABLE_SKINS[0];
+    const scale = getSkinScale(this.currentSkin);
+    const frameWidth = this.currentSkin.frameWidth ?? 48;
+    const frameHeight = this.currentSkin.frameHeight ?? 48;
+    
     // Physics body size (before scale) - small hitbox at feet
-    // Cat sprite is 48x48, we want a small body at the bottom center
-    this.setSize(16, 12);
-    this.setOffset(16, 36); // Center horizontally, bottom of sprite
-    this.setScale(PLAYER_SPRITE.SCALE);
+    // Adjust offset based on frame dimensions
+    const bodyWidth = Math.round(frameWidth * 0.33);
+    const bodyHeight = Math.round(frameHeight * 0.25);
+    const offsetX = Math.round((frameWidth - bodyWidth) / 2);
+    const offsetY = Math.round(frameHeight * 0.75);
+    this.setSize(bodyWidth, bodyHeight);
+    this.setOffset(offsetX, offsetY);
+    this.setScale(scale);
     this.setDepth(PLAYER_SPRITE.DEPTH);
 
     // Start with idle animation
@@ -50,6 +62,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   public changeSkin(newSkinId: string): void {
+    // Update scale for new skin
+    this.currentSkin = AVAILABLE_SKINS.find(s => s.id === newSkinId) ?? AVAILABLE_SKINS[0];
+    const scale = getSkinScale(this.currentSkin);
+    const frameWidth = this.currentSkin.frameWidth ?? 48;
+    const frameHeight = this.currentSkin.frameHeight ?? 48;
+    
+    // Update physics body for new skin dimensions
+    const bodyWidth = Math.round(frameWidth * 0.33);
+    const bodyHeight = Math.round(frameHeight * 0.25);
+    const offsetX = Math.round((frameWidth - bodyWidth) / 2);
+    const offsetY = Math.round(frameHeight * 0.75);
+    this.setSize(bodyWidth, bodyHeight);
+    this.setOffset(offsetX, offsetY);
+    this.setScale(scale);
+    
     this.animations.handleSkinChange(this, newSkinId);
   }
 
@@ -68,13 +95,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Apply horizontal movement
+    // For sprites facing left by default, invert flipX logic
+    const facingLeft = this.currentSkin.facingLeft ?? false;
     if (input.left) {
       this.setVelocityX(-MOVEMENT_CONFIG.SPEED);
-      this.setFlipX(true);
+      this.setFlipX(!facingLeft); // Normal: true, FacingLeft: false
       this.animState = 'running';
     } else if (input.right) {
       this.setVelocityX(MOVEMENT_CONFIG.SPEED);
-      this.setFlipX(false);
+      this.setFlipX(facingLeft);  // Normal: false, FacingLeft: true
       this.animState = 'running';
     } else {
       this.setVelocityX(0);

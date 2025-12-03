@@ -1,9 +1,8 @@
 <script lang="ts">
   import { AVAILABLE_BACKGROUNDS, backgroundManager } from '../data/background';
-  import { AVAILABLE_SKINS, skinManager, type SkinConfig } from '../data/skinConfig';
+  import { AVAILABLE_SKINS, skinManager, type SkinConfig, getSkinAssetPath } from '../data/skinConfig';
   import { hasSelectedBackground, currentBackground, currentSkin } from '../stores';
   import { startGameScene } from '../utils/sceneManager';
-  import { parseGIF, decompressFrames } from 'gifuct-js';
 
   const backgrounds = AVAILABLE_BACKGROUNDS;
   const skins = AVAILABLE_SKINS;
@@ -11,89 +10,67 @@
   // Track selected skin (preselect cat_orange)
   let selectedSkinId = $state(skinManager.getSkinId());
   
-  // Canvas refs for skin thumbnails - use $state for Svelte 5 reactivity
+  // Canvas refs for skin thumbnails (for skins without preview.png)
   let canvasRefs: Record<string, HTMLCanvasElement | null> = $state({});
+  // Track which skins have preview images
+  let hasPreview: Record<string, boolean> = $state({});
   
-  // Load thumbnails when canvas refs are available
+  // Check for preview images on mount
   $effect(() => {
-    // Check if all canvas refs are ready
-    const allRefsReady = skins.every(skin => canvasRefs[skin.id]);
-    if (allRefsReady) {
-      skins.forEach(skin => {
+    skins.forEach(skin => {
+      const basePath = getSkinAssetPath(skin);
+      const img = new Image();
+      img.onload = () => { hasPreview[skin.id] = true; };
+      img.onerror = () => { 
+        hasPreview[skin.id] = false;
+        // Load canvas fallback
         loadSkinThumbnail(skin);
-      });
-    }
+      };
+      img.src = `./${basePath}/preview.png`;
+    });
   });
   
-  /** Load first frame and render to canvas - supports both PNG and GIF */
-  async function loadSkinThumbnail(skin: SkinConfig): Promise<void> {
+  /** Get preview image path for a skin */
+  function getSkinPreviewPath(skin: SkinConfig): string {
+    const basePath = getSkinAssetPath(skin);
+    return `./${basePath}/preview.png`;
+  }
+  
+  /** Load first frame from PNG spritesheet and render to canvas (fallback) */
+  function loadSkinThumbnail(skin: SkinConfig): void {
     const canvas = canvasRefs[skin.id];
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    if (skin.format === 'gif') {
-      // Load GIF and extract first frame
-      await loadGifThumbnail(skin, canvas, ctx);
-    } else {
-      // Load PNG spritesheet
-      loadPngThumbnail(skin, canvas, ctx);
-    }
-  }
-  
-  /** Load first frame from GIF */
-  async function loadGifThumbnail(skin: SkinConfig, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): Promise<void> {
-    try {
-      const response = await fetch(`./assets/skins/${skin.folder}/idle.gif`);
-      const arrayBuffer = await response.arrayBuffer();
-      const gif = parseGIF(arrayBuffer);
-      const frames = decompressFrames(gif, true);
-      
-      if (frames.length === 0) return;
-      
-      const frame = frames[0];
-      const imageData = ctx.createImageData(frame.dims.width, frame.dims.height);
-      imageData.data.set(frame.patch);
-      
-      // Create temp canvas for the frame
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = gif.lsd.width;
-      tempCanvas.height = gif.lsd.height;
-      const tempCtx = tempCanvas.getContext('2d')!;
-      
-      const patchCanvas = document.createElement('canvas');
-      patchCanvas.width = frame.dims.width;
-      patchCanvas.height = frame.dims.height;
-      const patchCtx = patchCanvas.getContext('2d')!;
-      patchCtx.putImageData(imageData, 0, 0);
-      tempCtx.drawImage(patchCanvas, frame.dims.left, frame.dims.top);
-      
-      // Draw to main canvas scaled up
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.imageSmoothingEnabled = false;
-      const offsetX = Math.floor((canvas.width - gif.lsd.width * 2) / 2);
-      const offsetY = Math.floor((canvas.height - gif.lsd.height * 2) / 2);
-      ctx.drawImage(tempCanvas, offsetX, offsetY, gif.lsd.width * 2, gif.lsd.height * 2);
-    } catch (error) {
-      console.error(`Failed to load GIF thumbnail for ${skin.id}:`, error);
-    }
-  }
-  
-  /** Load first frame from PNG spritesheet */
-  function loadPngThumbnail(skin: SkinConfig, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
+    const frameWidth = skin.frameWidth ?? 48;
+    const frameHeight = skin.frameHeight ?? 48;
+    const basePath = getSkinAssetPath(skin);
+    
     const img = new Image();
-    img.src = `./assets/skins/${skin.folder}/idle.png`;
+    img.src = `./${basePath}/idle.png`;
     
     img.onload = () => {
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Draw first 48x48 frame, scaled up
       ctx.imageSmoothingEnabled = false;
+      
+      // Calculate scale to fit canvas while maintaining aspect ratio
+      const scaleX = canvas.width / frameWidth;
+      const scaleY = canvas.height / frameHeight;
+      const scale = Math.min(scaleX, scaleY);
+      
+      const destWidth = frameWidth * scale;
+      const destHeight = frameHeight * scale;
+      const offsetX = (canvas.width - destWidth) / 2;
+      const offsetY = (canvas.height - destHeight) / 2;
+      
+      // Draw first frame, scaled to fit canvas
       ctx.drawImage(
         img,
-        0, 0, 48, 48,  // Source: first frame
-        0, 0, canvas.width, canvas.height  // Dest: fill canvas
+        0, 0, frameWidth, frameHeight,  // Source: first frame
+        offsetX, offsetY, destWidth, destHeight  // Dest: centered in canvas
       );
     };
   }
@@ -131,12 +108,20 @@
           type="button"
         >
           <div class="skin-preview-container">
-            <canvas 
-              bind:this={canvasRefs[skin.id]}
-              width="96"
-              height="96"
-              class="skin-preview"
-            ></canvas>
+            {#if hasPreview[skin.id]}
+              <img 
+                src={getSkinPreviewPath(skin)}
+                alt={skin.name}
+                class="skin-preview-img"
+              />
+            {:else}
+              <canvas 
+                bind:this={canvasRefs[skin.id]}
+                width="96"
+                height="96"
+                class="skin-preview"
+              ></canvas>
+            {/if}
           </div>
           <span class="skin-name">{skin.name}</span>
         </button>
@@ -256,6 +241,13 @@
   .skin-preview {
     width: 100%;
     height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .skin-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     image-rendering: pixelated;
   }
 
