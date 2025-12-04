@@ -95,7 +95,7 @@ export function createAnimationsForTexture(scene: Phaser.Scene, textureKey: stri
 /**
  * Get ordered list of item IDs for building layers
  */
-function getOrderedItemIds(selection: ModularCharacterSelection): string[] {
+export function getOrderedItemIds(selection: ModularCharacterSelection): string[] {
   const itemIds: string[] = [];
 
   // Build in layer order: skins -> clothing (no hats) -> hair

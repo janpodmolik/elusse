@@ -27,10 +27,9 @@ import { type ModularCharacterSelection } from '../../data/modularConfig';
 import { getSavedCharacterSelection } from '../ModularPlayer';
 import {
   preloadModularCharacter,
-  buildModularCharacter,
   MODULAR_SCALE,
-  type BuiltCharacter,
 } from '../shared/ModularCharacterBuilder';
+import { ModularCharacterVisual } from '../../entities/ModularCharacterVisual';
 
 // Selection highlight color - Green for player (from centralized colors)
 const SELECTION_TINT = SELECTION_COLORS.PLAYER.hex;
@@ -44,7 +43,7 @@ const SELECTION_TINT = SELECTION_COLORS.PLAYER.hex;
 export class BuilderPlayerController {
   private scene: Phaser.Scene;
   private player!: Phaser.GameObjects.Sprite | Phaser.GameObjects.Container;
-  private modularCharacter: BuiltCharacter | null = null;
+  private modularCharacter: ModularCharacterVisual | null = null;
   private worldWidth: number;
   private worldHeight: number;
   private unsubscribers: Array<() => void> = [];
@@ -119,7 +118,7 @@ export class BuilderPlayerController {
     // No need to recalculate here
     
     // Use shared builder - static display, facing right
-    this.modularCharacter = buildModularCharacter(
+    this.modularCharacter = new ModularCharacterVisual(
       this.scene,
       startX,
       startY,
@@ -131,7 +130,7 @@ export class BuilderPlayerController {
       }
     );
     
-    const container = this.modularCharacter.container;
+    const container = this.modularCharacter;
     container.setDepth(PLAYER_SPRITE.DEPTH);
     container.setData('isPlayer', true);
     

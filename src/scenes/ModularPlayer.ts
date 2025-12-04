@@ -4,7 +4,7 @@
  * Renders multiple sprite layers (skins, clothing, hair, hats) synchronized
  * together to create a customized character.
  * 
- * Uses shared ModularCharacterBuilder for consistent rendering.
+ * Uses shared ModularCharacterVisual for consistent rendering.
  * Implements IPlayer interface for unified player abstraction.
  */
 
@@ -27,10 +27,9 @@ import {
 } from '../entities';
 import {
   preloadModularCharacter,
-  buildModularCharacter,
   MODULAR_SCALE,
-  type BuiltCharacter,
 } from './shared/ModularCharacterBuilder';
+import { ModularCharacterVisual } from '../entities/ModularCharacterVisual';
 
 type AnimationState = 'idle' | 'running';
 
@@ -96,7 +95,7 @@ export function fromSaveData(data: CharacterSaveData): ModularCharacterSelection
 }
 
 export class ModularPlayer extends Phaser.GameObjects.Container implements IPlayer {
-  private character: BuiltCharacter | null = null;
+  private character: ModularCharacterVisual | null = null;
   private selection: ModularCharacterSelection;
   private animState: AnimationState = 'idle';
   private hasNotifiedMovement: boolean = false;
@@ -249,7 +248,7 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
     }
     
     // Build using shared utility - animated, facing right
-    this.character = buildModularCharacter(
+    this.character = new ModularCharacterVisual(
       this.scene,
       0, 0, // Position at container origin
       this.selection,
@@ -262,7 +261,7 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
     );
     
     // Add the character container as a child of this container
-    this.add(this.character.container);
+    this.add(this.character);
     this.currentFacing = 'right';
   }
   
