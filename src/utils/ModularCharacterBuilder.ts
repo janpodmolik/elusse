@@ -28,7 +28,7 @@ import {
 } from '../data/modularConfig';
 
 // Default scale for modular characters (matching legacy player size)
-export const MODULAR_SCALE = 3;
+export const MODULAR_SCALE = 3.5;
 
 /**
  * Preload all textures needed for a character selection

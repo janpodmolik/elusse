@@ -13,6 +13,7 @@ export interface SkinConfig {
   variant?: string;     // Subfolder for sprite variant (e.g., 'basic')
   frameWidth?: number;  // Sprite frame width (default: 48)
   frameHeight?: number; // Sprite frame height (default: 48)
+  scale?: number;       // Custom scale multiplier (overrides automatic calculation based on TARGET_PLAYER_HEIGHT)
   facingLeft?: boolean; // True if sprite faces left by default (inverts flipX logic)
   frameRates?: {        // Optional frame rate overrides
     idle?: number;
@@ -40,6 +41,9 @@ export function getSkinAssetPath(skin: SkinConfig): string {
  * Get the scale factor for a skin to achieve TARGET_PLAYER_HEIGHT
  */
 export function getSkinScale(skin: SkinConfig): number {
+  if (skin.scale !== undefined) {
+    return skin.scale;
+  }
   const frameHeight = skin.frameHeight ?? DEFAULT_FRAME_HEIGHT;
   return TARGET_PLAYER_HEIGHT / frameHeight;
 }
