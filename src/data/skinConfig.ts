@@ -18,6 +18,8 @@ export interface SkinConfig {
   frameRates?: {        // Optional frame rate overrides
     idle?: number;
     run?: number;
+    jump?: number;
+    fall?: number;
   };
 }
 

@@ -2,7 +2,7 @@ const Aseprite = require('ase-parser');
 const fs = require('fs');
 const path = require('path');
 
-const asePath = path.join(__dirname, '../public/assets/skins/succubus/animations.ase');
+const asePath = path.join(__dirname, '../public/assets/skins/static/succubus/animations.ase');
 const buff = fs.readFileSync(asePath);
 const aseFile = new Aseprite(buff, 'succubus.ase');
 

@@ -31,7 +31,7 @@ import {
 } from '../utils/ModularCharacterBuilder';
 import { ModularCharacterVisual } from './ModularCharacterVisual';
 
-type AnimationState = 'idle' | 'running';
+type AnimationState = 'idle' | 'running' | 'jumping' | 'falling';
 
 export class ModularPlayer extends Phaser.GameObjects.Container implements IPlayer {
   private character: ModularCharacterVisual | null = null;
@@ -216,8 +216,10 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
    */
   update() {
     const input = this.inputController.getInputState();
-    const { left, right } = input;
+    const body = this.body as Phaser.Physics.Arcade.Body;
     
+    if (!body) return;
+
     // Track first input
     if (this.inputController.hasAnyInput() && !this.hasReceivedInput) {
       this.hasReceivedInput = true;
@@ -229,22 +231,38 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
       hasPlayerMoved.set(true);
     }
     
-    // Movement
-    if (left) {
-      this.velocityX = -MOVEMENT_CONFIG.SPEED;
+    // Horizontal Movement
+    if (input.left) {
+      body.setVelocityX(-MOVEMENT_CONFIG.SPEED);
       this.setFacing('left');
-      this.animState = 'running';
-    } else if (right) {
-      this.velocityX = MOVEMENT_CONFIG.SPEED;
+    } else if (input.right) {
+      body.setVelocityX(MOVEMENT_CONFIG.SPEED);
       this.setFacing('right');
-      this.animState = 'running';
     } else {
-      this.velocityX = 0;
-      this.animState = 'idle';
+      body.setVelocityX(0);
+    }
+
+    // Jumping
+    if (input.jump && body.blocked.down) {
+      body.setVelocityY(MOVEMENT_CONFIG.JUMP_SPEED);
     }
     
-    // Apply movement
-    this.x += this.velocityX * (this.scene.game.loop.delta / 1000);
+    // Determine animation state
+    if (!body.blocked.down) {
+      // In air
+      if (body.velocity.y < 0) {
+        this.animState = 'jumping';
+      } else {
+        this.animState = 'falling';
+      }
+    } else {
+      // On ground
+      if (input.left || input.right) {
+        this.animState = 'running';
+      } else {
+        this.animState = 'idle';
+      }
+    }
     
     // Play animation
     switch (this.animState) {
@@ -253,6 +271,12 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
         break;
       case 'running':
         this.playAnimation('run');
+        break;
+      case 'jumping':
+        this.playAnimation('jump');
+        break;
+      case 'falling':
+        this.playAnimation('fall');
         break;
     }
   }

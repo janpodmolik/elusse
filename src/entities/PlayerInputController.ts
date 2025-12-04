@@ -15,7 +15,7 @@ import { isPointerOverUI } from '../utils/inputUtils';
 // Touch control constants
 export const TOUCH_CONFIG = {
   THRESHOLD_X: 20,
-  THRESHOLD_Y: 80,
+  THRESHOLD_Y: 150,
   // UI ignore zones
   LANGUAGE_BUTTON: { width: 120, height: 60 },
   SKIN_BUTTON: { width: 120, height: 60, yOffset: 60 },
@@ -24,11 +24,13 @@ export const TOUCH_CONFIG = {
 // Movement constants
 export const MOVEMENT_CONFIG = {
   SPEED: 350,
+  JUMP_SPEED: -600,
 } as const;
 
 export interface InputState {
   left: boolean;
   right: boolean;
+  jump: boolean;
 }
 
 export interface PlayerInputControllerOptions {
@@ -46,13 +48,17 @@ export class PlayerInputController {
   // Keyboard controls - arrow keys
   private keyLeft?: Phaser.Input.Keyboard.Key;
   private keyRight?: Phaser.Input.Keyboard.Key;
+  private keyUp?: Phaser.Input.Keyboard.Key;
+  private keySpace?: Phaser.Input.Keyboard.Key;
   // WASD
   private keyA?: Phaser.Input.Keyboard.Key;
   private keyD?: Phaser.Input.Keyboard.Key;
+  private keyW?: Phaser.Input.Keyboard.Key;
   
   // Touch state
   private touchLeft: boolean = false;
   private touchRight: boolean = false;
+  private touchJump: boolean = false;
   
   // Touch handlers for cleanup
   private touchHandlers?: {
@@ -78,9 +84,12 @@ export class PlayerInputController {
       // Arrow keys
       this.keyLeft = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT, false);
       this.keyRight = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT, false);
+      this.keyUp = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP, false);
+      this.keySpace = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE, false);
       // WASD
       this.keyA = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A, false);
       this.keyD = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D, false);
+      this.keyW = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W, false);
     }
   }
 
@@ -95,6 +104,7 @@ export class PlayerInputController {
       if (get(frameClickBlocked)) {
         this.touchLeft = false;
         this.touchRight = false;
+        this.touchJump = false;
         return;
       }
       
@@ -118,7 +128,9 @@ export class PlayerInputController {
       const camera = scene.cameras.main;
       const playerPos = this.getPlayerPosition();
       const playerScreenX = playerPos.x - camera.scrollX;
+      const playerScreenY = playerPos.y - camera.scrollY;
       const deltaX = x - playerScreenX;
+      const deltaY = y - playerScreenY;
 
       // Determine movement direction
       if (deltaX < -TOUCH_CONFIG.THRESHOLD_X) {
@@ -130,6 +142,13 @@ export class PlayerInputController {
       } else {
         this.touchLeft = false;
         this.touchRight = false;
+      }
+
+      // Determine jump (click above player)
+      if (deltaY < -TOUCH_CONFIG.THRESHOLD_Y) {
+        this.touchJump = true;
+      } else {
+        this.touchJump = false;
       }
     };
 
@@ -150,6 +169,7 @@ export class PlayerInputController {
     const pointerupHandler = () => {
       this.touchLeft = false;
       this.touchRight = false;
+      this.touchJump = false;
     };
 
     scene.input.on('pointerdown', pointerdownHandler);
@@ -170,8 +190,9 @@ export class PlayerInputController {
   getInputState(): InputState {
     const left = this.keyA?.isDown || this.keyLeft?.isDown || this.touchLeft || false;
     const right = this.keyD?.isDown || this.keyRight?.isDown || this.touchRight || false;
+    const jump = this.keySpace?.isDown || this.keyUp?.isDown || this.keyW?.isDown || this.touchJump || false;
     
-    return { left, right };
+    return { left, right, jump };
   }
 
   /**
@@ -179,7 +200,7 @@ export class PlayerInputController {
    */
   hasAnyInput(): boolean {
     const state = this.getInputState();
-    return state.left || state.right;
+    return state.left || state.right || state.jump;
   }
 
   /**

@@ -32,6 +32,14 @@ export function preloadSkins(scene: Phaser.Scene): void {
       frameWidth,
       frameHeight,
     });
+    scene.load.spritesheet(`${skin.id}-jump`, `${basePath}/jump.png`, {
+      frameWidth,
+      frameHeight,
+    });
+    scene.load.spritesheet(`${skin.id}-fall`, `${basePath}/fall.png`, {
+      frameWidth,
+      frameHeight,
+    });
   });
 }
 
@@ -55,17 +63,29 @@ export function createSkinAnimations(scene: Phaser.Scene, skin: SkinConfig): voi
   if (scene.anims.exists(`${skinId}-run`)) {
     scene.anims.remove(`${skinId}-run`);
   }
+  if (scene.anims.exists(`${skinId}-jump`)) {
+    scene.anims.remove(`${skinId}-jump`);
+  }
+  if (scene.anims.exists(`${skinId}-fall`)) {
+    scene.anims.remove(`${skinId}-fall`);
+  }
   
   // Get texture to determine frame count
   const idleTexture = scene.textures.get(`${skinId}-idle`);
   const runTexture = scene.textures.get(`${skinId}-run`);
+  const jumpTexture = scene.textures.get(`${skinId}-jump`);
+  const fallTexture = scene.textures.get(`${skinId}-fall`);
   
   const idleFrameCount = idleTexture.frameTotal - 1; // Subtract 1 for __BASE frame
   const runFrameCount = runTexture.frameTotal - 1;
+  const jumpFrameCount = jumpTexture.key !== '__MISSING' ? jumpTexture.frameTotal - 1 : 0;
+  const fallFrameCount = fallTexture.key !== '__MISSING' ? fallTexture.frameTotal - 1 : 0;
   
   // Default frame rates
   const idleFps = skin.frameRates?.idle ?? 6;
   const runFps = skin.frameRates?.run ?? 12;
+  const jumpFps = skin.frameRates?.jump ?? 10;
+  const fallFps = skin.frameRates?.fall ?? 10;
   
   // Idle animation
   scene.anims.create({
@@ -82,6 +102,26 @@ export function createSkinAnimations(scene: Phaser.Scene, skin: SkinConfig): voi
     frameRate: runFps,
     repeat: -1
   });
+
+  // Jump animation
+  if (jumpFrameCount > 0) {
+    scene.anims.create({
+      key: `${skinId}-jump`,
+      frames: scene.anims.generateFrameNumbers(`${skinId}-jump`, { start: 0, end: jumpFrameCount - 1 }),
+      frameRate: jumpFps,
+      repeat: -1
+    });
+  }
+
+  // Fall animation
+  if (fallFrameCount > 0) {
+    scene.anims.create({
+      key: `${skinId}-fall`,
+      frames: scene.anims.generateFrameNumbers(`${skinId}-fall`, { start: 0, end: fallFrameCount - 1 }),
+      frameRate: fallFps,
+      repeat: -1
+    });
+  }
 }
 
 /**

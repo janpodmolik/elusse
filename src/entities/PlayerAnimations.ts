@@ -11,7 +11,7 @@
 import Phaser from 'phaser';
 import { DEFAULT_SKIN_ID } from '../data/skinConfig';
 
-export type AnimationState = 'idle' | 'running';
+export type AnimationState = 'idle' | 'running' | 'jumping' | 'falling';
 
 /**
  * PlayerAnimations - Manager for player animation playback
@@ -52,14 +52,14 @@ export class PlayerAnimations {
   /**
    * Get animation key for current skin
    */
-  getAnimationKey(type: 'idle' | 'run'): string {
+  getAnimationKey(type: 'idle' | 'run' | 'jump' | 'fall'): string {
     return `${this.currentSkinId}-${type}`;
   }
 
   /**
    * Play animation on sprite
    */
-  play(sprite: Phaser.GameObjects.Sprite, type: 'idle' | 'run'): void {
+  play(sprite: Phaser.GameObjects.Sprite, type: 'idle' | 'run' | 'jump' | 'fall'): void {
     const key = this.getAnimationKey(type);
     
     // Skip if already playing this animation
@@ -69,6 +69,15 @@ export class PlayerAnimations {
     
     // Check if animation exists before playing
     if (!this.scene.anims.exists(key)) {
+      // Fallback for jump/fall if they don't exist (e.g. for some skins)
+      if (type === 'jump' || type === 'fall') {
+        // Try to play idle or run instead if jump/fall missing
+        const fallbackKey = this.getAnimationKey('idle');
+        if (this.scene.anims.exists(fallbackKey)) {
+           sprite.play(fallbackKey);
+           return;
+        }
+      }
       console.warn(`[PlayerAnimations] Animation not found: ${key}`);
       return;
     }
@@ -86,8 +95,8 @@ export class PlayerAnimations {
     // Get current animation type and replay with new skin
     const currentAnim = sprite.anims.currentAnim?.key;
     if (currentAnim) {
-      // Extract animation type (e.g., "idle", "run")
-      const animType = currentAnim.replace(`${oldSkinId}-`, '') as 'idle' | 'run';
+      // Extract animation type (e.g., "idle", "run", "jump", "fall")
+      const animType = currentAnim.replace(`${oldSkinId}-`, '') as 'idle' | 'run' | 'jump' | 'fall';
       const newAnimKey = `${newSkinId}-${animType}`;
       
       if (this.scene.anims.exists(newAnimKey)) {

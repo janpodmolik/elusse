@@ -144,8 +144,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
    * Play animation by name
    */
   playAnimation(animName: string): void {
-    if (animName === 'idle' || animName === 'run') {
-      this.animations.play(this, animName);
+    if (animName === 'idle' || animName === 'run' || animName === 'jump' || animName === 'fall') {
+      this.animations.play(this, animName as any);
     }
   }
   
@@ -216,14 +216,33 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
     if (input.left) {
       this.setVelocityX(-MOVEMENT_CONFIG.SPEED);
       this.setFlipX(!facingLeft); // Normal: true, FacingLeft: false
-      this.animState = 'running';
     } else if (input.right) {
       this.setVelocityX(MOVEMENT_CONFIG.SPEED);
       this.setFlipX(facingLeft);  // Normal: false, FacingLeft: true
-      this.animState = 'running';
     } else {
       this.setVelocityX(0);
-      this.animState = 'idle';
+    }
+
+    // Handle jumping
+    if (input.jump && this.body?.blocked.down) {
+      this.setVelocityY(MOVEMENT_CONFIG.JUMP_SPEED);
+    }
+
+    // Determine animation state
+    if (!this.body?.blocked.down) {
+      // In air
+      if (this.body!.velocity.y < 0) {
+        this.animState = 'jumping';
+      } else {
+        this.animState = 'falling';
+      }
+    } else {
+      // On ground
+      if (input.left || input.right) {
+        this.animState = 'running';
+      } else {
+        this.animState = 'idle';
+      }
     }
 
     // Play appropriate animation
@@ -233,6 +252,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
         break;
       case 'running':
         this.playAnimation('run');
+        break;
+      case 'jumping':
+        this.playAnimation('jump');
+        break;
+      case 'falling':
+        this.playAnimation('fall');
         break;
     }
   }
