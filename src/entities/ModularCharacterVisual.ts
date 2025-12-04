@@ -8,7 +8,7 @@ import {
 import {
   getOrderedItemIds,
   MODULAR_SCALE
-} from '../scenes/shared/ModularCharacterBuilder';
+} from '../utils/ModularCharacterBuilder';
 
 export interface ModularCharacterVisualOptions {
   /** Play animation or show static frame (default: false = static) */
@@ -85,7 +85,7 @@ export class ModularCharacterVisual extends Phaser.GameObjects.Container {
     // Get ordered items
     const itemIds = getOrderedItemIds(this.selection);
 
-    itemIds.forEach(itemId => {
+    itemIds.forEach((itemId: string) => {
       const item = getItemById(itemId);
       if (!item) return;
 

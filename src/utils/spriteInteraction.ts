@@ -9,7 +9,7 @@
 import Phaser from 'phaser';
 import { isPointerOverUI } from './inputUtils';
 import { setDraggingInBuilder, gridSnappingEnabled, isPinchingInBuilder } from '../stores/builderStores';
-import { GRID_SIZE } from '../scenes/builder/builderConstants';
+import { GRID_SIZE } from '../managers/builder/builderConstants';
 import { get } from 'svelte/store';
 
 export interface DragCallbacks {

@@ -5,7 +5,7 @@
  */
 
 import { mount } from 'svelte';
-import CharacterBuilder from './ui/CharacterBuilder.svelte';
+import CharacterBuilder from './ui/builder/CharacterBuilder.svelte';
 
 // Wait for DOM to be ready
 const builderRoot = document.getElementById('builder-root');

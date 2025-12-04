@@ -11,7 +11,7 @@ import Phaser from 'phaser';
 import {
   type ModularCharacterSelection,
 } from '../data/modularConfig';
-import { preloadModularCharacter } from './shared/ModularCharacterBuilder';
+import { preloadModularCharacter } from '../utils/ModularCharacterBuilder';
 import { ModularCharacterVisual } from '../entities/ModularCharacterVisual';
 
 export default class CharacterPreviewScene extends Phaser.Scene {

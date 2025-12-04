@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { PlacedItemManager } from './PlacedItemManager';
-import { GameFrameManager } from './GameFrameManager';
-import { GameSocialManager } from './GameSocialManager';
+import { PlacedItemManager } from '../managers/PlacedItemManager';
+import { GameFrameManager } from '../managers/GameFrameManager';
+import { GameSocialManager } from '../managers/GameSocialManager';
 import { dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
 import { 
@@ -13,8 +13,8 @@ import {
 } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
 import type { IPlayer } from '../entities';
-import { GamePlayerManager } from './game/GamePlayerManager';
-import { MapManager } from './game/MapManager';
+import { GamePlayerManager } from '../managers/game/GamePlayerManager';
+import { MapManager } from '../managers/game/MapManager';
 import type { MapConfig } from '../data/mapConfig';
 
 export class GameScene extends Phaser.Scene {
@@ -301,8 +301,8 @@ export class GameScene extends Phaser.Scene {
     this.checkDialogZonesForPosition(playerX);
 
     // Update all parallax layers tiling for infinite scrolling effect
-    if (this.parallaxLayers) {
-      updateParallaxTiling(this.parallaxLayers, this.cameras.main);
+    if (this.mapManager) {
+      this.mapManager.update(this.cameras.main);
     }
   }
   

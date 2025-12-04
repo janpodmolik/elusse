@@ -5,6 +5,8 @@
 
 export { PlayerAnimations, type AnimationState } from './PlayerAnimations';
 export { PlayerInputController, TOUCH_CONFIG, MOVEMENT_CONFIG, type InputState, type PlayerInputControllerOptions } from './PlayerInputController';
+export { Player } from './Player';
+export { ModularPlayer } from './ModularPlayer';
 
 // ============================================================================
 // IPlayer Interface - Common abstraction for all player types

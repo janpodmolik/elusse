@@ -15,7 +15,7 @@
 import { DEPTH_LAYERS } from './depthLayers';
 import { skinManager, getSkinScale, getSkinFrameDimensions, TARGET_PLAYER_HEIGHT, type SkinConfig, AVAILABLE_SKINS } from '../data/skinConfig';
 import { MODULAR_FRAME } from '../data/modularConfig';
-import { MODULAR_SCALE } from '../scenes/shared/ModularCharacterBuilder';
+import { MODULAR_SCALE } from '../utils/ModularCharacterBuilder';
 
 // ============================================================================
 // Sprite Configuration (static/default values for reference)

@@ -1,21 +1,21 @@
 import Phaser from 'phaser';
-import { loadBackgroundAssets } from './BackgroundLoader';
-import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from './ParallaxHelper';
+import { loadBackgroundAssets } from '../utils/BackgroundLoader';
+import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from '../utils/ParallaxHelper';
 import { backgroundManager } from '../data/background';
 import { preloadSkins, createAllSkinAnimations } from '../utils/skinLoader';
 import type { MapConfig } from '../data/mapConfig';
-import { BuilderCameraController } from './builder/BuilderCameraController';
-import { BuilderPlayerController } from './builder/BuilderPlayerController';
-import { BuilderGridOverlay } from './builder/BuilderGridOverlay';
-import { BuilderItemsController } from './builder/BuilderItemsController';
-import { BuilderFramesController } from './builder/BuilderFramesController';
-import { BuilderSocialsController } from './builder/BuilderSocialsController';
-import { DialogZoneRenderer } from './builder/DialogZoneRenderer';
-import { PlacedItemManager } from './PlacedItemManager';
-import { GROUND_HEIGHT } from './builder/builderConstants';
-import { GroundManager } from './shared/GroundManager';
+import { BuilderCameraController } from '../managers/builder/BuilderCameraController';
+import { BuilderPlayerController } from '../managers/builder/BuilderPlayerController';
+import { BuilderGridOverlay } from '../managers/builder/BuilderGridOverlay';
+import { BuilderItemsController } from '../managers/builder/BuilderItemsController';
+import { BuilderFramesController } from '../managers/builder/BuilderFramesController';
+import { BuilderSocialsController } from '../managers/builder/BuilderSocialsController';
+import { DialogZoneRenderer } from '../managers/builder/DialogZoneRenderer';
+import { PlacedItemManager } from '../managers/PlacedItemManager';
+import { GROUND_HEIGHT } from '../managers/builder/builderConstants';
+import { GroundManager } from '../managers/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { updateCameraInfo } from '../stores/builderStores';
+import { updateCameraInfo } from '../stores/gameStores';
 import { EventBus, EVENTS, type MinimapNavigateEvent } from '../events/EventBus';
 
 /**

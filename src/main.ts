@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
 import { BuilderScene } from './scenes/BuilderScene';
 import { mount } from 'svelte';
-import GameUI from './ui/GameUI.svelte';
+import GameUI from './ui/game/GameUI.svelte';
 import { currentLanguage, currentSkin, currentBackground, isTouchDevice, showControlsDialog } from './stores';
 import { localization } from './data/localization';
 import { skinManager } from './data/skinConfig';
