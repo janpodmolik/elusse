@@ -71,10 +71,14 @@ export class MapManager {
   /**
    * Create ground with physics
    */
-  public createGround(): { ground: Phaser.GameObjects.Rectangle; groundY: number } {
+  public createGround(): { ground: Phaser.GameObjects.Rectangle; groundY: number; groundHeight: number } {
+    const bgConfig = backgroundManager.getCurrentConfig();
+    const groundHeight = bgConfig.groundHeight ?? 40;
+
     const result = GroundManager.createPhysicsGround(this.scene, {
       worldWidth: this.mapConfig.worldWidth,
       worldHeight: this.mapConfig.worldHeight,
+      height: groundHeight,
     });
     
     this.ground = result.ground;
@@ -83,7 +87,7 @@ export class MapManager {
     // Set world bounds
     this.scene.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
     
-    return result;
+    return { ...result, groundHeight };
   }
 
   /**

@@ -98,8 +98,8 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
   /**
    * Get the Y coordinate for standing on ground
    */
-  getGroundY(worldHeight: number): number {
-    return getModularPlayerGroundY(worldHeight);
+  getGroundY(worldHeight: number, groundHeight?: number): number {
+    return getModularPlayerGroundY(worldHeight, groundHeight);
   }
   
   /**

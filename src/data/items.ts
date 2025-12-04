@@ -24,28 +24,28 @@ export const ITEMS: ItemDefinition[] = [
     key: 'tent',
     name: 'Tent',
     path: 'assets/ui/tent.png',
-    scale: 6,
+    scale: 5,
     category: 'structures'
   },
   {
     key: 'lamp',
     name: 'Lamp',
     path: 'assets/ui/lamp.png',
-    scale: 8,
+    scale: 5,
     category: 'props'
   },
   {
     key: 'sign_left',
     name: 'Sign ←',
     path: 'assets/ui/sign_left.png',
-    scale: 7,
+    scale: 5,
     category: 'signs'
   },
   {
     key: 'sign_right',
     name: 'Sign →',
     path: 'assets/ui/sign_right.png',
-    scale: 7,
+    scale: 5,
     category: 'signs'
   },
   {
@@ -60,7 +60,7 @@ export const ITEMS: ItemDefinition[] = [
     key: 'stone_1',
     name: 'Stone 1',
     path: 'assets/ui/stone_1.png',
-    scale: 5,
+    scale: 4,
     category: 'nature',
     supportsPhysics: true
   },

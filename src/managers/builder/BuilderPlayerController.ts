@@ -11,7 +11,9 @@ import {
   isPlayerBelowGround,
   isModularPlayerBelowGround,
   STATIC_SELECTION_RATIOS,
+  GROUND_HEIGHT,
 } from '../../constants/playerConstants';
+import { backgroundManager } from '../../data/background';
 import {
   DRAG_MARGIN_HORIZONTAL,
   DRAG_MARGIN_TOP,
@@ -74,14 +76,16 @@ export class BuilderPlayerController {
    * Create and setup player sprite
    */
   create(startX: number, startY: number): Phaser.GameObjects.Sprite | Phaser.GameObjects.Container {
+    const groundHeight = backgroundManager.getCurrentConfig().groundHeight ?? GROUND_HEIGHT;
+
     if (this.useModular && this.modularSelection) {
       // Use modular-specific ground calculation from the start
-      const modularGroundY = getModularPlayerGroundY(this.worldHeight);
+      const modularGroundY = getModularPlayerGroundY(this.worldHeight, groundHeight);
       const safeY = Math.min(startY, modularGroundY);
       return this.createModularPlayer(startX, safeY);
     } else {
       // Use static player ground calculation
-      const safeY = Math.min(startY, getPlayerGroundY(this.worldHeight));
+      const safeY = Math.min(startY, getPlayerGroundY(this.worldHeight, groundHeight));
       return this.createStaticPlayer(startX, safeY);
     }
   }
@@ -208,16 +212,17 @@ export class BuilderPlayerController {
           this.scene.data.set('isDraggingObject', false);
           
           let finalY = this.player.y;
+          const groundHeight = backgroundManager.getCurrentConfig().groundHeight ?? GROUND_HEIGHT;
           
           // Use type-specific ground check
           if (this.useModular) {
-            if (isModularPlayerBelowGround(this.player.y, this.worldHeight)) {
-              finalY = getModularPlayerGroundY(this.worldHeight);
+            if (isModularPlayerBelowGround(this.player.y, this.worldHeight, groundHeight)) {
+              finalY = getModularPlayerGroundY(this.worldHeight, groundHeight);
               this.player.setY(finalY);
             }
           } else {
-            if (isPlayerBelowGround(this.player.y, this.worldHeight)) {
-              finalY = getPlayerGroundY(this.worldHeight);
+            if (isPlayerBelowGround(this.player.y, this.worldHeight, groundHeight)) {
+              finalY = getPlayerGroundY(this.worldHeight, groundHeight);
               this.player.setY(finalY);
             }
           }

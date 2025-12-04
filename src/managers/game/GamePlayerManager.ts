@@ -61,10 +61,10 @@ export class GamePlayerManager {
   /**
    * Create the player entity and setup collisions
    */
-  public createPlayer(mapConfig: MapConfig, ground: Phaser.GameObjects.Rectangle): IPlayer {
+  public createPlayer(mapConfig: MapConfig, ground: Phaser.GameObjects.Rectangle, groundHeight?: number): IPlayer {
     if (this.useModularPlayer && this.savedCharacterSelection) {
       // Use modular character - calculate proper Y for center origin
-      const modularGroundY = getModularPlayerGroundY(mapConfig.worldHeight);
+      const modularGroundY = getModularPlayerGroundY(mapConfig.worldHeight, groundHeight);
       const playerY = Math.min(mapConfig.playerStartY, modularGroundY);
       
       const modularPlayer = new ModularPlayer(
@@ -80,7 +80,7 @@ export class GamePlayerManager {
       GroundManager.addPlayerCollision(this.scene, modularPlayer, ground);
     } else {
       // Use legacy player
-      const staticGroundY = getPlayerGroundY(mapConfig.worldHeight);
+      const staticGroundY = getPlayerGroundY(mapConfig.worldHeight, groundHeight);
       const playerY = Math.min(mapConfig.playerStartY, staticGroundY);
       
       const staticPlayer = new Player(this.scene, mapConfig.playerStartX, playerY);

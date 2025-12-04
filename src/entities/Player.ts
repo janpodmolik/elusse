@@ -94,8 +94,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayer {
   /**
    * Get the Y coordinate for standing on ground
    */
-  getGroundY(worldHeight: number): number {
-    return getPlayerGroundY(worldHeight);
+  getGroundY(worldHeight: number, groundHeight?: number): number {
+    return getPlayerGroundY(worldHeight, groundHeight);
   }
   
   /**

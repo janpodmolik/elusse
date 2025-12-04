@@ -9,6 +9,8 @@ export interface BackgroundConfig {
   scrollFactors: number[];
   /** Number of layers from the end that should be rendered in foreground (in front of player). Defaults to 0 */
   foregroundLayers?: number;
+  /** Height of ground from bottom of screen. Defaults to 40 if not specified. */
+  groundHeight?: number;
 }
 
 export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
@@ -17,55 +19,55 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     folder: 'forest_blue',
     // forest_blue has layers 1-6 (6 parallax layers)
     scrollFactors: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
-  },
-  {
-    name: 'FOREST BIRCH',
-    folder: 'forest_birch',
-    // forest_birch has layers 1-5 (5 parallax layers)
-    scrollFactors: [0.75, 0.8, 0.85, 0.95, 1.0],
-    foregroundLayers: 1,
-  },
-  {
-    name: 'FOREST FANTASY',
-    folder: 'forest_fantasy',
-    // forest_fantasy has layers 1-7 (7 parallax layers, last 2 are foreground)
-    scrollFactors: [0.75, 0.8, 0.85, 0.9, 1.0, 1.0, 1.0],
-    foregroundLayers: 2,
-  },
-  {
-    name: 'FOREST GOLD',
-    folder: 'forest_gold',
-    // forest_gold has layers 1-6 (6 parallax layers, last 2 are foreground)
-    scrollFactors: [0.75, 0.8, 0.85, 1.0, 1.0, 1.0],
-    foregroundLayers: 2,
-  },
-  {
-    name: 'FOREST JUNGLE',
-    folder: 'forest_jungle',
-    // forest_jungle has layers 1-4 (4 parallax layers)
-    scrollFactors: [0.75, 0.8, 0.95, 1.0],
-    foregroundLayers: 1,
+    groundHeight: 40,
   },
   {
     name: 'FOREST SUMMER',
     folder: 'forest_summer',
     // forest_summer has layers 1-5 (5 parallax layers, last 1 is foreground)
-    scrollFactors: [0.75, 0.8, 0.85, 1.0, 1.0],
+    scrollFactors: [0.9, 0.95, 0.975, 1.0, 1.05],
     foregroundLayers: 1,
+    groundHeight: 90,
+  },
+  {
+    name: 'FOREST BIRCH',
+    folder: 'forest_birch',
+    // forest_birch has layers 1-5 (5 parallax layers)
+    scrollFactors: [0.9, 0.95, 0.975, 1.0, 1.05],
+    foregroundLayers: 1,
+    groundHeight: 30,
+  },
+  {
+    name: 'FOREST FANTASY',
+    folder: 'forest_fantasy',
+    // forest_fantasy has layers 1-7 (7 parallax layers, last 2 are foreground)
+    scrollFactors: [0.85, 0.9, 0.95, 0.975, 1.0, 1.05, 1.1],
+    foregroundLayers: 2,
+    groundHeight: 30,
+  },
+  {
+    name: 'FOREST GOLD',
+    folder: 'forest_gold',
+    // forest_gold has layers 1-6 (6 parallax layers, last 2 are foreground)
+    scrollFactors: [0.85, 0.9, 0.95, 1.0, 1.05, 1.1],
+    foregroundLayers: 2,
+    groundHeight: 80,
   },
   {
     name: 'CAVE DARK',
     folder: 'cave_dark',
     // cave_dark has layers 1-7 (7 parallax layers, last 2 are foreground)
-    scrollFactors: [0.7, 0.75, 0.8, 0.85, 0.9, 1.0, 1.0],
+    scrollFactors: [0.85, 0.875, 0.9, 0.925, 0.95, 0.975, 1.05],
     foregroundLayers: 2,
+    groundHeight: 20,
   },
   {
     name: 'FOREST DEAD',
     folder: 'forest_dead',
     // forest_dead has layers 1-6 (6 parallax layers, last 1 is foreground)
-    scrollFactors: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
+    scrollFactors: [0.9, 0.925, 0.95, 0.975, 1.0, 1.05],
     foregroundLayers: 1,
+    groundHeight: 100,
   },
 ];
 

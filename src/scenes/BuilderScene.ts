@@ -95,7 +95,9 @@ export class BuilderScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, this.config.worldWidth, this.config.worldHeight);
 
     // Initialize controllers
-    const groundY = this.config.worldHeight - GROUND_HEIGHT;
+    const bgConfig = backgroundManager.getCurrentConfig();
+    const groundHeight = bgConfig.groundHeight ?? GROUND_HEIGHT;
+    const groundY = this.config.worldHeight - groundHeight;
     
     this.cameraController = new BuilderCameraController(this, this.config.worldWidth, this.config.worldHeight);
     this.playerController = new BuilderPlayerController(this, this.config.worldWidth, this.config.worldHeight);
@@ -173,10 +175,13 @@ export class BuilderScene extends Phaser.Scene {
   }
 
   private createGroundReference(): void {
+    const config = backgroundManager.getCurrentConfig();
+    const groundHeight = config.groundHeight ?? GROUND_HEIGHT;
+
     GroundManager.createVisualGround(this, {
       worldWidth: this.config.worldWidth,
       worldHeight: this.config.worldHeight,
-      height: GROUND_HEIGHT,
+      height: groundHeight,
     });
   }
 

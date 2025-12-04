@@ -63,7 +63,7 @@ export interface IPlayer {
   setPlayerPosition(x: number, y: number): void;
   
   /** Get the Y coordinate for standing on ground */
-  getGroundY(worldHeight: number): number;
+  getGroundY(worldHeight: number, groundHeight?: number): number;
   
   /** Get player type for positioning calculations */
   getPlayerType(): PlayerType;

@@ -113,10 +113,10 @@ export class GameScene extends Phaser.Scene {
       await this.mapManager.setupBackground();
 
       // Create ground with physics
-      const { ground, groundY } = this.mapManager.createGround();
+      const { ground, groundY, groundHeight } = this.mapManager.createGround();
 
       // Create player
-      this.player = this.playerManager.createPlayer(mapConfig, ground);
+      this.player = this.playerManager.createPlayer(mapConfig, ground, groundHeight);
 
       // Initialize placed items system (read-only mode for game scene)
       this.itemManager = new PlacedItemManager(

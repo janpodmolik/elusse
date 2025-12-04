@@ -13,6 +13,7 @@ import {
   GROUND_AREA_LINE_ALPHA,
   OVERLAY_DEPTH
 } from './builderConstants';
+import { backgroundManager } from '../../data/background';
 
 /**
  * BuilderGridOverlay - Manages grid visualization for builder mode
@@ -65,7 +66,8 @@ export class BuilderGridOverlay {
     }
 
     // Highlight ground level
-    const groundY = this.worldHeight - GROUND_HEIGHT;
+    const groundHeight = backgroundManager.getCurrentConfig().groundHeight ?? GROUND_HEIGHT;
+    const groundY = this.worldHeight - groundHeight;
     this.graphics.lineStyle(GROUND_LINE_WIDTH, GROUND_LINE_COLOR, GROUND_LINE_ALPHA);
     this.graphics.beginPath();
     this.graphics.moveTo(0, groundY);

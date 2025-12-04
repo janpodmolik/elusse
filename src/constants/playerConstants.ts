@@ -118,16 +118,16 @@ export const GROUND_HEIGHT = 40;
 /**
  * Calculate ground Y position (top of ground area)
  */
-export function getGroundY(worldHeight: number): number {
-  return worldHeight - GROUND_HEIGHT;
+export function getGroundY(worldHeight: number, groundHeight: number = GROUND_HEIGHT): number {
+  return worldHeight - groundHeight;
 }
 
 /**
  * Calculate player Y position so they stand on ground
  * Returns the Y coordinate for player sprite center
  */
-export function getPlayerGroundY(worldHeight: number): number {
-  const groundY = getGroundY(worldHeight);
+export function getPlayerGroundY(worldHeight: number, groundHeight: number = GROUND_HEIGHT): number {
+  const groundY = getGroundY(worldHeight, groundHeight);
   return groundY - PLAYER_SIZE.HALF_HEIGHT;
 }
 
@@ -135,16 +135,16 @@ export function getPlayerGroundY(worldHeight: number): number {
  * Ensure player Y position is not below ground level
  * Returns corrected Y if player would be underground, otherwise returns original Y
  */
-export function clampPlayerY(y: number, worldHeight: number): number {
-  const maxY = getPlayerGroundY(worldHeight);
+export function clampPlayerY(y: number, worldHeight: number, groundHeight: number = GROUND_HEIGHT): number {
+  const maxY = getPlayerGroundY(worldHeight, groundHeight);
   return Math.min(y, maxY);
 }
 
 /**
  * Check if player position is below ground
  */
-export function isPlayerBelowGround(playerY: number, worldHeight: number): boolean {
-  const maxY = getPlayerGroundY(worldHeight);
+export function isPlayerBelowGround(playerY: number, worldHeight: number, groundHeight: number = GROUND_HEIGHT): boolean {
+  const maxY = getPlayerGroundY(worldHeight, groundHeight);
   return playerY > maxY;
 }
 
@@ -159,26 +159,27 @@ export function isPlayerBelowGround(playerY: number, worldHeight: number): boole
  * This is different from static players which use top-left origin (0, 0).
  * 
  * @param worldHeight - Total world height
+ * @param groundHeight - Height of ground from bottom
  * @returns Y coordinate for modular player container center
  */
-export function getModularPlayerGroundY(worldHeight: number): number {
-  const groundY = getGroundY(worldHeight);
+export function getModularPlayerGroundY(worldHeight: number, groundHeight: number = GROUND_HEIGHT): number {
+  const groundY = getGroundY(worldHeight, groundHeight);
   return groundY - MODULAR_PLAYER_SIZE.HALF_HEIGHT;
 }
 
 /**
  * Ensure modular player Y position is not below ground level
  */
-export function clampModularPlayerY(y: number, worldHeight: number): number {
-  const maxY = getModularPlayerGroundY(worldHeight);
+export function clampModularPlayerY(y: number, worldHeight: number, groundHeight: number = GROUND_HEIGHT): number {
+  const maxY = getModularPlayerGroundY(worldHeight, groundHeight);
   return Math.min(y, maxY);
 }
 
 /**
  * Check if modular player position is below ground
  */
-export function isModularPlayerBelowGround(playerY: number, worldHeight: number): boolean {
-  const maxY = getModularPlayerGroundY(worldHeight);
+export function isModularPlayerBelowGround(playerY: number, worldHeight: number, groundHeight: number = GROUND_HEIGHT): boolean {
+  const maxY = getModularPlayerGroundY(worldHeight, groundHeight);
   return playerY > maxY;
 }
 
