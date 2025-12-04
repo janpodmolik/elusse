@@ -28,6 +28,9 @@ export function getCurrentMapConfig(): MapConfig | null {
 
   try {
     const gameScene = gameInstance.scene.getScene(SCENE_KEYS.GAME) as any;
+    if (typeof gameScene.getMapConfig === 'function') {
+      return gameScene.getMapConfig();
+    }
     return gameScene?.mapConfig || null;
   } catch (error) {
     console.error('Failed to get map config:', error);

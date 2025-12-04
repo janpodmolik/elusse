@@ -3,7 +3,7 @@
   import { AVAILABLE_SKINS, skinManager, type SkinConfig, getSkinAssetPath } from '../data/skinConfig';
   import { hasSelectedBackground, currentBackground, currentSkin } from '../stores';
   import { startGameScene } from '../utils/sceneManager';
-  import { getSavedCharacterSelection } from '../scenes/ModularPlayer';
+  import { getSavedCharacterSelection } from '../data/CharacterStorage';
 
   // Special ID for custom modular character
   const CUSTOM_SKIN_ID = 'custom';

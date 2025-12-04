@@ -1,35 +1,34 @@
 import Phaser from 'phaser';
-import { Player } from './Player';
-import { ModularPlayer, getSavedCharacterSelection } from './ModularPlayer';
-import { preloadSkins, createAllSkinAnimations } from '../utils/skinLoader';
-import { backgroundManager } from '../data/background';
-import { loadBackgroundAssets } from './BackgroundLoader';
-import { createParallaxBackground, updateParallaxTiling, type ParallaxLayers } from './ParallaxHelper';
 import { PlacedItemManager } from './PlacedItemManager';
 import { GameFrameManager } from './GameFrameManager';
 import { GameSocialManager } from './GameSocialManager';
-import { loadMapConfig, MapConfig } from '../data/mapConfig';
-import { getBuilderConfig, dialogZones as dialogZonesStore } from '../stores/builderStores';
-import { GroundManager } from './shared/GroundManager';
+import { dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { getModularPlayerGroundY, getPlayerGroundY } from '../constants/playerConstants';
-import { isLoading, setActiveDialogZone, setPlayerScreenPosition, setGameCameraInfo, setGameWorldDimensions } from '../stores';
+import { 
+  isLoading, 
+  setGameWorldDimensions, 
+  setPlayerScreenPosition, 
+  setGameCameraInfo, 
+  setActiveDialogZone 
+} from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
-import type { ModularCharacterSelection } from '../data/modularConfig';
 import type { IPlayer } from '../entities';
+import { GamePlayerManager } from './game/GamePlayerManager';
+import { MapManager } from './game/MapManager';
+import type { MapConfig } from '../data/mapConfig';
 
 export class GameScene extends Phaser.Scene {
-  // Unified player interface - works with both Player and ModularPlayer
+  // Managers
+  private playerManager!: GamePlayerManager;
+  private mapManager!: MapManager;
+  
+  // Unified player interface
   private player: IPlayer | null = null;
-  private useModularPlayer: boolean = false;
-  private savedCharacterSelection: ModularCharacterSelection | null = null;
 
-  // Map configuration (loaded from JSON)
-  private mapConfig!: MapConfig;
-
-  // Parallax backgrounds (flexible layer count)
-  private parallaxLayers: ParallaxLayers | null = null;
-  private loadedBackgrounds: Set<string> = new Set();
+  // Public accessor for map config (used by sceneManager)
+  public getMapConfig(): MapConfig | null {
+    return this.mapManager?.getConfig() || null;
+  }
 
   // Placed items system (replaces dialog trigger system)
   private itemManager!: PlacedItemManager;
@@ -65,21 +64,17 @@ export class GameScene extends Phaser.Scene {
     // Reset initialization flag
     this.isInitialized = false;
     
-    // Check if user selected custom character in BackgroundSelect
-    const useModularSetting = localStorage.getItem('useModularPlayer');
+    // Initialize managers
+    this.playerManager = new GamePlayerManager(this);
+    this.mapManager = new MapManager(this);
     
-    // Check if we have a saved modular character
-    this.savedCharacterSelection = getSavedCharacterSelection();
-    
-    // Use modular player if explicitly selected AND we have character data
-    this.useModularPlayer = useModularSetting === 'true' && this.savedCharacterSelection !== null;
+    // Initialize player settings
+    this.playerManager.init();
   }
 
   preload(): void {
-    // Load player sprite sheets (for legacy Player)
-    if (!this.useModularPlayer) {
-      preloadSkins(this);
-    }
+    // Preload player assets
+    this.playerManager.preload();
 
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
@@ -108,70 +103,33 @@ export class GameScene extends Phaser.Scene {
     isLoading.set(true);
     
     try {
-      // Create animations for legacy skins (if not using modular)
-      if (!this.useModularPlayer) {
-        createAllSkinAnimations(this);
-      }
+      // Load player assets
+      await this.playerManager.loadAssets();
       
-      // Load modular character assets if needed
-      if (this.useModularPlayer && this.savedCharacterSelection) {
-        await ModularPlayer.preloadCharacter(this, this.savedCharacterSelection);
-      }
+      // Load map configuration
+      const mapConfig = await this.mapManager.loadMapConfiguration(this.initData?.useBuilderConfig);
       
-      // Load map configuration asynchronously
-      await this.loadMapConfiguration();
-      
-      // Load background assets
-      const bgConfig = backgroundManager.getCurrentConfig();
-      await this.loadBackgroundIfNeeded(bgConfig);
-      
-      // Create parallax background layers
-      this.createParallaxBackground();
+      // Setup background
+      await this.mapManager.setupBackground();
 
       // Create ground with physics
-      const { ground, groundY } = GroundManager.createPhysicsGround(this, {
-        worldWidth: this.mapConfig.worldWidth,
-        worldHeight: this.mapConfig.worldHeight,
-      });
+      const { ground, groundY } = this.mapManager.createGround();
 
-      // Create player - ensure they start on ground, not floating or underground
-      if (this.useModularPlayer && this.savedCharacterSelection) {
-        // Use modular character - calculate proper Y for center origin
-        const modularGroundY = getModularPlayerGroundY(this.mapConfig.worldHeight);
-        const playerY = Math.min(this.mapConfig.playerStartY, modularGroundY);
-        
-        const modularPlayer = new ModularPlayer(
-          this, 
-          this.mapConfig.playerStartX, 
-          playerY, 
-          this.savedCharacterSelection
-        );
-        modularPlayer.buildCharacter();
-        this.player = modularPlayer;
-        // Add collision between modular player and ground
-        GroundManager.addPlayerCollision(this, modularPlayer, ground);
-      } else {
-        // Use legacy player
-        const staticGroundY = getPlayerGroundY(this.mapConfig.worldHeight);
-        const playerY = Math.min(this.mapConfig.playerStartY, staticGroundY);
-        const staticPlayer = new Player(this, this.mapConfig.playerStartX, playerY);
-        this.player = staticPlayer;
-        // Add collision between player and ground
-        GroundManager.addPlayerCollision(this, staticPlayer, ground);
-      }
+      // Create player
+      this.player = this.playerManager.createPlayer(mapConfig, ground);
 
       // Initialize placed items system (read-only mode for game scene)
       this.itemManager = new PlacedItemManager(
         this, 
         groundY, 
-        this.mapConfig.worldWidth,
-        this.mapConfig.worldHeight,
+        mapConfig.worldWidth,
+        mapConfig.worldHeight,
         false
       );
       
       // Load placed items from config
-      if (this.mapConfig.placedItems && this.mapConfig.placedItems.length > 0) {
-        this.itemManager.createItems(this.mapConfig.placedItems);
+      if (mapConfig.placedItems && mapConfig.placedItems.length > 0) {
+        this.itemManager.createItems(mapConfig.placedItems);
       }
       
       // Add collision between player and physics-enabled items
@@ -184,20 +142,20 @@ export class GameScene extends Phaser.Scene {
       this.frameManager = new GameFrameManager(this);
       
       // Load placed frames from config
-      if (this.mapConfig.placedFrames && this.mapConfig.placedFrames.length > 0) {
-        this.frameManager.createFrames(this.mapConfig.placedFrames);
+      if (mapConfig.placedFrames && mapConfig.placedFrames.length > 0) {
+        this.frameManager.createFrames(mapConfig.placedFrames);
       }
       
       // Initialize social manager for clickable social icons
       this.socialManager = new GameSocialManager(this);
       
       // Load placed socials from config
-      if (this.mapConfig.placedSocials && this.mapConfig.placedSocials.length > 0) {
-        this.socialManager.createSocials(this.mapConfig.placedSocials);
+      if (mapConfig.placedSocials && mapConfig.placedSocials.length > 0) {
+        this.socialManager.createSocials(mapConfig.placedSocials);
       }
       
       // Load dialog zones from config (initial load)
-      this.dialogZones = this.mapConfig.dialogZones || [];
+      this.dialogZones = mapConfig.dialogZones || [];
       
       // Subscribe to dialog zones store for live updates from builder
       const unsubDialogZones = dialogZonesStore.subscribe(zones => {
@@ -212,7 +170,6 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.player.getGameObject(), true, 0.1, 0.1);
       }
       this.setupCameraBounds();
-      this.physics.world.setBounds(0, 0, this.mapConfig.worldWidth, this.mapConfig.worldHeight);
       
       // Setup resize handler
       this.scale.on('resize', this.handleResize, this);
@@ -229,65 +186,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Load map configuration from builder or JSON file
-   */
-  private async loadMapConfiguration(): Promise<void> {
-    try {
-      if (this.initData?.useBuilderConfig) {
-        const config = getBuilderConfig();
-        this.mapConfig = config || await loadMapConfig();
-      } else {
-        this.mapConfig = await loadMapConfig();
-      }
-    } catch (error) {
-      console.error('[GameScene] Failed to load map configuration:', error);
-      // Fallback to default config - playerStartY will be clamped to ground level
-      const fallbackWorldHeight = 600;
-      this.mapConfig = {
-        worldWidth: 3200,
-        worldHeight: fallbackWorldHeight,
-        playerStartX: 400,
-        playerStartY: getPlayerGroundY(fallbackWorldHeight),
-        placedItems: [],
-      };
-    }
-  }
-
-  private createParallaxBackground(): void {
-    const config = backgroundManager.getCurrentConfig();
-    this.parallaxLayers = createParallaxBackground(
-      this,
-      this.mapConfig.worldWidth,
-      this.mapConfig.worldHeight,
-      config
-    );
-  }
-
-  private async loadBackgroundIfNeeded(config: import('../data/background').BackgroundConfig): Promise<boolean> {
-    // Skip if already loaded
-    if (this.loadedBackgrounds.has(config.folder)) {
-      return true;
-    }
-
-    // Load background assets
-    const success = await loadBackgroundAssets(this, config);
-    if (success) {
-      this.loadedBackgrounds.add(config.folder);
-    }
-    return success;
-  }
-
-  /**
    * Setup camera bounds with zoom adjustment to always show full world height
    */
   private setupCameraBounds(): void {
+    const mapConfig = this.mapManager.getConfig();
+    if (!mapConfig) return;
+
     const camera = this.cameras.main;
     const viewportHeight = camera.height;
     const viewportWidth = camera.width;
     
     // Calculate zoom to ensure full world height is always visible
     // If viewport is shorter than world, we need to zoom out
-    const zoomToFitHeight = viewportHeight / this.mapConfig.worldHeight;
+    const zoomToFitHeight = viewportHeight / mapConfig.worldHeight;
     const zoom = Math.min(1, zoomToFitHeight); // Never zoom in beyond 1x
     
     camera.setZoom(zoom);
@@ -298,20 +209,20 @@ export class GameScene extends Phaser.Scene {
     
     // Calculate bounds - allow negative Y to center vertically when viewport > world
     let boundsY = 0;
-    let boundsHeight = this.mapConfig.worldHeight;
+    let boundsHeight = mapConfig.worldHeight;
     
-    if (effectiveViewportHeight > this.mapConfig.worldHeight) {
+    if (effectiveViewportHeight > mapConfig.worldHeight) {
       // Viewport is taller than world - center vertically
-      boundsY = (this.mapConfig.worldHeight - effectiveViewportHeight) / 2;
+      boundsY = (mapConfig.worldHeight - effectiveViewportHeight) / 2;
       boundsHeight = effectiveViewportHeight;
     }
     
     // Similarly for X axis
     let boundsX = 0;
-    let boundsWidth = this.mapConfig.worldWidth;
+    let boundsWidth = mapConfig.worldWidth;
     
-    if (effectiveViewportWidth > this.mapConfig.worldWidth) {
-      boundsX = (this.mapConfig.worldWidth - effectiveViewportWidth) / 2;
+    if (effectiveViewportWidth > mapConfig.worldWidth) {
+      boundsX = (mapConfig.worldWidth - effectiveViewportWidth) / 2;
       boundsWidth = effectiveViewportWidth;
     }
     
@@ -319,8 +230,8 @@ export class GameScene extends Phaser.Scene {
     
     // Update game world dimensions for UI frame overlay
     setGameWorldDimensions(
-      this.mapConfig.worldWidth,
-      this.mapConfig.worldHeight,
+      mapConfig.worldWidth,
+      mapConfig.worldHeight,
       viewportWidth,
       viewportHeight,
       zoom
@@ -332,7 +243,7 @@ export class GameScene extends Phaser.Scene {
    */
   private handleResize(_gameSize: Phaser.Structs.Size): void {
     // Guard: only handle resize when scene is active
-    if (!this.cameras?.main || !this.mapConfig) return;
+    if (!this.cameras?.main || !this.mapManager) return;
     
     // Update camera bounds with vertical centering
     this.setupCameraBounds();

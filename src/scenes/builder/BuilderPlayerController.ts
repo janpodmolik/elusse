@@ -24,7 +24,7 @@ import {
   DEBUG_HIT_AREA_STROKE_ALPHA,
 } from './builderConstants';
 import { type ModularCharacterSelection } from '../../data/modularConfig';
-import { getSavedCharacterSelection } from '../ModularPlayer';
+import { getSavedCharacterSelection } from '../../data/CharacterStorage';
 import {
   preloadModularCharacter,
   MODULAR_SCALE,

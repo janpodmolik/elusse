@@ -16,6 +16,7 @@
     getModularAssetPath,
     getItemById,
   } from '../data/modularConfig';
+  import { getSavedCharacterSelection } from '../data/CharacterStorage';
   import CharacterPreviewScene from '../scenes/CharacterPreviewScene';
   
   // ============================================================================
@@ -184,20 +185,9 @@
   }
   
   function loadSavedSelection() {
-    const saved = localStorage.getItem('characterSelection');
+    const saved = getSavedCharacterSelection();
     if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as ModularCharacterSelection;
-        // Validate basic structure
-        if (parsed.gender && (parsed.gender === 'male' || parsed.gender === 'female')) {
-          selection = {
-            ...parsed,
-            clothing: Array.isArray(parsed.clothing) ? parsed.clothing : [],
-          };
-        }
-      } catch (e) {
-        console.warn('Failed to load saved character selection:', e);
-      }
+      selection = saved;
     }
   }
   
