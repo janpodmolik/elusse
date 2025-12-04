@@ -12,11 +12,9 @@ import {
   isModularPlayerBelowGround,
   STATIC_SELECTION_RATIOS,
 } from '../../constants/playerConstants';
-import { SELECTION_COLORS } from '../../constants/colors';
 import {
   DRAG_MARGIN_HORIZONTAL,
   DRAG_MARGIN_TOP,
-  DRAG_TINT,
   DEBUG_HIT_AREAS,
   DEBUG_HIT_AREA_COLOR,
   DEBUG_HIT_AREA_ALPHA,
@@ -33,9 +31,6 @@ import {
   MODULAR_SCALE,
 } from '../../utils/ModularCharacterBuilder';
 import { ModularCharacterVisual } from '../../entities/ModularCharacterVisual';
-
-// Selection highlight color - Green for player (from centralized colors)
-const SELECTION_TINT = SELECTION_COLORS.PLAYER.hex;
 
 /**
  * BuilderPlayerController - Manages player sprite and interactions in builder mode

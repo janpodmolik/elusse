@@ -43,9 +43,6 @@ export class ModularPlayer extends Phaser.GameObjects.Container implements IPlay
   
   // Input - using shared PlayerInputController
   private inputController: PlayerInputController;
-  
-  // Velocity for movement
-  private velocityX: number = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, selection: ModularCharacterSelection) {
     super(scene, x, y);
