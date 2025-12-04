@@ -11,7 +11,7 @@ import { DEFAULT_LANGUAGE, type Language } from '../types/Language';
 export const currentLanguage = writable<'cs' | 'en'>('cs');
 
 /** Current player skin ID */
-export const currentSkin = writable<string>('cat_orange');
+export const currentSkin = writable<string>('succubus');
 
 /** Current background name */
 export const currentBackground = writable<string>('Forest');

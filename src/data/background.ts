@@ -13,13 +13,6 @@ export interface BackgroundConfig {
 
 export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
   {
-    name: 'FOREST GREEN',
-    folder: 'forest_green',
-    // forest_green has layers 1-6 (6 parallax layers, last 1 is foreground)
-    scrollFactors: [0.75, 0.8, 0.85, 0.9, 1.0, 1.0],
-    foregroundLayers: 1,
-  },
-  {
     name: 'FOREST BLUE',
     folder: 'forest_blue',
     // forest_blue has layers 1-6 (6 parallax layers)

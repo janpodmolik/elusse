@@ -202,7 +202,7 @@ interface Scene {
   userId: string;                // FK → User (vlastník)
   name: string;                  // Název scény (např. "Můj les")
   slug?: string;                 // URL-friendly identifikátor
-  backgroundFolder: string;      // 'forest_green' | 'forest_blue' | ...
+  backgroundFolder: string;      // 'forest_blue' | 'forest_birch' | ...
   isPublic: boolean;             // Veřejně přístupná?
   config: MapConfig;             // JSON — hlavní konfigurace (viz níže)
   createdAt: Date;
@@ -217,7 +217,7 @@ CREATE TABLE scenes (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   slug VARCHAR(100) UNIQUE,
-  background_folder VARCHAR(50) NOT NULL DEFAULT 'forest_green',
+  background_folder VARCHAR(50) NOT NULL DEFAULT 'forest_blue',
   is_public BOOLEAN DEFAULT false,
   config JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMP DEFAULT NOW(),
@@ -433,7 +433,7 @@ Uživatel může mít **neomezený počet scén**. Každá scéna má vlastní k
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "name": "Můj lesní svět",
       "slug": "muj-lesni-svet",
-      "backgroundFolder": "forest_green",
+      "backgroundFolder": "forest_blue",
       "isPublic": true,
       "createdAt": "2025-12-02T10:00:00Z",
       "updatedAt": "2025-12-02T14:30:00Z"
@@ -458,7 +458,7 @@ Uživatel může mít **neomezený počet scén**. Každá scéna má vlastní k
 ```json
 {
   "name": "Můj lesní svět",
-  "backgroundFolder": "forest_green"
+  "backgroundFolder": "forest_blue"
 }
 ```
 
@@ -469,7 +469,7 @@ Uživatel může mít **neomezený počet scén**. Každá scéna má vlastní k
   "userId": "...",
   "name": "Můj lesní svět",
   "slug": "muj-lesni-svet",
-  "backgroundFolder": "forest_green",
+  "backgroundFolder": "forest_blue",
   "isPublic": false,
   "config": {
     "worldWidth": 2500,
@@ -537,8 +537,7 @@ Tyto soubory jsou velké a nemění se — hostovat na CDN nebo jako statické s
 ```
 public/assets/
 ├── backgrounds/
-│   ├── forest_green/    (0.png - 5.png, preview.png)
-│   ├── forest_blue/
+│   ├── forest_blue/     (0.png - 5.png, preview.png)
 │   ├── forest_birch/
 │   ├── forest_fantasy/
 │   ├── forest_gold/
@@ -713,7 +712,7 @@ public class Scene
     public Guid UserId { get; set; }
     public string Name { get; set; } = null!;
     public string? Slug { get; set; }
-    public string BackgroundFolder { get; set; } = "forest_green";
+    public string BackgroundFolder { get; set; } = "forest_blue";
     public bool IsPublic { get; set; }
     public JsonDocument Config { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
@@ -1043,7 +1042,6 @@ Viz `src/types/` a `src/data/mapConfig.ts` v projektu.
 
 | Folder | Název | Vrstev | Foreground |
 |--------|-------|--------|------------|
-| `forest_green` | Forest Green | 6 | 1 |
 | `forest_blue` | Forest Blue | 6 | 0 |
 | `forest_birch` | Forest Birch | 5 | 0 |
 | `forest_fantasy` | Forest Fantasy | 7 | 2 |

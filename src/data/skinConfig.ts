@@ -9,7 +9,7 @@ export interface SkinConfig {
   id: string;           // Unique identifier, matches folder name
   name: string;         // Display name for UI
   folder: string;       // Asset folder name (same as id)
-  character: 'cat' | 'dog' | 'human';  // Character type for animation grouping
+  character: 'human';  // Character type for animation grouping
   variant?: string;     // Subfolder for sprite variant (e.g., 'basic')
   frameWidth?: number;  // Sprite frame width (default: 48)
   frameHeight?: number; // Sprite frame height (default: 48)
@@ -59,11 +59,6 @@ export function getSkinFrameDimensions(skin: SkinConfig): { width: number; heigh
 }
 
 export const AVAILABLE_SKINS: SkinConfig[] = [
-  // { id: 'cat_blue', name: 'BLUE CAT', folder: 'cat_blue', character: 'cat' },
-  // { id: 'cat_orange', name: 'ORANGE CAT', folder: 'cat_orange', character: 'cat' },
-  // { id: 'cat_white', name: 'WHITE CAT', folder: 'cat_white', character: 'cat' },
-  // { id: 'dog_blue', name: 'BLUE DOG', folder: 'dog_blue', character: 'dog' },
-  // { id: 'dog_yellow', name: 'YELLOW DOG', folder: 'dog_yellow', character: 'dog' },
   { id: 'succubus', name: 'SUCCUBUS', folder: 'succubus', variant: 'basic', character: 'human', frameWidth: 156, frameHeight: 72, facingLeft: true, frameRates: { idle: 8, run: 12 } },
 ];
 

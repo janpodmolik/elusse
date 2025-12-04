@@ -53,6 +53,11 @@ const isDevelopment = (): boolean => {
 export const DEBUG_HIT_AREAS = isDevelopment();
 export const DEBUG_INTERACTION = false; // Set to true when debugging interaction issues
 export const DEBUG_HIT_AREA_COLOR = 0x00ff00;
-export const DEBUG_HIT_AREA_ALPHA = 0.3;
-export const DEBUG_HIT_AREA_STROKE_WIDTH = 2;
-export const DEBUG_HIT_AREA_STROKE_ALPHA = 0.8;
+export const DEBUG_HIT_AREA_ALPHA = 0.1; // Low opacity for unselected state
+export const DEBUG_HIT_AREA_STROKE_WIDTH = 1;
+export const DEBUG_HIT_AREA_STROKE_ALPHA = 0.3;
+
+// Selected state constants
+export const SELECTED_HIT_AREA_ALPHA = 0.2;
+export const SELECTED_HIT_AREA_STROKE_WIDTH = 2;
+export const SELECTED_HIT_AREA_STROKE_ALPHA = 0.8;

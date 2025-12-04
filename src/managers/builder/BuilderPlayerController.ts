@@ -22,6 +22,9 @@ import {
   DEBUG_HIT_AREA_ALPHA,
   DEBUG_HIT_AREA_STROKE_WIDTH,
   DEBUG_HIT_AREA_STROKE_ALPHA,
+  SELECTED_HIT_AREA_ALPHA,
+  SELECTED_HIT_AREA_STROKE_WIDTH,
+  SELECTED_HIT_AREA_STROKE_ALPHA,
 } from './builderConstants';
 import { type ModularCharacterSelection } from '../../data/modularConfig';
 import { getSavedCharacterSelection } from '../../data/CharacterStorage';
@@ -51,6 +54,7 @@ export class BuilderPlayerController {
   private useModular: boolean = false;
   private modularSelection: ModularCharacterSelection | null = null;
   private debugGraphics: Phaser.GameObjects.Graphics | null = null;
+  private isSelected: boolean = false;
 
   constructor(scene: Phaser.Scene, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -198,7 +202,6 @@ export class BuilderPlayerController {
           return get(isPlayerSelected);
         },
         onDragStart: () => {
-          this.applyTint(DRAG_TINT);
           this.scene.data.set('isDraggingObject', true);
         },
         onDrag: (x, y) => {
@@ -207,7 +210,6 @@ export class BuilderPlayerController {
           this.updateDebugVisualization();
         },
         onDragEnd: (_x, _y) => {
-          this.updateSelectionVisual(get(isPlayerSelected));
           this.scene.data.set('isDraggingObject', false);
           
           let finalY = this.player.y;
@@ -259,17 +261,14 @@ export class BuilderPlayerController {
     
     this.debugGraphics.clear();
     
-    let bounds: { x: number; y: number; width: number; height: number };
+    // Determine style based on selection state
+    const alpha = this.isSelected ? SELECTED_HIT_AREA_ALPHA : DEBUG_HIT_AREA_ALPHA;
+    const strokeWidth = this.isSelected ? SELECTED_HIT_AREA_STROKE_WIDTH : DEBUG_HIT_AREA_STROKE_WIDTH;
+    const strokeAlpha = this.isSelected ? SELECTED_HIT_AREA_STROKE_ALPHA : DEBUG_HIT_AREA_STROKE_ALPHA;
+    
+    let bounds: { x: number; y: number; width: number; height: number } | null = null;
     
     if (this.useModular && this.modularCharacter) {
-      bounds = this.modularCharacter.getHitBounds();
-      
-      // Draw visual bounds in GREEN
-      this.debugGraphics.fillStyle(0x00ff00, 0.2);
-      this.debugGraphics.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-      this.debugGraphics.lineStyle(3, 0x00ff00, 0.8);
-      this.debugGraphics.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
-      
       // Get the actual interactive hit area from container
       const container = this.player as Phaser.GameObjects.Container;
       const hitArea = this.scene.data.get('modularPlayerHitArea') as Phaser.Geom.Rectangle;
@@ -278,18 +277,12 @@ export class BuilderPlayerController {
         // Calculate world position of interactive hit area
         // Hit area coordinates are relative to container position
         const scale = container.scaleX;
-        const interactiveBounds = {
+        bounds = {
           x: container.x + (hitArea.x * scale),
           y: container.y + (hitArea.y * scale),
           width: hitArea.width * scale,
           height: hitArea.height * scale,
         };
-        
-        // Draw interactive area in RED
-        this.debugGraphics.fillStyle(0xff0000, 0.3);
-        this.debugGraphics.fillRect(interactiveBounds.x, interactiveBounds.y, interactiveBounds.width, interactiveBounds.height);
-        this.debugGraphics.lineStyle(3, 0xff0000, 1.0);
-        this.debugGraphics.strokeRect(interactiveBounds.x, interactiveBounds.y, interactiveBounds.width, interactiveBounds.height);
       }
     } else {
       // Calculate bounds for static sprite
@@ -314,13 +307,15 @@ export class BuilderPlayerController {
         width: selectionWidth,
         height: frameHeight,
       };
-      
+    }
+
+    if (bounds) {
       // Draw filled area with transparency
-      this.debugGraphics.fillStyle(DEBUG_HIT_AREA_COLOR, DEBUG_HIT_AREA_ALPHA);
+      this.debugGraphics.fillStyle(DEBUG_HIT_AREA_COLOR, alpha);
       this.debugGraphics.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
       
       // Draw stroke
-      this.debugGraphics.lineStyle(DEBUG_HIT_AREA_STROKE_WIDTH, DEBUG_HIT_AREA_COLOR, DEBUG_HIT_AREA_STROKE_ALPHA);
+      this.debugGraphics.lineStyle(strokeWidth, DEBUG_HIT_AREA_COLOR, strokeAlpha);
       this.debugGraphics.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
     }
   }
@@ -330,44 +325,12 @@ export class BuilderPlayerController {
    */
   private setupSelectionSubscription(): void {
     const unsubscribe = isPlayerSelected.subscribe(selected => {
-      this.updateSelectionVisual(selected);
+      this.isSelected = selected;
+      this.updateDebugVisualization();
       // Sync to scene data for camera controller
       this.scene.data.set('isPlayerSelected', selected);
     });
     this.unsubscribers.push(unsubscribe);
-  }
-  
-  /**
-   * Update visual selection state
-   */
-  private updateSelectionVisual(selected: boolean): void {
-    if (!this.player) return;
-    
-    if (this.modularCharacter) {
-      if (selected) {
-        this.modularCharacter.setTint(SELECTION_TINT);
-      } else {
-        this.modularCharacter.clearTint();
-      }
-    } else {
-      const sprite = this.player as Phaser.GameObjects.Sprite;
-      if (selected) {
-        sprite.setTint(SELECTION_TINT);
-      } else {
-        sprite.clearTint();
-      }
-    }
-  }
-  
-  /**
-   * Apply tint to player (for drag feedback)
-   */
-  private applyTint(tint: number): void {
-    if (this.modularCharacter) {
-      this.modularCharacter.setTint(tint);
-    } else {
-      (this.player as Phaser.GameObjects.Sprite).setTint(tint);
-    }
   }
   
   /**
