@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import DraggablePanel from '../shared/DraggablePanel.svelte';
-  import { ITEMS } from '../../data/items';
+  import { ITEMS, isAnimatedItem, getAnimationConfig } from '../../data/items';
+  import { backgroundManager } from '../../data/background';
   import { EventBus, EVENTS } from '../../events/EventBus';
   import { builderEditMode } from '../../stores/builderStores';
   import { isItemPaletteOpen } from '../../stores/uiStores';
@@ -10,7 +11,10 @@
   const ACCENT_COLOR = '#4a90e2'; // Blue for items
   const NARROW_SCREEN_THRESHOLD = 600; // px - close palette after adding item on narrow screens
   
-  const items = ITEMS;
+  // Filter items based on current background
+  const currentBg = backgroundManager.getCurrentConfig();
+  const allowedGroups = currentBg.itemGroups || ['shared'];
+  const items = ITEMS.filter(item => allowedGroups.includes(item.group));
   
   /** Check if screen is narrow (portrait mobile) */
   function isNarrowScreen(): boolean {
@@ -121,11 +125,32 @@
             tabindex="0"
             style:--accent-color={ACCENT_COLOR}
           >
-            <img 
-              src={item.path} 
-              alt={item.name}
-              class="item-preview"
-            />
+            {#if isAnimatedItem(item.key)}
+              {@const config = getAnimationConfig(item.key)}
+              <div 
+                class="animated-wrapper" 
+                style:width="{config?.frameWidth}px" 
+                style:height="{config?.frameHeight}px"
+                data-drag-preview
+              >
+                <img 
+                  src={item.path} 
+                  alt={item.name}
+                  class="item-preview animated"
+                  style:width="{config?.frameWidth}px"
+                  style:height="{config?.frameHeight}px"
+                  style:object-fit="none"
+                  style:object-position="0 0"
+                />
+              </div>
+            {:else}
+              <img 
+                src={item.path} 
+                alt={item.name}
+                class="item-preview"
+                data-drag-preview
+              />
+            {/if}
           </div>
         {/each}
       </div>
@@ -194,6 +219,20 @@
     object-fit: contain;
     image-rendering: pixelated;
     filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
+  }
+  
+  .animated-wrapper {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .item-preview.animated {
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
   }
   
   .palette-item:hover .item-preview {

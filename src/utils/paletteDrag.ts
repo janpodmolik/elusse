@@ -195,12 +195,20 @@ export function createPaletteDragHandlers(
 
     // Create custom drag image
     const target = event.target as HTMLElement;
-    const dragImg = target.querySelector('img')?.cloneNode(true) as HTMLImageElement | undefined;
-    if (dragImg) {
-      dragImg.style.cssText = 'position: absolute; top: -1000px;';
-      document.body.appendChild(dragImg);
-      event.dataTransfer.setDragImage(dragImg, halfSize, halfSize);
-      requestAnimationFrame(() => dragImg.remove());
+    // Try to find explicit preview element, fallback to img
+    const sourceEl = target.querySelector('[data-drag-preview]') || target.querySelector('img');
+    const dragEl = sourceEl?.cloneNode(true) as HTMLElement | undefined;
+
+    if (dragEl) {
+      // Preserve existing styles but move off-screen
+      dragEl.style.position = 'absolute';
+      dragEl.style.top = '-1000px';
+      dragEl.style.left = '-1000px';
+      dragEl.style.zIndex = '-1';
+      
+      document.body.appendChild(dragEl);
+      event.dataTransfer.setDragImage(dragEl, halfSize, halfSize);
+      requestAnimationFrame(() => dragEl.remove());
     }
   }
 

@@ -1,6 +1,16 @@
 /**
  * Item definition for placeable items in the game
  */
+
+export interface ItemAnimationConfig {
+  frameWidth: number;
+  frameHeight: number;
+  frameRate?: number;
+  repeat?: number;
+  startFrame?: number;
+  endFrame?: number;
+}
+
 export interface ItemDefinition {
   /** Unique identifier for the item */
   key: string;
@@ -10,6 +20,8 @@ export interface ItemDefinition {
   path: string;
   /** Default scale factor when placed in scene */
   scale: number;
+  /** Group identifier for background filtering */
+  group: string;
   /** Optional category for grouping in UI */
   category?: string;
   /** Whether this item supports physics body (can block player) */
@@ -17,61 +29,65 @@ export interface ItemDefinition {
 }
 
 /**
+ * Registry of animated items and their configuration
+ */
+export const ANIMATED_ITEMS: Record<string, ItemAnimationConfig> = {
+  'campfire': {
+    frameWidth: 32,
+    frameHeight: 32,
+    frameRate: 10,
+    repeat: -1,
+    endFrame: 39
+  }
+};
+
+/**
  * Central registry of all available items
  */
 export const ITEMS: ItemDefinition[] = [
   {
-    key: 'tent',
-    name: 'Tent',
-    path: 'assets/ui/tent.png',
-    scale: 5,
-    category: 'structures'
-  },
-  {
-    key: 'lamp',
-    name: 'Lamp',
-    path: 'assets/ui/lamp.png',
-    scale: 5,
+    key: 'campfire',
+    name: 'Campfire',
+    path: 'assets/items/campfire.png',
+    scale: 3,
+    group: 'forest_summer',
     category: 'props'
-  },
-  {
-    key: 'sign_left',
-    name: 'Sign ←',
-    path: 'assets/ui/sign_left.png',
-    scale: 5,
-    category: 'signs'
-  },
-  {
-    key: 'sign_right',
-    name: 'Sign →',
-    path: 'assets/ui/sign_right.png',
-    scale: 5,
-    category: 'signs'
   },
   {
     key: 'stone_0',
     name: 'Stone 0',
-    path: 'assets/ui/stone_0.png',
+    path: 'assets/items/stone_0.png',
     scale: 4,
+    group: 'shared',
     category: 'nature',
     supportsPhysics: true
   },
   {
     key: 'stone_1',
     name: 'Stone 1',
-    path: 'assets/ui/stone_1.png',
+    path: 'assets/items/stone_1.png',
     scale: 4,
+    group: 'shared',
     category: 'nature',
     supportsPhysics: true
   },
   {
     key: 'stone_2',
     name: 'Stone 2',
-    path: 'assets/ui/stone_2.png',
+    path: 'assets/items/stone_2.png',
     scale: 4,
+    group: 'shared',
     category: 'nature',
     supportsPhysics: true
   },
+  {
+    key: 'tent_large',
+    name: 'Tent Large',
+    path: 'assets/items/tent_large.png',
+    scale: 4,
+    group: 'forest_summer',
+    category: 'structures'
+  }
 ];
 
 /**
@@ -93,6 +109,20 @@ export function getItemScale(key: string): number {
  */
 export function getItemsByCategory(category: string): ItemDefinition[] {
   return ITEMS.filter(item => item.category === category);
+}
+
+/**
+ * Check if an item is animated
+ */
+export function isAnimatedItem(key: string): boolean {
+  return key in ANIMATED_ITEMS;
+}
+
+/**
+ * Get animation config for an item
+ */
+export function getAnimationConfig(key: string): ItemAnimationConfig | undefined {
+  return ANIMATED_ITEMS[key];
 }
 
 /**

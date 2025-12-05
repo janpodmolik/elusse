@@ -11,9 +11,12 @@ export interface BackgroundConfig {
   foregroundLayers?: number;
   /** Height of ground from bottom of screen. Defaults to 40 if not specified. */
   groundHeight?: number;
+  /** Item groups available for this background. Always includes 'shared'. */
+  itemGroups?: string[];
 }
 
 export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
+  /*
   {
     name: 'FOREST BLUE',
     folder: 'forest_blue',
@@ -21,6 +24,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
     groundHeight: 40,
   },
+  */
   {
     name: 'FOREST SUMMER',
     folder: 'forest_summer',
@@ -28,6 +32,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.9, 0.95, 0.975, 1.0, 1.05],
     foregroundLayers: 1,
     groundHeight: 90,
+    itemGroups: ['shared', 'forest_summer'],
   },
   {
     name: 'FOREST BIRCH',
@@ -36,7 +41,9 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.9, 0.95, 0.975, 1.0, 1.05],
     foregroundLayers: 1,
     groundHeight: 30,
+    itemGroups: ['shared'],
   },
+  /*
   {
     name: 'FOREST FANTASY',
     folder: 'forest_fantasy',
@@ -53,6 +60,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     foregroundLayers: 2,
     groundHeight: 80,
   },
+  */
   {
     name: 'CAVE DARK',
     folder: 'cave_dark',
@@ -60,14 +68,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.85, 0.875, 0.9, 0.925, 0.95, 0.975, 1.05],
     foregroundLayers: 2,
     groundHeight: 20,
-  },
-  {
-    name: 'FOREST DEAD',
-    folder: 'forest_dead',
-    // forest_dead has layers 1-6 (6 parallax layers, last 1 is foreground)
-    scrollFactors: [0.9, 0.925, 0.95, 0.975, 1.0, 1.05],
-    foregroundLayers: 1,
-    groundHeight: 100,
+    itemGroups: ['shared'],
   },
 ];
 

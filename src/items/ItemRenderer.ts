@@ -4,7 +4,7 @@
 
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
-import { ITEMS } from '../data/items';
+import { ITEMS, isAnimatedItem, getAnimationConfig } from '../data/items';
 
 /**
  * ItemRenderer - Factory for creating and updating item sprites
@@ -23,7 +23,17 @@ export class ItemRenderer {
    */
   static preloadAssets(scene: Phaser.Scene): void {
     ITEMS.forEach(item => {
-      scene.load.image(item.key, item.path);
+      if (isAnimatedItem(item.key)) {
+        const config = getAnimationConfig(item.key);
+        if (config) {
+          scene.load.spritesheet(item.key, item.path, {
+            frameWidth: config.frameWidth,
+            frameHeight: config.frameHeight
+          });
+        }
+      } else {
+        scene.load.image(item.key, item.path);
+      }
     });
   }
 
@@ -42,6 +52,30 @@ export class ItemRenderer {
     sprite.setDepth(depth);
     sprite.setFlipX(flipX);
     sprite.setData('itemId', id);
+    
+    // Handle animation if applicable
+    if (isAnimatedItem(assetKey)) {
+      const animKey = `${assetKey}_anim`;
+      const config = getAnimationConfig(assetKey);
+      
+      if (config) {
+        // Create animation if it doesn't exist
+        if (!this.scene.anims.exists(animKey)) {
+          this.scene.anims.create({
+            key: animKey,
+            frames: this.scene.anims.generateFrameNumbers(assetKey, { 
+              start: config.startFrame ?? 0, 
+              end: config.endFrame 
+            }),
+            frameRate: config.frameRate ?? 8,
+            repeat: config.repeat ?? -1
+          });
+        }
+        
+        // Play animation
+        sprite.play(animKey);
+      }
+    }
     
     return sprite;
   }
