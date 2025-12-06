@@ -4,7 +4,7 @@
 
 import Phaser from 'phaser';
 import type { PlacedItem } from '../data/mapConfig';
-import { ITEMS, isAnimatedItem, getAnimationConfig } from '../data/items';
+import { ITEMS, isAnimatedItem, getAnimationConfig } from '../data/items/index';
 
 /**
  * ItemRenderer - Factory for creating and updating item sprites

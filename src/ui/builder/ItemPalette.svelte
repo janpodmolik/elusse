@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import DraggablePanel from '../shared/DraggablePanel.svelte';
-  import { ITEMS, isAnimatedItem, getAnimationConfig } from '../../data/items';
+  import { ITEMS, isAnimatedItem, getAnimationConfig } from '../../data/items/index';
   import { backgroundManager } from '../../data/background';
   import { EventBus, EVENTS } from '../../events/EventBus';
   import { builderEditMode } from '../../stores/builderStores';
@@ -125,6 +125,11 @@
             tabindex="0"
             style:--accent-color={ACCENT_COLOR}
           >
+            {#if item.name.toLowerCase().includes('large')}
+              <span class="size-badge large">L</span>
+            {:else if item.name.toLowerCase().includes('small')}
+              <span class="size-badge small">S</span>
+            {/if}
             {#if isAnimatedItem(item.key)}
               {@const config = getAnimationConfig(item.key)}
               <div 
@@ -193,6 +198,29 @@
     aspect-ratio: 1;
     user-select: none;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+
+  .size-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .size-badge.large {
+    background: #ff4444;
+    color: white;
+  }
+
+  .size-badge.small {
+    background: #44ff44;
+    color: black;
   }
   
   .palette-item:active {

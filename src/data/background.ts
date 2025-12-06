@@ -32,7 +32,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.9, 0.95, 0.975, 1.0, 1.05],
     foregroundLayers: 1,
     groundHeight: 90,
-    itemGroups: ['shared', 'forest_summer'],
+    itemGroups: ['shared', 'forest_summer', 'forest_shared'],
   },
   {
     name: 'FOREST BIRCH',
@@ -41,7 +41,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.9, 0.95, 0.975, 1.0, 1.05],
     foregroundLayers: 1,
     groundHeight: 30,
-    itemGroups: ['shared'],
+    itemGroups: ['shared', 'forest_birch', 'forest_shared'],
   },
   /*
   {
@@ -68,7 +68,7 @@ export const AVAILABLE_BACKGROUNDS: BackgroundConfig[] = [
     scrollFactors: [0.85, 0.875, 0.9, 0.925, 0.95, 0.975, 1.05],
     foregroundLayers: 2,
     groundHeight: 20,
-    itemGroups: ['shared'],
+    itemGroups: ['shared', 'cave_dark'],
   },
 ];
 

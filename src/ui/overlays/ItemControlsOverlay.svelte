@@ -1,7 +1,7 @@
 <script lang="ts">
   import { selectedItemId, selectedItem, selectedItemPhysicsEnabled, selectedItemFlipX, itemDepthLayer, selectedItemScreenPosition, builderEditMode, toggleItemDepthLayer, updateItemDepth, updateItemPhysics, updateItemFlipX, deletePlacedItem, clearSelection, isDraggingInBuilder } from '../../stores/builderStores';
   import { getItemDepth } from '../../constants/depthLayers';
-  import { itemSupportsPhysics } from '../../data/items';
+  import { itemSupportsPhysics } from '../../data/items/index';
   import PixelButton from '../shared/PixelButton.svelte';
   
   // Check if selected item supports physics
