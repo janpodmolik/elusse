@@ -11,6 +11,8 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   private radiusIndicator?: Phaser.GameObjects.Arc;
   private _isSelected: boolean = false;
   private isBuilderMode: boolean;
+  /** Top offset in scaled pixels (empty space at top of sprite) */
+  private _topOffset: number = 0;
   
   private static readonly DEFAULT_TRIGGER_RADIUS = 200;
 
@@ -33,33 +35,46 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     // Setup visual properties
-    this.setScale(config.scale ?? definition.scale);
+    const scale = config.scale ?? definition.scale;
+    this.setScale(scale);
     this.setFlipX(config.flipX ?? false);
+    
+    // Store topOffset (scaled) for hitbox and dialog positioning
+    this._topOffset = (definition.topOffset ?? 0) * scale;
     
     // Setup physics body
     // NPCs are static obstacles usually, but we might want them to push back or be immovable
     this.setImmovable(true);
     (this.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     
-    // Adjust hitbox if needed (can be refined based on asset)
-    const width = definition.frameWidth * 0.6;
-    const height = definition.frameHeight * 0.8;
+    // Adjust hitbox based on topOffset - excludes empty space at top
+    const topOffset = definition.topOffset ?? 0;
+    const contentHeight = definition.frameHeight - topOffset;
+    const width = definition.frameWidth * 0.5;
+    const height = contentHeight * 0.9;
     this.body?.setSize(width, height);
     this.body?.setOffset(
       (definition.frameWidth - width) / 2,
-      definition.frameHeight - height
+      topOffset + (contentHeight - height)
     );
-
+    
+    // Set interactive hitArea - smaller width for easier clicking between NPCs
+    const hitWidth = definition.frameWidth * 0.5;
+    const hitHeight = contentHeight * 0.9;
+    const hitX = (definition.frameWidth - hitWidth) / 2;
+    const hitY = topOffset + (contentHeight - hitHeight);
+    this.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(hitX, hitY, hitWidth, hitHeight),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      cursor: 'pointer'
+    });
+    
     // Setup animations - only in game mode
     if (!this.isBuilderMode) {
       this.setupAnimations(definition);
       this.play(`${this.npcId}_idle`);
     }
     // In builder mode, just show the first frame (static image)
-
-    // NPC dialogs are now triggered by proximity, not click
-    // Interactive is still set for builder mode selection
-    this.setInteractive({ cursor: 'pointer' });
   }
 
   private setupAnimations(definition: any) {
@@ -87,6 +102,21 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     return this.dialogData;
   }
   
+  /**
+   * Get the "content height" of the NPC (excluding empty top space)
+   * Used for dialog bubble positioning
+   */
+  public getContentHeight(): number {
+    return this.displayHeight - this._topOffset;
+  }
+  
+  /**
+   * Get the top offset (empty space at top of sprite)
+   */
+  public get topOffset(): number {
+    return this._topOffset;
+  }
+  
   public get triggerRadius(): number {
     return this._triggerRadius;
   }
@@ -103,6 +133,25 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.setFlipX(flip);
   }
   
+  /**
+   * Get the hitbox dimensions (for selection indicator)
+   */
+  private getHitboxDimensions(): { width: number; height: number; offsetY: number } {
+    const definition = getNPCDefinition(this.npcId);
+    if (!definition) return { width: this.displayWidth, height: this.displayHeight, offsetY: 0 };
+    
+    const scale = this.scaleX;
+    const topOffset = definition.topOffset ?? 0;
+    const contentHeight = definition.frameHeight - topOffset;
+    
+    const hitWidth = definition.frameWidth * 0.5 * scale;
+    const hitHeight = contentHeight * 0.9 * scale;
+    // Offset from center: move down by half of topOffset (scaled)
+    const offsetY = (topOffset * scale) / 2;
+    
+    return { width: hitWidth, height: hitHeight, offsetY };
+  }
+  
   public get isSelected(): boolean {
     return this._isSelected;
   }
@@ -114,13 +163,15 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this._isSelected = selected;
     
     if (selected) {
+      const hitbox = this.getHitboxDimensions();
+      
       if (!this.selectionIndicator) {
-        // Create selection indicator (orange outline rectangle)
+        // Create selection indicator (orange outline rectangle) matching hitbox size
         this.selectionIndicator = this.scene.add.rectangle(
           this.x,
-          this.y,
-          this.displayWidth + 8,
-          this.displayHeight + 8,
+          this.y + hitbox.offsetY,
+          hitbox.width + 8,
+          hitbox.height + 8,
           0xe67e22,
           0
         );
@@ -153,8 +204,9 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   
   public updateSelectionIndicator() {
     if (this.selectionIndicator && this._isSelected) {
-      this.selectionIndicator.setPosition(this.x, this.y);
-      this.selectionIndicator.setSize(this.displayWidth + 8, this.displayHeight + 8);
+      const hitbox = this.getHitboxDimensions();
+      this.selectionIndicator.setPosition(this.x, this.y + hitbox.offsetY);
+      this.selectionIndicator.setSize(hitbox.width + 8, hitbox.height + 8);
     }
     if (this.radiusIndicator && this._isSelected) {
       this.radiusIndicator.setPosition(this.x, this.y);

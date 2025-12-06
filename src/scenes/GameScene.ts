@@ -4,6 +4,7 @@ import { PlacedNPCManager } from '../managers/PlacedNPCManager';
 import { GameSocialManager } from '../managers/GameSocialManager';
 import { dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
+import { calculateDepthFromY } from '../constants/depthLayers';
 import { 
   isLoading, 
   setGameWorldDimensions, 
@@ -292,17 +293,22 @@ export class GameScene extends Phaser.Scene {
     this.player.update();
     const { x: playerX, y: playerY } = this.player.getPosition();
     
-    // Calculate player's bottom Y for auto-depth sorting
+    // Get world height for depth calculation
+    const worldHeight = this.mapManager.getConfig()?.worldHeight ?? 640;
+    
+    // Calculate player's bottom Y and update player depth
     const playerGameObject = this.player.getGameObject();
     const playerBounds = playerGameObject.getBounds();
     const playerBottomY = playerBounds.bottom;
+    const playerDepth = calculateDepthFromY(playerBottomY, worldHeight);
+    playerGameObject.setDepth(playerDepth);
     
-    // Update auto-depth for items and NPCs based on player position
+    // Update auto-depth for items and NPCs based on Y position
     if (this.itemManager) {
-      this.itemManager.updateAutoDepth(playerBottomY);
+      this.itemManager.updateAutoDepth(worldHeight);
     }
     if (this.npcManager) {
-      this.npcManager.updateAutoDepth(playerBottomY);
+      this.npcManager.updateAutoDepth(worldHeight);
     }
     
     // Update player screen position for UI (dialog bubbles)
@@ -400,6 +406,11 @@ export class GameScene extends Phaser.Scene {
       const npcScreenX = npc.x - camera.scrollX;
       const npcScreenY = npc.y - camera.scrollY;
       
+      // Use content height (excludes empty top space) for dialog positioning
+      const npcContentHeight = npc.getContentHeight();
+      // Adjust screenY to account for topOffset (move reference point down)
+      const adjustedScreenY = npcScreenY + npc.topOffset / 2;
+      
       if (this.currentNPCId !== nearestNPC.id) {
         // New NPC in proximity
         this.currentNPCId = nearestNPC.id;
@@ -407,8 +418,8 @@ export class GameScene extends Phaser.Scene {
           npcId: nearestNPC.id,
           texts: npc.getDialogData() ?? [],
           screenX: npcScreenX,
-          screenY: npcScreenY,
-          npcHeight: npc.displayHeight
+          screenY: adjustedScreenY,
+          npcHeight: npcContentHeight
         });
       } else {
         // Same NPC, just update position
@@ -416,8 +427,8 @@ export class GameScene extends Phaser.Scene {
           npcId: nearestNPC.id,
           texts: npc.getDialogData() ?? [],
           screenX: npcScreenX,
-          screenY: npcScreenY,
-          npcHeight: npc.displayHeight
+          screenY: adjustedScreenY,
+          npcHeight: npcContentHeight
         });
       }
     } else if (this.currentNPCId) {

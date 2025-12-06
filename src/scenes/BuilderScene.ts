@@ -17,6 +17,7 @@ import { GroundManager } from '../managers/GroundManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
 import { updateCameraInfo } from '../stores/gameStores';
 import { EventBus, EVENTS, type MinimapNavigateEvent } from '../events/EventBus';
+import { calculateDepthFromY } from '../constants/depthLayers';
 
 /**
  * BuilderScene - Interactive map builder with visual editor
@@ -191,17 +192,23 @@ export class BuilderScene extends Phaser.Scene {
       updateParallaxTiling(this.parallaxLayers, this.cameras.main);
     }
     
+    // Get world height for depth calculation
+    const worldHeight = this.config.worldHeight;
+    
     // Get player sprite for auto-depth calculations
     const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
     
-    // Update auto-depth for items and NPCs based on player position
+    // Update player depth based on Y position
     if (playerSprite) {
       const playerBounds = playerSprite.getBounds();
       const playerBottomY = playerBounds.bottom;
-      
-      this.itemManager?.updateAutoDepth(playerBottomY);
-      this.npcsController?.updateAutoDepth(playerBottomY);
+      const playerDepth = calculateDepthFromY(playerBottomY, worldHeight);
+      playerSprite.setDepth(playerDepth);
     }
+    
+    // Update auto-depth for items and NPCs based on Y position
+    this.itemManager?.updateAutoDepth(worldHeight);
+    this.npcsController?.updateAutoDepth(worldHeight);
     
     // Update selection visuals and screen position (for UI overlay)
     this.itemManager?.updateSelectionVisuals();

@@ -7,6 +7,7 @@ import { openNPCConfigPanel } from '../stores/uiStores';
 import { setupSpriteInteraction, DoubleClickDetector } from '../utils/spriteInteraction';
 import { worldToScreen } from '../utils/inputUtils';
 import { get } from 'svelte/store';
+import { calculateDepthFromY } from '../constants/depthLayers';
 
 import { NPC_REGISTRY } from '../data/npcs/npcRegistry';
 
@@ -212,21 +213,17 @@ export class PlacedNPCManager {
   }
 
   /**
-   * Update NPC depths based on player position
-   * NPCs with bottomY above player bottomY are behind, otherwise in front
-   * @param playerBottomY - The bottom Y position of the player sprite
+   * Update NPC depths based on Y position
+   * All objects are sorted by bottomY - lower on screen = higher depth
+   * @param worldHeight - The total world height for depth calculation
    */
-  updateAutoDepth(playerBottomY: number): void {
-    const DEPTH_BEHIND = 5;  // DEPTH_LAYERS.ITEMS_BEHIND
-    const DEPTH_FRONT = 15;  // DEPTH_LAYERS.ITEMS_FRONT
-    
+  updateAutoDepth(worldHeight: number): void {
     this.npcs.forEach((npc) => {
       // Calculate NPC's bottom Y position
       const npcBottomY = npc.y + npc.displayHeight / 2;
       
-      // If NPC bottom is above player bottom, NPC is behind player
-      // Otherwise NPC is in front of player
-      const newDepth = npcBottomY < playerBottomY ? DEPTH_BEHIND : DEPTH_FRONT;
+      // Calculate depth from Y position
+      const newDepth = calculateDepthFromY(npcBottomY, worldHeight);
       npc.setDepth(newDepth);
     });
   }

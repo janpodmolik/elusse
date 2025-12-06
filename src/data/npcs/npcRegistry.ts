@@ -5,6 +5,12 @@ export interface NPCDefinition {
   frameWidth: number;
   frameHeight: number;
   scale: number;
+  /** 
+   * Offset from top of frame where actual content starts (in pixels before scale).
+   * Used for more accurate hitbox and dialog bubble positioning.
+   * Default is 0 (no offset).
+   */
+  topOffset?: number;
   animations?: {
     idle: {
       startFrame: number;
@@ -27,6 +33,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }
@@ -38,6 +45,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }
@@ -49,6 +57,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }
@@ -60,6 +69,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 9, frameRate: 8 }
     }
@@ -71,6 +81,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }
@@ -82,6 +93,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 5, frameRate: 8 }
     }
@@ -93,6 +105,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 6, frameRate: 8 }
     }
@@ -104,6 +117,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }
@@ -115,6 +129,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }
@@ -126,6 +141,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 8, frameRate: 8 }
     }
@@ -137,6 +153,7 @@ export const NPC_REGISTRY: NPCDefinition[] = [
     frameWidth: 64,
     frameHeight: 64,
     scale: 4,
+    topOffset: 28,
     animations: {
       idle: { startFrame: 0, endFrame: 4, frameRate: 8 }
     }

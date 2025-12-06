@@ -3,6 +3,7 @@ import type { PlacedItem } from '../data/mapConfig';
 import { updateSelectedItemScreenPosition } from '../stores/builderStores';
 import { worldToScreen } from '../utils/inputUtils';
 import { ItemRenderer, ItemDragController, ItemSelectionManager } from '../items';
+import { calculateDepthFromY, DEPTH_LAYERS } from '../constants/depthLayers';
 
 /**
  * PlacedItemManager - Universal manager for placed items
@@ -260,18 +261,15 @@ export class PlacedItemManager {
   }
 
   /**
-   * Update item depths based on player position
-   * Items with bottomY above player bottomY are behind, otherwise in front
-   * @param playerBottomY - The bottom Y position of the player sprite
+   * Update item depths based on Y position
+   * All objects are sorted by bottomY - lower on screen = higher depth
+   * @param worldHeight - The total world height for depth calculation
    */
-  updateAutoDepth(playerBottomY: number): void {
-    const DEPTH_BEHIND = 5;  // DEPTH_LAYERS.ITEMS_BEHIND
-    const DEPTH_FRONT = 15;  // DEPTH_LAYERS.ITEMS_FRONT
-    
+  updateAutoDepth(worldHeight: number): void {
     this.items.forEach(({ sprite, data }) => {
-      // Skip physics-enabled items - they must stay behind player
+      // Skip physics-enabled items - they should stay at a low depth
       if (data.physicsEnabled) {
-        sprite.setDepth(DEPTH_BEHIND);
+        sprite.setDepth(DEPTH_LAYERS.DYNAMIC_BASE);
         return;
       }
       
@@ -279,9 +277,8 @@ export class PlacedItemManager {
       const bounds = sprite.getBounds();
       const itemBottomY = bounds.bottom;
       
-      // If item bottom is above player bottom, item is behind player
-      // Otherwise item is in front of player
-      const newDepth = itemBottomY < playerBottomY ? DEPTH_BEHIND : DEPTH_FRONT;
+      // Calculate depth from Y position
+      const newDepth = calculateDepthFromY(itemBottomY, worldHeight);
       sprite.setDepth(newDepth);
     });
   }
