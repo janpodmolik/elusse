@@ -1,15 +1,29 @@
 <script lang="ts">
   import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, selectedItemId, selectedFrameId, selectedDialogZoneId, selectedSocialId } from '../../stores/builderStores';
-  import { isItemPaletteOpen, isFramePaletteOpen, isSocialPaletteOpen, toggleItemPalette, toggleFramePalette, toggleSocialPalette } from '../../stores/uiStores';
+  import { 
+    isItemPaletteOpen, 
+    isFramePaletteOpen, 
+    isSocialPaletteOpen, 
+    isNPCPaletteOpen, 
+    isFramePanelOpen,
+    isSocialPanelOpen,
+    isDialogZonePanelOpen,
+    toggleItemPalette, 
+    toggleFramePalette, 
+    toggleSocialPalette, 
+    toggleNPCPalette 
+  } from '../../stores/uiStores';
   import { switchToGame } from '../../utils/sceneManager';
   import { EventBus, EVENTS } from '../../events/EventBus';
 import ItemPalette from './ItemPalette.svelte';
 import FramePalette from './FramePalette.svelte';
 import SocialsPalette from './SocialsPalette.svelte';
+import NPCPalette from './NPCPalette.svelte';
 import PixelButton from '../shared/PixelButton.svelte';
 import DialogZonePanel from './DialogZonePanel.svelte';
   import FramePanel from './FramePanel.svelte';
   import SocialsPanel from './SocialsPanel.svelte';
+  import NPCConfigPanel from './NPCConfigPanel.svelte';
   import FrameContent from '../overlays/FrameContent.svelte';
   import TempZoneButton from './TempZoneButton.svelte';
   import DialogModeHint from '../overlays/DialogModeHint.svelte';
@@ -34,6 +48,29 @@ import DialogZonePanel from './DialogZonePanel.svelte';
     }
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  });
+
+  // Global double-click handler to close panels
+  function handleGlobalDoubleClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    // If click is inside a draggable panel, ignore
+    if (target.closest('.draggable-panel')) {
+      return;
+    }
+    
+    // Close all panels
+    isItemPaletteOpen.set(false);
+    isFramePaletteOpen.set(false);
+    isSocialPaletteOpen.set(false);
+    isNPCPaletteOpen.set(false);
+    isFramePanelOpen.set(false);
+    isSocialPanelOpen.set(false);
+    isDialogZonePanelOpen.set(false);
+  }
+
+  $effect(() => {
+    window.addEventListener('dblclick', handleGlobalDoubleClick);
+    return () => window.removeEventListener('dblclick', handleGlobalDoubleClick);
   });
 
   function handleSave() {
@@ -72,10 +109,13 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   <FramePalette />
 {:else if $builderEditMode === 'socials'}
   <SocialsPalette />
+{:else if $builderEditMode === 'npcs'}
+  <NPCPalette />
 {/if}
 <!-- FramePanel shows whenever a frame is selected, regardless of mode -->
 <FramePanel />
 <SocialsPanel />
+<NPCConfigPanel />
 <FrameContent />
 
 <!-- Temporary zone button (shown on click in dialog mode) -->
@@ -149,6 +189,21 @@ import DialogZonePanel from './DialogZonePanel.svelte';
       title="Edit social icons"
     >
       SOCIALS
+    </PixelButton>
+
+    <PixelButton 
+      variant={$builderEditMode === 'npcs' && $isNPCPaletteOpen ? 'orange' : 'green'}
+      onclick={() => {
+        if ($builderEditMode === 'npcs') {
+          toggleNPCPalette();
+        } else {
+          setBuilderEditMode('npcs');
+          isNPCPaletteOpen.set(true);
+        }
+      }}
+      title="Edit NPCs"
+    >
+      NPCS
     </PixelButton>
 
     <HStack>

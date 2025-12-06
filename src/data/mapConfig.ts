@@ -5,9 +5,22 @@
 
 import { getItemScale } from './items';
 import { getItemDepth } from '../constants/depthLayers';
-import type { DialogZone } from '../types/DialogTypes';
+import type { DialogZone, LocalizedText } from '../types/DialogTypes';
 import type { PlacedFrame } from '../types/FrameTypes';
 import type { PlacedSocial } from '../types/SocialTypes';
+
+/**
+ * Placed NPC in the game world
+ */
+export interface PlacedNPC {
+  id: string;
+  npcId: string; // ID from NPC_REGISTRY
+  x: number;
+  y: number;
+  scale?: number;
+  flipX?: boolean;
+  dialog?: LocalizedText[]; // Optional dialog content
+}
 
 /**
  * Placed item in the game world
@@ -34,6 +47,7 @@ export interface MapConfig {
   dialogZones?: DialogZone[];
   placedFrames?: PlacedFrame[];
   placedSocials?: PlacedSocial[];
+  placedNPCs?: PlacedNPC[];
 }
 
 /**

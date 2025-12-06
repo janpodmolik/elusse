@@ -196,6 +196,14 @@ export const EVENTS = {
   // Dialog zone events
   DIALOG_ZONE_CREATE: 'dialogZone:create',
   DIALOG_ZONE_CREATE_AT: 'dialogZone:createAt',
+  SHOW_DIALOG: 'dialog:show',
+  
+  // NPC events
+  NPC_DROPPED: 'npc:dropped',
+  NPC_SELECTED: 'npc:selected',
+  NPC_DESELECTED: 'npc:deselected',
+  NPC_UPDATED: 'npc:updated',
+  NPC_DELETED: 'npc:deleted',
   
   // Temp zone button events
   TEMP_ZONE_BUTTON_SHOW: 'tempZoneButton:show',

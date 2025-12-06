@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../managers/PlacedItemManager';
+import { PlacedNPCManager } from '../managers/PlacedNPCManager';
 import { GameFrameManager } from '../managers/GameFrameManager';
 import { GameSocialManager } from '../managers/GameSocialManager';
 import { dialogZones as dialogZonesStore } from '../stores/builderStores';
@@ -11,11 +12,12 @@ import {
   setGameCameraInfo, 
   setActiveDialogZone 
 } from '../stores';
-import type { DialogZone } from '../types/DialogTypes';
+import type { DialogZone, LocalizedText } from '../types/DialogTypes';
 import type { IPlayer } from '../entities';
 import { GamePlayerManager } from '../managers/game/GamePlayerManager';
 import { MapManager } from '../managers/game/MapManager';
 import type { MapConfig } from '../data/mapConfig';
+import { EventBus, EVENTS } from '../events/EventBus';
 
 export class GameScene extends Phaser.Scene {
   // Managers
@@ -32,6 +34,9 @@ export class GameScene extends Phaser.Scene {
 
   // Placed items system (replaces dialog trigger system)
   private itemManager!: PlacedItemManager;
+  
+  // Placed NPCs system
+  private npcManager!: PlacedNPCManager;
   
   // Frame manager for clickable frames
   private frameManager!: GameFrameManager;
@@ -78,6 +83,9 @@ export class GameScene extends Phaser.Scene {
 
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
+    
+    // Load NPC assets
+    PlacedNPCManager.preloadAssets(this);
     
     // Load frame assets
     GameFrameManager.preloadAssets(this);
@@ -154,6 +162,14 @@ export class GameScene extends Phaser.Scene {
         this.socialManager.createSocials(mapConfig.placedSocials);
       }
       
+      // Initialize NPC manager
+      this.npcManager = new PlacedNPCManager(this, groundY, false);
+      
+      // Load placed NPCs from config
+      if (mapConfig.placedNPCs && mapConfig.placedNPCs.length > 0) {
+        this.npcManager.createNPCs(mapConfig.placedNPCs);
+      }
+      
       // Load dialog zones from config (initial load)
       this.dialogZones = mapConfig.dialogZones || [];
       
@@ -174,6 +190,9 @@ export class GameScene extends Phaser.Scene {
       // Setup resize handler
       this.scale.on('resize', this.handleResize, this);
       
+      // Listen for NPC dialog events
+      EventBus.on(EVENTS.SHOW_DIALOG, this.handleShowDialog, this);
+      
       // Mark as initialized - safe to call update()
       this.isInitialized = true;
     } catch (error) {
@@ -183,6 +202,21 @@ export class GameScene extends Phaser.Scene {
       // Hide loading indicator
       isLoading.set(false);
     }
+  }
+
+  private handleShowDialog(data: { texts: LocalizedText[], npcId: string }) {
+    // Create a temporary dialog zone structure to reuse the existing UI
+    const tempZone: DialogZone = {
+      id: 'npc-dialog-' + data.npcId + '-' + Date.now(),
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      text: data.texts,
+      isTemporary: true
+    };
+    
+    setActiveDialogZone(tempZone);
   }
 
   /**
@@ -255,6 +289,9 @@ export class GameScene extends Phaser.Scene {
     
     // Remove resize listener
     this.scale.off('resize', this.handleResize, this);
+    
+    // Remove NPC dialog listener
+    EventBus.off(EVENTS.SHOW_DIALOG, this.handleShowDialog, this);
     
     // Clear active dialog zone
     setActiveDialogZone(null);

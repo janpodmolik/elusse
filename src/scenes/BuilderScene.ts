@@ -10,6 +10,7 @@ import { BuilderGridOverlay } from '../managers/builder/BuilderGridOverlay';
 import { BuilderItemsController } from '../managers/builder/BuilderItemsController';
 import { BuilderFramesController } from '../managers/builder/BuilderFramesController';
 import { BuilderSocialsController } from '../managers/builder/BuilderSocialsController';
+import { BuilderNPCsController } from '../managers/builder/BuilderNPCsController';
 import { DialogZoneRenderer } from '../managers/builder/DialogZoneRenderer';
 import { PlacedItemManager } from '../managers/PlacedItemManager';
 import { GROUND_HEIGHT } from '../managers/builder/builderConstants';
@@ -33,6 +34,7 @@ export class BuilderScene extends Phaser.Scene {
   private itemsController!: BuilderItemsController;
   private framesController!: BuilderFramesController;
   private socialsController!: BuilderSocialsController;
+  private npcsController!: BuilderNPCsController;
   private dialogZoneRenderer!: DialogZoneRenderer;
   
   // Configuration
@@ -74,6 +76,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Load social assets
     BuilderSocialsController.preloadAssets(this);
+    
+    // Load NPC assets
+    BuilderNPCsController.preloadAssets(this);
   }
 
   create(): void {
@@ -105,6 +110,7 @@ export class BuilderScene extends Phaser.Scene {
     this.itemsController = new BuilderItemsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
     this.framesController = new BuilderFramesController(this, this.config.worldWidth, this.config.worldHeight);
     this.socialsController = new BuilderSocialsController(this, this.config.worldWidth, this.config.worldHeight);
+    this.npcsController = new BuilderNPCsController(this, groundY);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
     // Load and create background
@@ -128,6 +134,9 @@ export class BuilderScene extends Phaser.Scene {
     
     // Create socials manager
     this.socialsController.create(this.config.placedSocials || []);
+    
+    // Create NPCs manager
+    this.npcsController.create(this.config.placedNPCs || []);
     
     // Create dialog zone renderer
     this.dialogZoneRenderer.create();

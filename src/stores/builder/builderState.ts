@@ -10,7 +10,7 @@ import { builderZoomLevel } from '../gameStores';
 export type ItemDepthLayer = 'behind' | 'front';
 
 /** Builder edit mode */
-export type BuilderEditMode = 'items' | 'dialogs' | 'frames' | 'socials';
+export type BuilderEditMode = 'items' | 'dialogs' | 'frames' | 'socials' | 'npcs';
 
 export interface BuilderState {
   isActive: boolean;

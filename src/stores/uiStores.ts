@@ -48,6 +48,11 @@ export const isFramePanelOpen = writable<boolean>(false);
 /** Whether social palette is open */
 export const isSocialPaletteOpen = writable<boolean>(false);
 
+/** Whether NPC palette is open */
+export const isNPCPaletteOpen = writable<boolean>(false);
+
+/** Toggle item palette visibility */
+
 /** Whether social panel is explicitly open (set by double-click, not single click) */
 export const isSocialPanelOpen = writable<boolean>(false);
 
@@ -82,6 +87,11 @@ export function closeFramePanel(): void {
 /** Toggle social palette */
 export function toggleSocialPalette(): void {
   isSocialPaletteOpen.update(open => !open);
+}
+
+/** Toggle NPC palette */
+export function toggleNPCPalette(): void {
+  isNPCPaletteOpen.update(open => !open);
 }
 
 /** Open social panel (called on double-click) */
