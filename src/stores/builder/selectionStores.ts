@@ -34,12 +34,11 @@ export function selectPlayer(selected: boolean): void {
   }));
 }
 
-/** Clear all selections (items, frames, dialogs, socials, player) */
+/** Clear all selections (items, dialogs, socials, player) */
 export function clearSelection(): void {
   builderState.update(state => ({
     ...state,
     selectedItemId: null,
-    selectedFrameId: null,
     selectedDialogZoneId: null,
     selectedSocialId: null,
     isPlayerSelected: false

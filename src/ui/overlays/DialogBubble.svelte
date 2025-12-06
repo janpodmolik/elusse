@@ -5,9 +5,6 @@
     DIALOG_BUBBLE_VERTICAL_OFFSET
   } from '../../constants/uiConstants';
   
-  // Check if we have both title and content (for divider)
-  let hasBoth = $derived($activeDialogText?.title && $activeDialogText?.content);
-  
   // Calculate bubble bottom position (bubble sits above player)
   // Using bottom anchor so bubble grows upward
   let bubbleBottom = $derived(Math.max(10, window.innerHeight - $playerScreenPosition.y + DIALOG_BUBBLE_VERTICAL_OFFSET));
@@ -26,9 +23,6 @@
     class:narrow={isNarrowScreen}
     style="bottom: {bubbleBottom}px; left: {bubbleLeft}{bubbleStyle};"
   >
-    {#if $activeDialogText.title}
-      <div class="dialog-title" class:has-divider={hasBoth}>{$activeDialogText.title}</div>
-    {/if}
     {#if $activeDialogText.content}
       <div class="dialog-content">{$activeDialogText.content}</div>
     {/if}
@@ -95,21 +89,6 @@
     border-right: 8px solid transparent;
     border-top: 12px solid #f8f8f8;
     z-index: 1;
-  }
-  
-  .dialog-title {
-    font-size: 11px;
-    font-weight: bold;
-    color: #1a1a2e;
-    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-  
-  .dialog-title.has-divider {
-    margin-bottom: 8px;
-    padding-bottom: 6px;
-    border-bottom: 4px solid #ddd;
   }
   
   .dialog-content {

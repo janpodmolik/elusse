@@ -8,7 +8,6 @@ import { BuilderCameraController } from '../managers/builder/BuilderCameraContro
 import { BuilderPlayerController } from '../managers/builder/BuilderPlayerController';
 import { BuilderGridOverlay } from '../managers/builder/BuilderGridOverlay';
 import { BuilderItemsController } from '../managers/builder/BuilderItemsController';
-import { BuilderFramesController } from '../managers/builder/BuilderFramesController';
 import { BuilderSocialsController } from '../managers/builder/BuilderSocialsController';
 import { BuilderNPCsController } from '../managers/builder/BuilderNPCsController';
 import { DialogZoneRenderer } from '../managers/builder/DialogZoneRenderer';
@@ -32,7 +31,6 @@ export class BuilderScene extends Phaser.Scene {
   private playerController!: BuilderPlayerController;
   private gridOverlay!: BuilderGridOverlay;
   private itemsController!: BuilderItemsController;
-  private framesController!: BuilderFramesController;
   private socialsController!: BuilderSocialsController;
   private npcsController!: BuilderNPCsController;
   private dialogZoneRenderer!: DialogZoneRenderer;
@@ -71,9 +69,6 @@ export class BuilderScene extends Phaser.Scene {
     // Load UI assets for placed items
     PlacedItemManager.preloadAssets(this);
     
-    // Load frame assets
-    BuilderFramesController.preloadAssets(this);
-    
     // Load social assets
     BuilderSocialsController.preloadAssets(this);
     
@@ -108,7 +103,6 @@ export class BuilderScene extends Phaser.Scene {
     this.playerController = new BuilderPlayerController(this, this.config.worldWidth, this.config.worldHeight);
     this.gridOverlay = new BuilderGridOverlay(this, this.config.worldWidth, this.config.worldHeight);
     this.itemsController = new BuilderItemsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
-    this.framesController = new BuilderFramesController(this, this.config.worldWidth, this.config.worldHeight);
     this.socialsController = new BuilderSocialsController(this, this.config.worldWidth, this.config.worldHeight);
     this.npcsController = new BuilderNPCsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
@@ -128,9 +122,6 @@ export class BuilderScene extends Phaser.Scene {
     
     // Create placed items manager
     this.itemsController.create(this.config.placedItems || []);
-    
-    // Create frames manager
-    this.framesController.create(this.config.placedFrames || []);
     
     // Create socials manager
     this.socialsController.create(this.config.placedSocials || []);
@@ -200,16 +191,26 @@ export class BuilderScene extends Phaser.Scene {
       updateParallaxTiling(this.parallaxLayers, this.cameras.main);
     }
     
+    // Get player sprite for auto-depth calculations
+    const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
+    
+    // Update auto-depth for items and NPCs based on player position
+    if (playerSprite) {
+      const playerBounds = playerSprite.getBounds();
+      const playerBottomY = playerBounds.bottom;
+      
+      this.itemManager?.updateAutoDepth(playerBottomY);
+      this.npcsController?.updateAutoDepth(playerBottomY);
+    }
+    
     // Update selection visuals and screen position (for UI overlay)
     this.itemManager?.updateSelectionVisuals();
-    this.framesController?.updateSelectionVisuals();
     this.socialsController?.updateSelectionVisuals();
     this.dialogZoneRenderer?.updateSelectionVisuals();
     this.npcsController?.update();
     
     // Update camera info for minimap
     const camera = this.cameras.main;
-    const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
     
     // Use worldView for accurate world-to-screen conversion
     // worldView represents the visible area in world coordinates
@@ -271,9 +272,6 @@ export class BuilderScene extends Phaser.Scene {
     }
     if (this.itemsController) {
       this.itemsController.destroy();
-    }
-    if (this.framesController) {
-      this.framesController.destroy();
     }
     if (this.socialsController) {
       this.socialsController.destroy();

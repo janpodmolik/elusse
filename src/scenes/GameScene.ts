@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../managers/PlacedItemManager';
 import { PlacedNPCManager } from '../managers/PlacedNPCManager';
-import { GameFrameManager } from '../managers/GameFrameManager';
 import { GameSocialManager } from '../managers/GameSocialManager';
 import { dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
@@ -37,9 +36,6 @@ export class GameScene extends Phaser.Scene {
   
   // Placed NPCs system
   private npcManager!: PlacedNPCManager;
-  
-  // Frame manager for clickable frames
-  private frameManager!: GameFrameManager;
   
   // Social manager for clickable social icons
   private socialManager!: GameSocialManager;
@@ -92,9 +88,6 @@ export class GameScene extends Phaser.Scene {
     
     // Load NPC assets
     PlacedNPCManager.preloadAssets(this);
-    
-    // Load frame assets
-    GameFrameManager.preloadAssets(this);
     
     // Load social assets
     GameSocialManager.preloadAssets(this);
@@ -150,14 +143,6 @@ export class GameScene extends Phaser.Scene {
       const itemPhysicsGroup = this.itemManager.getPhysicsGroup();
       if (itemPhysicsGroup && this.player) {
         this.physics.add.collider(this.player.getGameObject(), itemPhysicsGroup);
-      }
-      
-      // Initialize frame manager for clickable frames
-      this.frameManager = new GameFrameManager(this);
-      
-      // Load placed frames from config
-      if (mapConfig.placedFrames && mapConfig.placedFrames.length > 0) {
-        this.frameManager.createFrames(mapConfig.placedFrames);
       }
       
       // Initialize social manager for clickable social icons
@@ -250,7 +235,7 @@ export class GameScene extends Phaser.Scene {
     
     camera.setBounds(boundsX, boundsY, boundsWidth, boundsHeight);
     
-    // Update game world dimensions for UI frame overlay
+    // Update game world dimensions for UI overlay
     setGameWorldDimensions(
       mapConfig.worldWidth,
       mapConfig.worldHeight,
@@ -293,11 +278,6 @@ export class GameScene extends Phaser.Scene {
       this.itemManager.destroy();
     }
     
-    // Clean up frame manager
-    if (this.frameManager) {
-      this.frameManager.destroy();
-    }
-    
     // Clean up social manager
     if (this.socialManager) {
       this.socialManager.destroy();
@@ -312,13 +292,26 @@ export class GameScene extends Phaser.Scene {
     this.player.update();
     const { x: playerX, y: playerY } = this.player.getPosition();
     
+    // Calculate player's bottom Y for auto-depth sorting
+    const playerGameObject = this.player.getGameObject();
+    const playerBounds = playerGameObject.getBounds();
+    const playerBottomY = playerBounds.bottom;
+    
+    // Update auto-depth for items and NPCs based on player position
+    if (this.itemManager) {
+      this.itemManager.updateAutoDepth(playerBottomY);
+    }
+    if (this.npcManager) {
+      this.npcManager.updateAutoDepth(playerBottomY);
+    }
+    
     // Update player screen position for UI (dialog bubbles)
     const camera = this.cameras.main;
     const screenX = playerX - camera.scrollX;
     const screenY = playerY - camera.scrollY;
     setPlayerScreenPosition(screenX, screenY);
     
-    // Update camera info for frame text overlay
+    // Update camera info for overlay
     setGameCameraInfo(camera.scrollX, camera.scrollY, camera.zoom);
     
     // Check dialog zone collisions

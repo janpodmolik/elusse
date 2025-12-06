@@ -22,7 +22,6 @@ import { isPointerOverUI } from '../utils/inputUtils';
  */
 export const INTERACTIVE_DATA_KEYS = {
   ITEM: 'itemId',
-  FRAME: 'frameId', 
   SOCIAL: 'socialId',
   NPC: 'npcId',
   PLAYER: 'isPlayer',
@@ -37,7 +36,6 @@ export const INTERACTIVE_DATA_KEYS = {
  */
 export const SELECTED_DATA_KEYS: Record<string, string> = {
   [INTERACTIVE_DATA_KEYS.ITEM]: 'selectedItemId',
-  [INTERACTIVE_DATA_KEYS.FRAME]: 'selectedFrameId',
   [INTERACTIVE_DATA_KEYS.SOCIAL]: 'selectedSocialId',
   [INTERACTIVE_DATA_KEYS.NPC]: 'selectedItemId',  // NPCs reuse selectedItemId
   [INTERACTIVE_DATA_KEYS.PLAYER]: 'isPlayerSelected',

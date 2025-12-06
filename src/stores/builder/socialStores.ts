@@ -90,9 +90,8 @@ export function selectSocial(id: string | null): void {
   builderState.update(state => ({
     ...state,
     selectedSocialId: id,
-    // Deselect player, items and frames when selecting a social
+    // Deselect player and items when selecting a social
     isPlayerSelected: id ? false : state.isPlayerSelected,
-    selectedItemId: id ? null : state.selectedItemId,
-    selectedFrameId: id ? null : state.selectedFrameId
+    selectedItemId: id ? null : state.selectedItemId
   }));
 }

@@ -106,13 +106,6 @@ export interface AssetDroppedEvent {
   canvasY: number;
 }
 
-/** Frame dropped from palette to canvas */
-export interface FrameDroppedEvent {
-  frameKey: string;
-  canvasX: number;
-  canvasY: number;
-}
-
 /** Social dropped from palette to canvas */
 export interface SocialDroppedEvent {
   socialKey: string;
@@ -157,9 +150,6 @@ export interface MinimapNavigateEvent {
 export const EVENTS = {
   // Asset events
   ASSET_DROPPED: 'asset:dropped',
-  
-  // Frame events
-  FRAME_DROPPED: 'frame:dropped',
   
   // Social events
   SOCIAL_DROPPED: 'social:dropped',

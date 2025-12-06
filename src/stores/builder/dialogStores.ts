@@ -123,7 +123,7 @@ export function updateDialogZoneText(zoneId: string, language: string, updates: 
 
 /** Add a new language to a dialog zone */
 export function addDialogZoneLanguage(zoneId: string, language: string): void {
-  updateDialogZoneText(zoneId, language, { language, title: '', content: '' });
+  updateDialogZoneText(zoneId, language, { language, content: '' });
 }
 
 /** Remove a language from a dialog zone */

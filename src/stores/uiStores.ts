@@ -39,12 +39,6 @@ export const backgroundChangeCounter = writable<number>(0);
 /** Whether item palette is open */
 export const isItemPaletteOpen = writable<boolean>(false);
 
-/** Whether frame palette is open */
-export const isFramePaletteOpen = writable<boolean>(false);
-
-/** Whether frame panel is explicitly open (set by double-click, not single click) */
-export const isFramePanelOpen = writable<boolean>(false);
-
 /** Whether social palette is open */
 export const isSocialPaletteOpen = writable<boolean>(false);
 
@@ -70,21 +64,6 @@ export const builderPreviewLanguage = writable<Language>(DEFAULT_LANGUAGE);
 /** Toggle item palette */
 export function toggleItemPalette(): void {
   isItemPaletteOpen.update(open => !open);
-}
-
-/** Toggle frame palette */
-export function toggleFramePalette(): void {
-  isFramePaletteOpen.update(open => !open);
-}
-
-/** Open frame panel (called on double-click) */
-export function openFramePanel(): void {
-  isFramePanelOpen.set(true);
-}
-
-/** Close frame panel */
-export function closeFramePanel(): void {
-  isFramePanelOpen.set(false);
 }
 
 /** Toggle social palette */

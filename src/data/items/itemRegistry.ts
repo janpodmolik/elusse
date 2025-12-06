@@ -10,13 +10,6 @@ export const ANIMATED_ITEMS: Record<string, ItemAnimationConfig> = {
     frameRate: 10,
     repeat: -1,
     endFrame: 39
-  },
-  'campfire_large': {
-    frameWidth: 32,
-    frameHeight: 32,
-    frameRate: 10,
-    repeat: -1,
-    endFrame: 39
   }
 };
 
@@ -27,15 +20,7 @@ export const ITEMS: ItemDefinition[] = [
   // --- Shared Items ---
   {
     key: 'campfire',
-    name: 'Campfire Small',
-    path: 'assets/items/campfire.png',
-    scale: 3,
-    group: 'shared',
-    category: 'props'
-  },
-  {
-    key: 'campfire_large',
-    name: 'Campfire Large',
+    name: 'Campfire',
     path: 'assets/items/campfire.png',
     scale: 5,
     group: 'shared',

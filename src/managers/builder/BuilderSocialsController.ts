@@ -189,14 +189,14 @@ export class BuilderSocialsController {
     this.unsubscribers.push(selectedUnsubscribe);
     
     // Subscribe to edit mode changes
-    // Only disable socials when in dialogs mode (socials, items and frames share interaction)
+    // Only disable socials when in dialogs mode (socials and items share interaction)
     const editModeUnsubscribe = builderEditMode.subscribe(mode => {
       if (mode === 'dialogs') {
         // Clear selection and disable interactions only in dialogs mode
         selectSocial(null);
         this.setInteractiveEnabled(false);
       } else {
-        // Re-enable in items, frames or socials mode
+        // Re-enable in items or socials mode
         this.setInteractiveEnabled(true);
       }
     });

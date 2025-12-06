@@ -155,6 +155,11 @@ export class BuilderNPCsController {
   update(): void {
     this.npcManager.update();
   }
+  
+  /** Update NPC depths based on player position */
+  updateAutoDepth(playerBottomY: number): void {
+    this.npcManager.updateAutoDepth(playerBottomY);
+  }
 
   destroy(): void {
     this.unsubscribers.forEach(unsubscribe => unsubscribe());

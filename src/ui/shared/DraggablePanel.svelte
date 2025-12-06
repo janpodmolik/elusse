@@ -413,6 +413,40 @@
   function stopPropagation(event: Event) {
     event.stopPropagation();
   }
+
+  // Attach non-passive listeners to prevent browser zoom
+  $effect(() => {
+    if (!panelRef) return;
+    
+    const el = panelRef;
+    
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent browser zoom (Ctrl + Wheel or Pinch)
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+      // Always stop propagation to prevent game camera zoom
+      e.stopPropagation();
+    };
+    
+    const handleGesture = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    
+    // Use passive: false to allow preventDefault()
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    el.addEventListener('gesturestart', handleGesture, { passive: false });
+    el.addEventListener('gesturechange', handleGesture, { passive: false });
+    el.addEventListener('gestureend', handleGesture, { passive: false });
+    
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      el.removeEventListener('gesturestart', handleGesture);
+      el.removeEventListener('gesturechange', handleGesture);
+      el.removeEventListener('gestureend', handleGesture);
+    };
+  });
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->

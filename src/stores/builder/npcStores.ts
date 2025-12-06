@@ -67,7 +67,7 @@ export function updatePlacedNPC(id: string, updates: Partial<PlacedNPC>): void {
 
 import type { Language } from '../../types/Language';
 
-export function updateNPCDialogText(id: string, language: Language, updates: { title?: string; content?: string }): void {
+export function updateNPCDialogText(id: string, language: Language, updates: { content?: string }): void {
   builderState.update(state => {
     if (!state.config?.placedNPCs) return state;
     
@@ -82,7 +82,7 @@ export function updateNPCDialogText(id: string, language: Language, updates: { t
         newDialogs = [...dialogs];
         newDialogs[existingIndex] = { ...newDialogs[existingIndex], ...updates };
       } else {
-        newDialogs = [...dialogs, { language, title: updates.title ?? '', content: updates.content ?? '' }];
+        newDialogs = [...dialogs, { language, title: '', content: updates.content ?? '' }];
       }
       
       return { ...npc, dialog: newDialogs };

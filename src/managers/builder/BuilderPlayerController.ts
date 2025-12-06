@@ -347,7 +347,7 @@ export class BuilderPlayerController {
         this.player.disableInteractive();
         this.setAlpha(0.6);
       } else {
-        // Re-enable in items/frames mode and restore opacity
+        // Re-enable in items mode and restore opacity
         this.setAlpha(1);
         if (!this.interactionCleanup) {
           this.setupInteraction();

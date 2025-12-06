@@ -7,19 +7,15 @@ import { builderZoomLevel } from '../gameStores';
 
 // ==================== Types ====================
 
-export type ItemDepthLayer = 'behind' | 'front';
-
 /** Builder edit mode */
-export type BuilderEditMode = 'items' | 'dialogs' | 'frames' | 'socials' | 'npcs';
+export type BuilderEditMode = 'items' | 'dialogs' | 'socials' | 'npcs';
 
 export interface BuilderState {
   isActive: boolean;
   config: MapConfig | null;
   selectedItemId: string | null;
-  itemDepthLayer: ItemDepthLayer;
   editMode: BuilderEditMode;
   selectedDialogZoneId: string | null;
-  selectedFrameId: string | null;
   selectedSocialId: string | null;
   isPlayerSelected: boolean;
 }
@@ -30,10 +26,8 @@ const initialState: BuilderState = {
   isActive: false,
   config: null,
   selectedItemId: null,
-  itemDepthLayer: 'behind',
   editMode: 'items',
   selectedDialogZoneId: null,
-  selectedFrameId: null,
   selectedSocialId: null,
   isPlayerSelected: false,
 };
@@ -63,7 +57,7 @@ export function toggleGridSnapping(): void {
 
 // ==================== Drag State ====================
 
-/** Whether any item/frame/zone is currently being dragged */
+/** Whether any item/zone is currently being dragged */
 export const isDraggingInBuilder = writable<boolean>(false);
 
 /** Set dragging state (called from Phaser scene) */
@@ -89,14 +83,11 @@ export function enterBuilderMode(config: MapConfig): void {
       ...config, 
       placedItems: config.placedItems || [],
       dialogZones: config.dialogZones || [],
-      placedFrames: config.placedFrames || [],
       placedSocials: config.placedSocials || []
     },
     selectedItemId: null,
-    itemDepthLayer: 'behind',
     editMode: 'items',
     selectedDialogZoneId: null,
-    selectedFrameId: null,
     selectedSocialId: null,
     isPlayerSelected: false,
   });
@@ -138,13 +129,12 @@ export function getBuilderConfig(): MapConfig | null {
 
 // ==================== Actions - Edit Mode ====================
 
-/** Set builder edit mode (items, dialogs, or frames) */
+/** Set builder edit mode (items, dialogs, socials or npcs) */
 export function setBuilderEditMode(mode: BuilderEditMode): void {
   builderState.update(state => ({
     ...state,
     editMode: mode,
     // Clear item and dialog selections when switching modes
-    // Keep selectedFrameId - FramePanel can be open in any mode
     selectedItemId: null,
     selectedDialogZoneId: null,
   }));
@@ -153,7 +143,7 @@ export function setBuilderEditMode(mode: BuilderEditMode): void {
 /** Toggle between edit modes */
 export function toggleBuilderEditMode(): void {
   builderState.update(state => {
-    const modes: BuilderEditMode[] = ['items', 'dialogs', 'frames'];
+    const modes: BuilderEditMode[] = ['items', 'dialogs', 'socials', 'npcs'];
     const currentIndex = modes.indexOf(state.editMode);
     const nextMode = modes[(currentIndex + 1) % modes.length];
     return {
@@ -161,7 +151,6 @@ export function toggleBuilderEditMode(): void {
       editMode: nextMode,
       selectedItemId: null,
       selectedDialogZoneId: null,
-      selectedFrameId: null,
     };
   });
 }

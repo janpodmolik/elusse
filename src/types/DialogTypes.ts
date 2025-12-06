@@ -64,7 +64,7 @@ export function createDialogZone(x: number, width: number = 300): DialogZone {
     texts: [
       {
         language: 'cs',
-        title: '',
+        title: '', // Kept for backwards compatibility but not used in UI
         content: '',
       }
     ],

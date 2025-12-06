@@ -5,17 +5,17 @@
     showControlsDialog, 
     isTouchDevice,
     hasPlayerMoved,
-    hasSelectedBackground,
-    gameFrameVisible
+    hasSelectedBackground
   } from '../../stores';
   import { isBuilderMode } from '../../stores/builderStores';
+  import { gameFrameVisible } from '../../stores/gameStores';
   import { localization } from '../../data/localization';
   import BuilderUI from '../builder/BuilderUI.svelte';
   import BackgroundSelect from '../shared/BackgroundSelect.svelte';
   import PixelButton from '../shared/PixelButton.svelte';
+  import FixedPosition from '../shared/layout/FixedPosition.svelte';
   import DialogBubble from '../overlays/DialogBubble.svelte';
   import NPCDialogBubble from '../overlays/NPCDialogBubble.svelte';
-  import FrameContent from '../overlays/FrameContent.svelte';
   import GameFrame from './GameFrame.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../../utils/sceneManager';
 
@@ -71,46 +71,47 @@
 {#if !$hasSelectedBackground}
   <BackgroundSelect />
 {:else}
-  <!-- Game Frame (only visible in play mode, not in builder) -->
-  {#if $gameFrameVisible && !$isBuilderMode}
-    <GameFrame />
-  {/if}
-
   <div class="game-ui-wrapper">
+    <!-- Game Frame (decorative border) - only in game mode -->
+    {#if $gameFrameVisible && !$isBuilderMode}
+      <GameFrame />
+    {/if}
+
     <!-- Builder Mode UI -->
     {#if $isBuilderMode}
       <BuilderUI />
     {:else}
-      <!-- Game Mode: Dialog Bubble, NPC Dialog Bubble, and Frame Content -->
+      <!-- Game Mode: Dialog Bubble and NPC Dialog Bubble -->
       <DialogBubble />
       <NPCDialogBubble />
-      <FrameContent />
     {/if}
 
     <!-- Builder Mode Toggle Button (only in play mode) -->
     {#if !$isBuilderMode}
-      <PixelButton 
-        position="top-left"
-        variant="green"
-        width="120px"
-        onclick={handleBuilderToggle}
-        title="Toggle Builder Mode"
-      >
-        BUILD
-      </PixelButton>
+      <FixedPosition position="top-left">
+        <PixelButton 
+          variant="green"
+          width="120px"
+          onclick={handleBuilderToggle}
+          title="Toggle Builder Mode"
+        >
+          BUILD
+        </PixelButton>
+      </FixedPosition>
     {/if}
 
     <!-- Language Button (only in play mode) -->
     {#if !$isBuilderMode}
-      <PixelButton 
-        position="top-right"
-        variant="default"
-        width="100px"
-        onclick={handleLanguageToggle}
-        title="Toggle Language (L)"
-      >
-        {$currentLanguage.toUpperCase()}
-      </PixelButton>
+      <FixedPosition position="top-right">
+        <PixelButton 
+          variant="default"
+          width="100px"
+          onclick={handleLanguageToggle}
+          title="Toggle Language (L)"
+        >
+          {$currentLanguage.toUpperCase()}
+        </PixelButton>
+      </FixedPosition>
     {/if}
 
     <!-- Controls Dialog -->

@@ -25,11 +25,6 @@
     selectedZone?.texts.find(t => t.language === selectedLanguage) ?? null
   );
   
-  function handleTitleChange(value: string) {
-    if (!$selectedDialogZoneId) return;
-    updateDialogZoneText($selectedDialogZoneId, selectedLanguage, { title: value });
-  }
-  
   function handleContentChange(value: string) {
     if (!$selectedDialogZoneId) return;
     updateDialogZoneText($selectedDialogZoneId, selectedLanguage, { content: value });
@@ -79,11 +74,8 @@
       />
       
       <TextForm
-        title={currentText?.title ?? ''}
         content={currentText?.content ?? ''}
-        ontitlechange={handleTitleChange}
         oncontentchange={handleContentChange}
-        titlePlaceholder="Enter title..."
         contentPlaceholder="Enter dialog text..."
         idPrefix="dialog"
         accentColor={ACCENT_COLOR}

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { selectedItemId, selectedItem, selectedItemPhysicsEnabled, selectedItemFlipX, itemDepthLayer, selectedItemScreenPosition, builderEditMode, toggleItemDepthLayer, updateItemDepth, updateItemPhysics, updateItemFlipX, deletePlacedItem, clearSelection, isDraggingInBuilder } from '../../stores/builderStores';
-  import { getItemDepth } from '../../constants/depthLayers';
+  import { selectedItemId, selectedItem, selectedItemPhysicsEnabled, selectedItemFlipX, selectedItemScreenPosition, builderEditMode, updateItemPhysics, updateItemFlipX, deletePlacedItem, clearSelection, isDraggingInBuilder } from '../../stores/builderStores';
   import { itemSupportsPhysics } from '../../data/items/index';
   import PixelButton from '../shared/PixelButton.svelte';
   
@@ -15,8 +14,8 @@
     const padding = 10;
     const buttonRowHeight = 40;
     // Estimate controls width based on number of buttons
-    // ~85px per button, 4 buttons + gaps + padding = ~380px
-    const controlsWidth = canHavePhysics ? 380 : 290;
+    // ~85px per button, 3 buttons + gaps + padding = ~290px
+    const controlsWidth = canHavePhysics ? 290 : 200;
     
     // Try to position above the item first
     let y = pos.screenY - pos.itemHeight / 2 - 45;
@@ -46,14 +45,6 @@
     return { x, y };
   });
   
-  function handleToggleDepth() {
-    if (!$selectedItemId) return;
-    const newLayer = $itemDepthLayer === 'behind' ? 'front' : 'behind';
-    const newDepth = getItemDepth(newLayer);
-    toggleItemDepthLayer();
-    updateItemDepth($selectedItemId, newDepth);
-  }
-  
   function handleTogglePhysics() {
     if (!$selectedItemId) return;
     updateItemPhysics($selectedItemId, !$selectedItemPhysicsEnabled);
@@ -77,15 +68,6 @@
     style="left: {controlsPosition.x}px; top: {controlsPosition.y}px;{$isDraggingInBuilder ? ' pointer-events: none;' : ''}"
   >
     <div class="controls-row">
-      <PixelButton
-        variant={$itemDepthLayer === 'behind' ? 'blue' : 'orange'}
-        title={$selectedItemPhysicsEnabled ? "Solid items must be behind player" : "Toggle item depth: behind or in front of player"}
-        onclick={handleToggleDepth}
-        disabled={$selectedItemPhysicsEnabled}
-      >
-        {$itemDepthLayer === 'behind' ? 'Front' : 'Back'}
-      </PixelButton>
-      
       <PixelButton
         variant={$selectedItemFlipX ? 'orange' : 'blue'}
         title="Flip item horizontally"

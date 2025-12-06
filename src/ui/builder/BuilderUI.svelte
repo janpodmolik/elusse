@@ -1,36 +1,29 @@
 <script lang="ts">
-  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, selectedItemId, selectedFrameId, selectedDialogZoneId, selectedSocialId } from '../../stores/builderStores';
+  import { builderEditMode, setBuilderEditMode, gridSnappingEnabled, toggleGridSnapping, selectedItemId, selectedDialogZoneId, selectedSocialId } from '../../stores/builderStores';
   import { 
     isItemPaletteOpen, 
-    isFramePaletteOpen, 
     isSocialPaletteOpen, 
     isNPCPaletteOpen, 
-    isFramePanelOpen,
     isSocialPanelOpen,
     isDialogZonePanelOpen,
     isNPCConfigPanelOpen,
     toggleItemPalette, 
-    toggleFramePalette, 
     toggleSocialPalette, 
     toggleNPCPalette 
   } from '../../stores/uiStores';
   import { switchToGame } from '../../utils/sceneManager';
   import { EventBus, EVENTS } from '../../events/EventBus';
 import ItemPalette from './ItemPalette.svelte';
-import FramePalette from './FramePalette.svelte';
 import SocialsPalette from './SocialsPalette.svelte';
 import NPCPalette from './NPCPalette.svelte';
 import PixelButton from '../shared/PixelButton.svelte';
 import DialogZonePanel from './DialogZonePanel.svelte';
-  import FramePanel from './FramePanel.svelte';
   import SocialsPanel from './SocialsPanel.svelte';
   import NPCConfigPanel from './NPCConfigPanel.svelte';
-  import FrameContent from '../overlays/FrameContent.svelte';
   import TempZoneButton from './TempZoneButton.svelte';
   import DialogModeHint from '../overlays/DialogModeHint.svelte';
   import ItemControlsOverlay from '../overlays/ItemControlsOverlay.svelte';
   import NPCControlsOverlay from '../overlays/NPCControlsOverlay.svelte';
-  import FrameControlsOverlay from '../overlays/FrameControlsOverlay.svelte';
   import DialogZoneControlsOverlay from '../overlays/DialogZoneControlsOverlay.svelte';
   import SocialControlsOverlay from '../overlays/SocialControlsOverlay.svelte';
   import { HStack, VStack, FixedPosition } from '../shared/layout';
@@ -41,7 +34,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   let isNarrowScreen = $state(typeof window !== 'undefined' ? window.innerWidth < NARROW_SCREEN_THRESHOLD : false);
   
   // Reactive: hide buttons when something is selected on narrow screen
-  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedFrameId !== null || $selectedDialogZoneId !== null || $selectedSocialId !== null));
+  let hideButtons = $derived(isNarrowScreen && ($selectedItemId !== null || $selectedDialogZoneId !== null || $selectedSocialId !== null));
   
   // Listen for window resize
   $effect(() => {
@@ -66,10 +59,8 @@ import DialogZonePanel from './DialogZonePanel.svelte';
     
     // Close all panels
     isItemPaletteOpen.set(false);
-    isFramePaletteOpen.set(false);
     isSocialPaletteOpen.set(false);
     isNPCPaletteOpen.set(false);
-    isFramePanelOpen.set(false);
     isSocialPanelOpen.set(false);
     isDialogZonePanelOpen.set(false);
     isNPCConfigPanelOpen.set(false);
@@ -101,9 +92,6 @@ import DialogZonePanel from './DialogZonePanel.svelte';
 <!-- NPC controls overlay (positioned above selected NPC) -->
 <NPCControlsOverlay />
 
-<!-- Frame controls overlay (positioned above selected frame) -->
-<FrameControlsOverlay />
-
 <!-- Dialog zone controls overlay (positioned above selected zone) -->
 <DialogZoneControlsOverlay />
 
@@ -115,18 +103,13 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   <ItemPalette />
 {:else if $builderEditMode === 'dialogs'}
   <DialogZonePanel />
-{:else if $builderEditMode === 'frames'}
-  <FramePalette />
 {:else if $builderEditMode === 'socials'}
   <SocialsPalette />
 {:else if $builderEditMode === 'npcs'}
   <NPCPalette />
 {/if}
-<!-- FramePanel shows whenever a frame is selected, regardless of mode -->
-<FramePanel />
 <SocialsPanel />
 <NPCConfigPanel />
-<FrameContent />
 
 <!-- Temporary zone button (shown on click in dialog mode) -->
 <TempZoneButton />
@@ -152,7 +135,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   </div>
 </FixedPosition>
 
-<!-- Top-right: Mode selection buttons (ITEMS, FRAMES, DIALOGS) -->
+<!-- Top-right: Mode selection buttons (ITEMS, SOCIALS, NPCS, DIALOGS) -->
 <FixedPosition position="top-right">
   <div class="right-buttons" class:hide-right={hideButtons}>
     <VStack align="end">
@@ -169,21 +152,6 @@ import DialogZonePanel from './DialogZonePanel.svelte';
       title="Edit items"
     >
       ITEMS
-    </PixelButton>
-
-    <PixelButton 
-      variant={$builderEditMode === 'frames' && $isFramePaletteOpen ? 'orange' : 'purple'}
-      onclick={() => {
-        if ($builderEditMode === 'frames') {
-          toggleFramePalette();
-        } else {
-          setBuilderEditMode('frames');
-          isFramePaletteOpen.set(true);
-        }
-      }}
-      title="Edit text frames"
-    >
-      FRAMES
     </PixelButton>
 
     <PixelButton 

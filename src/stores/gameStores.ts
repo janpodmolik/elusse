@@ -4,12 +4,12 @@
  */
 import { writable } from 'svelte/store';
 
-// ==================== Game Frame Customization ====================
+// ==================== Game Frame ====================
 
-/** Game frame border color (customizable) */
+/** Current game frame border color */
 export const gameFrameColor = writable<string>('#2a1a0a');
 
-/** Game frame visibility */
+/** Whether the game frame is visible */
 export const gameFrameVisible = writable<boolean>(true);
 
 // ==================== Player Screen Position ====================

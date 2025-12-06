@@ -260,6 +260,33 @@ export class PlacedItemManager {
   }
 
   /**
+   * Update item depths based on player position
+   * Items with bottomY above player bottomY are behind, otherwise in front
+   * @param playerBottomY - The bottom Y position of the player sprite
+   */
+  updateAutoDepth(playerBottomY: number): void {
+    const DEPTH_BEHIND = 5;  // DEPTH_LAYERS.ITEMS_BEHIND
+    const DEPTH_FRONT = 15;  // DEPTH_LAYERS.ITEMS_FRONT
+    
+    this.items.forEach(({ sprite, data }) => {
+      // Skip physics-enabled items - they must stay behind player
+      if (data.physicsEnabled) {
+        sprite.setDepth(DEPTH_BEHIND);
+        return;
+      }
+      
+      // Calculate item's bottom Y position
+      const bounds = sprite.getBounds();
+      const itemBottomY = bounds.bottom;
+      
+      // If item bottom is above player bottom, item is behind player
+      // Otherwise item is in front of player
+      const newDepth = itemBottomY < playerBottomY ? DEPTH_BEHIND : DEPTH_FRONT;
+      sprite.setDepth(newDepth);
+    });
+  }
+
+  /**
    * Destroy manager and cleanup
    */
   destroy(): void {

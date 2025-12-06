@@ -207,14 +207,6 @@
     cursor: pointer;
   }
   
-  .slider-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 8px;
-    color: #666;
-    margin-top: 4px;
-  }
-  
   .panel-footer {
     margin-top: auto;
     padding: 12px;

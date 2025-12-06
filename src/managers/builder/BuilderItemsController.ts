@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../../managers/PlacedItemManager';
-import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, itemDepthLayer, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
+import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
 import { isItemPaletteOpen } from '../../stores/uiStores';
 import type { PlacedItem } from '../../data/mapConfig';
 import { PlacedItemFactory } from '../../data/mapConfig';
@@ -70,7 +70,7 @@ export class BuilderItemsController {
         clearSelection();
         this.itemManager.setInteractiveEnabled(false);
       } else {
-        // Re-enable in items or frames mode
+        // Re-enable in items mode
         this.itemManager.setInteractiveEnabled(true);
       }
     });
@@ -118,20 +118,13 @@ export class BuilderItemsController {
       const worldX = Math.max(0, Math.min(this.worldWidth, worldPoint.x));
       const worldY = Math.max(0, Math.min(this.worldHeight, worldPoint.y));
       
-      // Get current depth layer preference
-      let currentDepthLayer: 'behind' | 'front' = 'behind';
-      const unsubscribe = itemDepthLayer.subscribe(layer => {
-        currentDepthLayer = layer;
-      });
-      unsubscribe();
-      
-      // Create new item using factory
+      // Create new item using factory (depth will be auto-managed based on player position)
       const newItem = PlacedItemFactory.createAtWorldPosition(
         assetKey,
         worldX,
         worldY,
         this.groundY,
-        currentDepthLayer
+        'behind' // Default depth, will be dynamically updated based on player position
       );
       
       // Add to store and create sprite

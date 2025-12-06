@@ -5,9 +5,6 @@
 
 // ==================== Dialog System ====================
 
-/** Maximum character length for dialog titles */
-export const MAX_DIALOG_TITLE_LENGTH = 50;
-
 /** Maximum character length for dialog content */
 export const MAX_DIALOG_CONTENT_LENGTH = 400;
 

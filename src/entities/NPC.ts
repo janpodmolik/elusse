@@ -10,10 +10,11 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   private selectionIndicator?: Phaser.GameObjects.Rectangle;
   private radiusIndicator?: Phaser.GameObjects.Arc;
   private _isSelected: boolean = false;
+  private isBuilderMode: boolean;
   
   private static readonly DEFAULT_TRIGGER_RADIUS = 200;
 
-  constructor(scene: Phaser.Scene, config: PlacedNPC) {
+  constructor(scene: Phaser.Scene, config: PlacedNPC, builderMode: boolean = false) {
     const definition = getNPCDefinition(config.npcId);
     if (!definition) {
       throw new Error(`NPC definition not found for id: ${config.npcId}`);
@@ -25,6 +26,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.npcId = config.npcId;
     this.dialogData = config.dialog;
     this._triggerRadius = config.triggerRadius ?? NPC.DEFAULT_TRIGGER_RADIUS;
+    this.isBuilderMode = builderMode;
 
     // Add to scene and physics
     scene.add.existing(this);
@@ -48,9 +50,12 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
       definition.frameHeight - height
     );
 
-    // Setup animations
-    this.setupAnimations(definition);
-    this.play(`${this.npcId}_idle`);
+    // Setup animations - only in game mode
+    if (!this.isBuilderMode) {
+      this.setupAnimations(definition);
+      this.play(`${this.npcId}_idle`);
+    }
+    // In builder mode, just show the first frame (static image)
 
     // NPC dialogs are now triggered by proximity, not click
     // Interactive is still set for builder mode selection

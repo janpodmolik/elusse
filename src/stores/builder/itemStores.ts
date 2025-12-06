@@ -12,9 +12,6 @@ import { isNPCConfigPanelOpen } from '../uiStores';
 /** Currently selected item ID (null if none) */
 export const selectedItemId = derived(builderState, $state => $state.selectedItemId);
 
-/** Current depth layer preference for new items */
-export const itemDepthLayer = derived(builderState, $state => $state.itemDepthLayer);
-
 /** Get selected item data */
 export const selectedItem = derived(builderState, $state => {
   if (!$state.selectedItemId || !$state.config?.placedItems) return null;
@@ -104,31 +101,13 @@ export function selectItem(id: string | null): void {
   }));
 }
 
-// ==================== Actions - Depth Layer ====================
-
-/** Toggle depth layer preference between 'behind' and 'front' */
-export function toggleItemDepthLayer(): void {
-  builderState.update(state => ({
-    ...state,
-    itemDepthLayer: state.itemDepthLayer === 'behind' ? 'front' : 'behind'
-  }));
-}
-
-/** Update depth of an existing item */
-export function updateItemDepth(id: string, depth: number): void {
-  updatePlacedItem(id, { depth });
-}
+// ==================== Actions - Item Properties ====================
 
 /** Update physics enabled state of an existing item */
 export function updateItemPhysics(id: string, physicsEnabled: boolean): void {
   if (physicsEnabled) {
     // When enabling physics, force depth to 'behind' layer
     updatePlacedItem(id, { physicsEnabled, depth: getItemDepth('behind') });
-    // Also update the UI state
-    builderState.update(state => ({
-      ...state,
-      itemDepthLayer: 'behind'
-    }));
   } else {
     updatePlacedItem(id, { physicsEnabled });
   }
