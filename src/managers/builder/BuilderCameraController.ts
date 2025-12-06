@@ -121,6 +121,30 @@ export class BuilderCameraController {
   }
 
   /**
+   * Set camera position and zoom (for restoring saved state)
+   */
+  setPosition(scrollX: number, scrollY: number, zoom: number): void {
+    this.currentZoom = Phaser.Math.Clamp(zoom, this.minZoom, MAX_ZOOM);
+    this.targetZoom = this.currentZoom;
+    this.camera.setZoom(this.currentZoom);
+    this.camera.scrollX = scrollX;
+    this.camera.scrollY = scrollY;
+    this.clampScroll();
+    setBuilderZoomLevel(this.currentZoom);
+  }
+
+  /**
+   * Get current camera position and zoom
+   */
+  getPosition(): { scrollX: number; scrollY: number; zoom: number } {
+    return {
+      scrollX: this.camera.scrollX,
+      scrollY: this.camera.scrollY,
+      zoom: this.currentZoom
+    };
+  }
+
+  /**
    * Handle window resize - recalculate minZoom and clamp
    */
   handleResize(): void {

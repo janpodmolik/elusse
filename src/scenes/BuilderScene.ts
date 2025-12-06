@@ -45,6 +45,9 @@ export class BuilderScene extends Phaser.Scene {
   // Shutdown guard to prevent double cleanup
   private isShuttingDown = false;
   
+  // Saved camera position to restore
+  private savedCameraPosition: { scrollX: number; scrollY: number; zoom: number } | null = null;
+  
   // Public access for UI
   public get itemManager(): PlacedItemManager {
     return this.itemsController?.getManager();
@@ -55,12 +58,23 @@ export class BuilderScene extends Phaser.Scene {
     this.cameraController?.resetToFit();
   }
 
+  /** Get current camera position and zoom */
+  public getCameraPosition(): { scrollX: number; scrollY: number; zoom: number } | null {
+    return this.cameraController?.getPosition() ?? null;
+  }
+
+  /** Set camera position and zoom (for restoring saved state) */
+  public setCameraPosition(scrollX: number, scrollY: number, zoom: number): void {
+    this.cameraController?.setPosition(scrollX, scrollY, zoom);
+  }
+
   constructor() {
     super({ key: SCENE_KEYS.BUILDER });
   }
 
-  init(data: { config: MapConfig }): void {
+  init(data: { config: MapConfig; savedCameraPosition?: { scrollX: number; scrollY: number; zoom: number } | null }): void {
     this.config = data.config;
+    this.savedCameraPosition = data.savedCameraPosition ?? null;
   }
 
   preload(): void {
@@ -135,7 +149,18 @@ export class BuilderScene extends Phaser.Scene {
 
     // Setup camera and controls
     this.cameraController.setup();
-    this.cameraController.centerOn(this.config.playerStartX, this.config.playerStartY);
+    
+    // Restore saved camera position or center on player
+    if (this.savedCameraPosition) {
+      this.cameraController.setPosition(
+        this.savedCameraPosition.scrollX,
+        this.savedCameraPosition.scrollY,
+        this.savedCameraPosition.zoom
+      );
+      this.savedCameraPosition = null;
+    } else {
+      this.cameraController.centerOn(this.config.playerStartX, this.config.playerStartY);
+    }
     
     // Listen for minimap navigation events
     this.minimapSubscription = EventBus.on<MinimapNavigateEvent>(EVENTS.MINIMAP_NAVIGATE, (data) => {

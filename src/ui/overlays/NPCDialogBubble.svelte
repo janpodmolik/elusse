@@ -1,23 +1,50 @@
 <script lang="ts">
-  import { activeNPCDialog, activeNPCDialogText } from '../../stores/dialogStores';
+  import { activeNPCDialog, activeNPCDialogText, activeDialogText } from '../../stores/dialogStores';
   import { DIALOG_BUBBLE_VERTICAL_OFFSET } from '../../constants/uiConstants';
+  
+  const BUBBLE_WIDTH = 300;
+  const BUBBLE_MARGIN = 20;
+  const PLAYER_BUBBLE_HEIGHT = 120; // Estimated height of player bubble + gap
+  
+  // Check if player dialog is also active (to avoid overlap)
+  let playerDialogActive = $derived(!!$activeDialogText);
   
   // Calculate bubble position (bubble sits above NPC)
   let bubbleBottom = $derived.by(() => {
     if (!$activeNPCDialog) return 0;
     // Position above the NPC sprite
     const npcTop = $activeNPCDialog.screenY - $activeNPCDialog.npcHeight / 2;
-    return Math.max(10, window.innerHeight - npcTop + DIALOG_BUBBLE_VERTICAL_OFFSET);
+    let bottom = Math.max(10, window.innerHeight - npcTop + DIALOG_BUBBLE_VERTICAL_OFFSET);
+    
+    // If player dialog is active, push NPC bubble higher
+    if (playerDialogActive) {
+      bottom += PLAYER_BUBBLE_HEIGHT;
+    }
+    
+    return bottom;
   });
   
-  // Center on NPC horizontally
-  let bubbleLeft = $derived($activeNPCDialog?.screenX ?? 0);
+  // Clamp bubble position to stay on screen
+  let clampedLeft = $derived.by(() => {
+    if (!$activeNPCDialog) return 0;
+    const npcX = $activeNPCDialog.screenX;
+    const halfWidth = BUBBLE_WIDTH / 2;
+    const minX = halfWidth + BUBBLE_MARGIN;
+    const maxX = window.innerWidth - halfWidth - BUBBLE_MARGIN;
+    return Math.max(minX, Math.min(maxX, npcX));
+  });
+  
+  // Calculate arrow offset (how much the arrow should shift from center)
+  let arrowOffset = $derived.by(() => {
+    if (!$activeNPCDialog) return 0;
+    return $activeNPCDialog.screenX - clampedLeft;
+  });
 </script>
 
 {#if $activeNPCDialogText && $activeNPCDialog}
   <div 
     class="npc-dialog-bubble"
-    style="bottom: {bubbleBottom}px; left: {bubbleLeft}px;"
+    style="bottom: {bubbleBottom}px; left: {clampedLeft}px; --arrow-offset: {arrowOffset}px;"
   >
     {#if $activeNPCDialogText.content}
       <div class="dialog-content">{$activeNPCDialogText.content}</div>
@@ -30,12 +57,12 @@
     position: fixed;
     transform: translateX(-50%);
     
-    /* Size constraints */
-    max-width: 400px;
+    /* Fixed width to prevent resizing */
+    width: 300px;
     max-height: 300px;
     
-    background: #fff8e8;
-    border: 4px solid #e67e22;
+    background: #f8f8f8;
+    border: 4px solid #333;
     padding: 12px 16px;
     
     font-family: 'Press Start 2P', monospace;
@@ -49,28 +76,28 @@
     /* Pixel art style */
     border-radius: 0;
     
-    /* Pixel art shadow - orange tinted */
+    /* Pixel art shadow */
     box-shadow:
-      4px 4px 0 0 rgba(230, 126, 34, 0.4),
+      4px 4px 0 0 rgba(0, 0, 0, 0.3),
       inset 2px 2px 0 0 rgba(255, 255, 255, 0.5);
     
     /* Entrance animation */
     animation: bubbleIn 0.15s ease-out;
   }
   
-  /* Outer triangle (border) - orange */
+  /* Outer triangle (border) */
   .npc-dialog-bubble::after {
     content: '';
     position: absolute;
     bottom: -16px;
-    left: 50%;
+    left: calc(50% + var(--arrow-offset, 0px));
     transform: translateX(-50%);
     
     width: 0;
     height: 0;
     border-left: 12px solid transparent;
     border-right: 12px solid transparent;
-    border-top: 16px solid #e67e22;
+    border-top: 16px solid #333;
   }
   
   /* Inner triangle (fill) */
@@ -78,14 +105,14 @@
     content: '';
     position: absolute;
     bottom: -9px;
-    left: 50%;
+    left: calc(50% + var(--arrow-offset, 0px));
     transform: translateX(-50%);
     
     width: 0;
     height: 0;
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
-    border-top: 12px solid #fff8e8;
+    border-top: 12px solid #f8f8f8;
     z-index: 1;
   }
   

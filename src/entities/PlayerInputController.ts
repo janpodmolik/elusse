@@ -23,7 +23,7 @@ export const TOUCH_CONFIG = {
 
 // Movement constants
 export const MOVEMENT_CONFIG = {
-  SPEED: 350,
+  SPEED: 280,
   JUMP_SPEED: -600,
 } as const;
 

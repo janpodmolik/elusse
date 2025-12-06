@@ -27,8 +27,8 @@ import {
   getHatsFromClothing,
 } from '../data/modularConfig';
 
-// Default scale for modular characters (matching legacy player size)
-export const MODULAR_SCALE = 3.5;
+// Default scale for modular characters (matching NPC size)
+export const MODULAR_SCALE = 4;
 
 /**
  * Preload all textures needed for a character selection

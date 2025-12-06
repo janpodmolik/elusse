@@ -1,11 +1,10 @@
 import Phaser from 'phaser';
 import { PlacedItemManager } from '../../managers/PlacedItemManager';
-import { selectedItemId, deletePlacedItem, addPlacedItem, selectItem, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
+import { selectedItemId, addPlacedItem, selectItem, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
 import { isItemPaletteOpen } from '../../stores/uiStores';
 import type { PlacedItem } from '../../data/mapConfig';
 import { PlacedItemFactory } from '../../data/mapConfig';
 import { EventBus, EVENTS, type AssetDroppedEvent } from '../../events/EventBus';
-import { isTypingInTextField } from '../../utils/inputUtils';
 
 /**
  * BuilderItemsController - Manages placed items and their interactions
@@ -45,7 +44,6 @@ export class BuilderItemsController {
     this.setupBackgroundDeselect();
     this.setupStoreSubscriptions();
     this.setupAssetDropListener();
-    this.setupDeleteKeys();
 
     return this.itemManager;
   }
@@ -137,25 +135,6 @@ export class BuilderItemsController {
     
     // Store subscription for cleanup
     this.unsubscribers.push(() => subscription.unsubscribe());
-  }
-
-  private setupDeleteKeys(): void {
-    // Note: enableCapture=false allows keys to reach input fields
-    const deleteKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE, false);
-    const backspaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE, false);
-    
-    const handleDelete = () => {
-      // Ignore when typing in input fields
-      if (isTypingInTextField()) return;
-      
-      const selectedId = this.scene.data.get('selectedItemId');
-      if (selectedId) {
-        deletePlacedItem(selectedId);
-      }
-    };
-    
-    deleteKey.on('down', handleDelete);
-    backspaceKey.on('down', handleDelete);
   }
 
   /**

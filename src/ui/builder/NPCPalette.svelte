@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import DraggablePanel from '../shared/DraggablePanel.svelte';
-  import { NPC_REGISTRY } from '../../data/npcs/npcRegistry';
+  import { NPC_REGISTRY, type NPCCategory } from '../../data/npcs/npcRegistry';
   import { EventBus, EVENTS } from '../../events/EventBus';
   import { builderEditMode } from '../../stores/builderStores';
   import { isNPCPaletteOpen, toggleNPCPalette } from '../../stores/uiStores';
@@ -9,6 +9,18 @@
   
   const ACCENT_COLOR = '#e67e22'; // Orange for NPCs
   const NARROW_SCREEN_THRESHOLD = 600;
+  
+  // Available categories for display
+  const CATEGORIES: { id: NPCCategory; label: string }[] = [
+    { id: 'humans', label: 'Humans' },
+    { id: 'fantasy', label: 'Fantasy' },
+  ];
+  
+  let selectedCategory = $state<NPCCategory>('humans');
+  
+  const filteredNPCs = $derived(
+    NPC_REGISTRY.filter(npc => npc.category === selectedCategory)
+  );
   
   function isNarrowScreen(): boolean {
     return window.innerWidth < NARROW_SCREEN_THRESHOLD;
@@ -96,8 +108,20 @@
       tabindex="-1"
       onpointerdown={stopMouseDown}
     >
+      <div class="category-tabs">
+        {#each CATEGORIES as cat}
+          <button
+            class="category-tab"
+            class:active={selectedCategory === cat.id}
+            onclick={() => selectedCategory = cat.id}
+          >
+            {cat.label}
+          </button>
+        {/each}
+      </div>
+      
       <div class="palette-grid">
-        {#each NPC_REGISTRY as npc}
+        {#each filteredNPCs as npc}
           <div 
             class="palette-item"
             data-ui
@@ -148,7 +172,40 @@
     user-select: none;
     -webkit-user-select: none;
     height: 100%;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .category-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 2px solid #333;
+    flex-shrink: 0;
+  }
+  
+  .category-tab {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 10px 16px;
+    background: #252540;
+    border: 2px solid #333;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease-out;
+  }
+  
+  .category-tab:hover {
+    background: #2d2d50;
+    border-color: #e67e22;
+    color: #ccc;
+  }
+  
+  .category-tab.active {
+    background: #e67e22;
+    border-color: #e67e22;
+    color: #fff;
   }
   
   .palette-grid {
@@ -156,6 +213,8 @@
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 8px;
     padding: 12px;
+    overflow-y: auto;
+    flex: 1;
   }
   
   .palette-item {

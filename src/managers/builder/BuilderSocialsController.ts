@@ -2,10 +2,10 @@ import Phaser from 'phaser';
 import { get } from 'svelte/store';
 import type { PlacedSocial } from '../../types/SocialTypes';
 import { generateSocialId, DEFAULT_SOCIAL_SCALE } from '../../types/SocialTypes';
-import { selectedSocialId, deletePlacedSocial, addPlacedSocial, selectSocial, builderEditMode, placedSocials, updatePlacedSocial, updateSelectedSocialScreenPosition } from '../../stores/builderStores';
+import { selectedSocialId, addPlacedSocial, selectSocial, builderEditMode, placedSocials, updatePlacedSocial, updateSelectedSocialScreenPosition } from '../../stores/builderStores';
 import { openSocialPanel } from '../../stores/uiStores';
 import { EventBus, EVENTS, type SocialDroppedEvent } from '../../events/EventBus';
-import { isTypingInTextField, worldToScreen } from '../../utils/inputUtils';
+import { worldToScreen } from '../../utils/inputUtils';
 import { DEPTH_LAYERS } from '../../constants/depthLayers';
 import { SELECTION_COLORS } from '../../constants/colors';
 import { setupSpriteInteraction, DoubleClickDetector } from '../../utils/spriteInteraction';
@@ -69,7 +69,6 @@ export class BuilderSocialsController {
     
     this.setupStoreSubscriptions();
     this.setupSocialDropListener();
-    this.setupDeleteKeys();
   }
 
   /**
@@ -267,30 +266,6 @@ export class BuilderSocialsController {
     });
     
     this.unsubscribers.push(() => subscription.unsubscribe());
-  }
-
-  private setupDeleteKeys(): void {
-    const deleteKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE, false);
-    const backspaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE, false);
-    
-    const handleDelete = () => {
-      // Ignore when typing in input fields
-      if (isTypingInTextField()) return;
-      
-      // Only delete in socials mode
-      let currentMode = 'items';
-      const unsub = builderEditMode.subscribe(m => currentMode = m);
-      unsub();
-      if (currentMode !== 'socials') return;
-      
-      const selectedId = this.scene.data.get('selectedSocialId');
-      if (selectedId) {
-        deletePlacedSocial(selectedId);
-      }
-    };
-    
-    deleteKey.on('down', handleDelete);
-    backspaceKey.on('down', handleDelete);
   }
 
   /**

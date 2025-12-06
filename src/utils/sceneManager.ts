@@ -5,6 +5,7 @@
 
 import type { MapConfig } from '../data/mapConfig';
 import { enterBuilderMode, exitBuilderMode } from '../stores/builderStores';
+import { saveBuilderCameraPosition, consumeSavedBuilderCameraPosition } from '../stores/gameStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
 import type { BuilderScene } from '../scenes/BuilderScene';
 
@@ -48,7 +49,7 @@ export function switchToBuilder(mapConfig: MapConfig): boolean {
   }
 
   try {
-    const gameScene = gameInstance.scene.getScene(SCENE_KEYS.GAME);
+    const gameScene = gameInstance.scene.getScene(SCENE_KEYS.GAME) as any;
     if (!gameScene) {
       console.error('GameScene not found');
       return false;
@@ -57,11 +58,17 @@ export function switchToBuilder(mapConfig: MapConfig): boolean {
     // Stop game scene
     gameInstance.scene.stop(SCENE_KEYS.GAME);
     
+    // Check if there's a saved builder camera position to restore
+    const savedBuilderPos = consumeSavedBuilderCameraPosition();
+    
     // Enter builder mode with current config
     enterBuilderMode(mapConfig);
     
-    // Start builder scene
-    gameInstance.scene.start(SCENE_KEYS.BUILDER, { config: mapConfig });
+    // Start builder scene with saved position
+    gameInstance.scene.start(SCENE_KEYS.BUILDER, { 
+      config: mapConfig,
+      savedCameraPosition: savedBuilderPos
+    });
     
     return true;
   } catch (error) {
@@ -81,6 +88,15 @@ export function switchToGame(): boolean {
   }
 
   try {
+    // Save BuilderScene camera position before switching
+    const builderScene = gameInstance.scene.getScene(SCENE_KEYS.BUILDER) as BuilderScene;
+    if (builderScene) {
+      const pos = builderScene.getCameraPosition();
+      if (pos) {
+        saveBuilderCameraPosition(pos.scrollX, pos.scrollY, pos.zoom);
+      }
+    }
+
     console.log('[SceneManager] Stopping builder scene...');
     // Stop builder scene
     gameInstance.scene.stop(SCENE_KEYS.BUILDER);

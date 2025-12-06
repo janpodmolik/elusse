@@ -5,6 +5,9 @@
     DIALOG_BUBBLE_VERTICAL_OFFSET
   } from '../../constants/uiConstants';
   
+  const BUBBLE_WIDTH = 320;
+  const BUBBLE_MARGIN = 20;
+  
   // Calculate bubble bottom position (bubble sits above player)
   // Using bottom anchor so bubble grows upward
   let bubbleBottom = $derived(Math.max(10, window.innerHeight - $playerScreenPosition.y + DIALOG_BUBBLE_VERTICAL_OFFSET));
@@ -12,16 +15,27 @@
   // Check if we're on a narrow screen
   let isNarrowScreen = $derived(window.innerWidth <= NARROW_SCREEN_BREAKPOINT);
   
-  // On narrow screens, center the bubble; on wide screens, follow player
-  let bubbleLeft = $derived(isNarrowScreen ? 50 : $playerScreenPosition.x);
-  let bubbleStyle = $derived(isNarrowScreen ? 'percent' : 'px');
+  // Clamp bubble position to stay on screen
+  let clampedLeft = $derived.by(() => {
+    if (isNarrowScreen) return window.innerWidth / 2;
+    const halfWidth = BUBBLE_WIDTH / 2;
+    const minX = halfWidth + BUBBLE_MARGIN;
+    const maxX = window.innerWidth - halfWidth - BUBBLE_MARGIN;
+    return Math.max(minX, Math.min(maxX, $playerScreenPosition.x));
+  });
+  
+  // Calculate arrow offset (how much the arrow should shift from center)
+  let arrowOffset = $derived.by(() => {
+    if (isNarrowScreen) return 0;
+    return $playerScreenPosition.x - clampedLeft;
+  });
 </script>
 
 {#if $activeDialogText}
   <div 
     class="dialog-bubble" 
     class:narrow={isNarrowScreen}
-    style="bottom: {bubbleBottom}px; left: {bubbleLeft}{bubbleStyle};"
+    style="bottom: {bubbleBottom}px; left: {clampedLeft}px; --arrow-offset: {arrowOffset}px;"
   >
     {#if $activeDialogText.content}
       <div class="dialog-content">{$activeDialogText.content}</div>
@@ -34,9 +48,9 @@
     position: fixed;
     transform: translateX(-50%);
     
-    /* Size constraints - match constants in uiConstants.ts */
-    max-width: 500px;  /* DIALOG_BUBBLE_MAX_WIDTH */
-    max-height: 400px; /* DIALOG_BUBBLE_MAX_HEIGHT */
+    /* Fixed width to prevent resizing */
+    width: 320px;
+    max-height: 400px;
     
     background: #f8f8f8;
     border: 4px solid #333;
@@ -65,7 +79,7 @@
     content: '';
     position: absolute;
     bottom: -16px;
-    left: 50%;
+    left: calc(50% + var(--arrow-offset, 0px));
     transform: translateX(-50%);
     
     width: 0;
@@ -80,7 +94,7 @@
     content: '';
     position: absolute;
     bottom: -9px;
-    left: 50%;
+    left: calc(50% + var(--arrow-offset, 0px));
     transform: translateX(-50%);
     
     width: 0;
@@ -114,9 +128,8 @@
   
   /* Narrow screen adjustments */
   .dialog-bubble.narrow {
-    transform: translateX(-50%);
-    max-width: calc(100% - 20px);
-    left: 50% !important;
+    width: calc(100vw - 40px);
+    max-width: 320px;
   }
   
   .dialog-bubble.narrow::after,

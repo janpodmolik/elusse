@@ -63,13 +63,17 @@ export function setGameWorldDimensions(
   const scaledWorldWidth = worldWidth * zoom;
   const scaledWorldHeight = worldHeight * zoom;
   
-  // Calculate offset when viewport is larger than scaled world
-  const offsetX = Math.max(0, (viewportWidth - scaledWorldWidth) / 2);
-  const offsetY = Math.max(0, (viewportHeight - scaledWorldHeight) / 2);
+  // Frame dimensions = visible area (min of scaled world and viewport)
+  const frameWidth = Math.min(scaledWorldWidth, viewportWidth);
+  const frameHeight = Math.min(scaledWorldHeight, viewportHeight);
+  
+  // Calculate offset to center the frame when viewport is larger than frame
+  const offsetX = Math.max(0, (viewportWidth - frameWidth) / 2);
+  const offsetY = Math.max(0, (viewportHeight - frameHeight) / 2);
   
   gameWorldDimensions.set({ 
-    worldWidth: scaledWorldWidth, 
-    worldHeight: scaledWorldHeight, 
+    worldWidth: frameWidth, 
+    worldHeight: frameHeight, 
     offsetX, 
     offsetY 
   });
@@ -98,6 +102,50 @@ export const builderZoomLevel = writable<number>(1);
 /** Set zoom level (called from BuilderCameraController) */
 export function setBuilderZoomLevel(level: number): void {
   builderZoomLevel.set(level);
+}
+
+// ==================== Saved Camera Positions ====================
+
+interface SavedCameraPosition {
+  scrollX: number;
+  scrollY: number;
+  zoom: number;
+}
+
+/** Saved GameScene camera position (restored when returning from builder) */
+export const savedGameCameraPosition = writable<SavedCameraPosition | null>(null);
+
+/** Saved BuilderScene camera position (restored when returning to builder) */
+export const savedBuilderCameraPosition = writable<SavedCameraPosition | null>(null);
+
+/** Save GameScene camera position before switching to builder */
+export function saveGameCameraPosition(scrollX: number, scrollY: number, zoom: number): void {
+  savedGameCameraPosition.set({ scrollX, scrollY, zoom });
+}
+
+/** Save BuilderScene camera position before switching to game */
+export function saveBuilderCameraPosition(scrollX: number, scrollY: number, zoom: number): void {
+  savedBuilderCameraPosition.set({ scrollX, scrollY, zoom });
+}
+
+/** Get and clear saved GameScene camera position */
+export function consumeSavedGameCameraPosition(): SavedCameraPosition | null {
+  let pos: SavedCameraPosition | null = null;
+  savedGameCameraPosition.update(current => {
+    pos = current;
+    return null;
+  });
+  return pos;
+}
+
+/** Get and clear saved BuilderScene camera position */
+export function consumeSavedBuilderCameraPosition(): SavedCameraPosition | null {
+  let pos: SavedCameraPosition | null = null;
+  savedBuilderCameraPosition.update(current => {
+    pos = current;
+    return null;
+  });
+  return pos;
 }
 
 export interface CameraInfo {

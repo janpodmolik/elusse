@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PlacedNPCManager } from '../../managers/PlacedNPCManager';
-import { builderConfig, builderEditMode, clearSelection, selectedItemId, selectItem } from '../../stores/builderStores';
-import { addPlacedNPC, deletePlacedNPC } from '../../stores/builder/npcStores';
+import { builderConfig, builderEditMode, clearSelection, selectItem } from '../../stores/builderStores';
+import { addPlacedNPC } from '../../stores/builder/npcStores';
 import { isNPCPaletteOpen } from '../../stores/uiStores';
 import type { PlacedNPC } from '../../data/mapConfig';
 import { EventBus, EVENTS } from '../../events/EventBus';
@@ -14,7 +14,6 @@ export class BuilderNPCsController {
   private worldHeight: number;
   public npcManager!: PlacedNPCManager;
   private unsubscribers: Array<() => void> = [];
-  private currentSelectedId: string | null = null;
 
   constructor(scene: Phaser.Scene, groundY: number, worldWidth: number, worldHeight: number) {
     this.scene = scene;
@@ -42,18 +41,11 @@ export class BuilderNPCsController {
     
     this.setupStoreSubscriptions();
     this.setupAssetDropListener();
-    this.setupDeleteKeys();
 
     return this.npcManager;
   }
 
   private setupStoreSubscriptions(): void {
-    // Subscribe to selection changes to track current selection
-    const selectionUnsubscribe = selectedItemId.subscribe(id => {
-      this.currentSelectedId = id;
-    });
-    this.unsubscribers.push(selectionUnsubscribe);
-    
     // Subscribe to edit mode changes
     // Only disable NPCs when in dialogs mode (consistent with items and frames)
     const editModeUnsubscribe = builderEditMode.subscribe(mode => {
@@ -135,22 +127,6 @@ export class BuilderNPCsController {
     this.unsubscribers.push(() => subscription.unsubscribe());
   }
 
-  private setupDeleteKeys(): void {
-    this.scene.input.keyboard?.on('keydown-DELETE', () => this.handleDelete());
-    this.scene.input.keyboard?.on('keydown-BACKSPACE', () => this.handleDelete());
-  }
-
-  private handleDelete(): void {
-    // Check if the selected ID corresponds to an NPC in our manager
-    if (this.currentSelectedId) {
-      const npc = this.npcManager.getNPC(this.currentSelectedId);
-      if (npc) {
-        deletePlacedNPC(this.currentSelectedId);
-        clearSelection();
-      }
-    }
-  }
-  
   /** Call in scene update loop to keep selection visuals in sync */
   update(): void {
     this.npcManager.update();
@@ -164,8 +140,6 @@ export class BuilderNPCsController {
   destroy(): void {
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
     this.npcManager.destroy();
-    this.scene.input.keyboard?.off('keydown-DELETE');
-    this.scene.input.keyboard?.off('keydown-BACKSPACE');
   }
   
   getManager(): PlacedNPCManager {
