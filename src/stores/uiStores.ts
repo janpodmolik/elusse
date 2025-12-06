@@ -51,6 +51,9 @@ export const isSocialPaletteOpen = writable<boolean>(false);
 /** Whether NPC palette is open */
 export const isNPCPaletteOpen = writable<boolean>(false);
 
+/** Whether NPC config panel is explicitly open */
+export const isNPCConfigPanelOpen = writable<boolean>(false);
+
 /** Toggle item palette visibility */
 
 /** Whether social panel is explicitly open (set by double-click, not single click) */
@@ -92,6 +95,16 @@ export function toggleSocialPalette(): void {
 /** Toggle NPC palette */
 export function toggleNPCPalette(): void {
   isNPCPaletteOpen.update(open => !open);
+}
+
+/** Open NPC config panel (called on edit button click) */
+export function openNPCConfigPanel(): void {
+  isNPCConfigPanelOpen.set(true);
+}
+
+/** Close NPC config panel */
+export function closeNPCConfigPanel(): void {
+  isNPCConfigPanelOpen.set(false);
 }
 
 /** Open social panel (called on double-click) */

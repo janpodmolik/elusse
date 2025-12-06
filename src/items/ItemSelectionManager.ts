@@ -24,6 +24,7 @@ export const INTERACTIVE_DATA_KEYS = {
   ITEM: 'itemId',
   FRAME: 'frameId', 
   SOCIAL: 'socialId',
+  NPC: 'npcId',
   PLAYER: 'isPlayer',
   ZONE: 'zoneId',  // Used for Rectangle objects (dialog zone handles)
 } as const;
@@ -38,6 +39,7 @@ export const SELECTED_DATA_KEYS: Record<string, string> = {
   [INTERACTIVE_DATA_KEYS.ITEM]: 'selectedItemId',
   [INTERACTIVE_DATA_KEYS.FRAME]: 'selectedFrameId',
   [INTERACTIVE_DATA_KEYS.SOCIAL]: 'selectedSocialId',
+  [INTERACTIVE_DATA_KEYS.NPC]: 'selectedItemId',  // NPCs reuse selectedItemId
   [INTERACTIVE_DATA_KEYS.PLAYER]: 'isPlayerSelected',
   // ZONE uses different selection mechanism (selectedDialogZoneId)
 } as const;

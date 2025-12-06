@@ -110,7 +110,7 @@ export class BuilderScene extends Phaser.Scene {
     this.itemsController = new BuilderItemsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
     this.framesController = new BuilderFramesController(this, this.config.worldWidth, this.config.worldHeight);
     this.socialsController = new BuilderSocialsController(this, this.config.worldWidth, this.config.worldHeight);
-    this.npcsController = new BuilderNPCsController(this, groundY);
+    this.npcsController = new BuilderNPCsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
     // Load and create background
@@ -205,6 +205,7 @@ export class BuilderScene extends Phaser.Scene {
     this.framesController?.updateSelectionVisuals();
     this.socialsController?.updateSelectionVisuals();
     this.dialogZoneRenderer?.updateSelectionVisuals();
+    this.npcsController?.update();
     
     // Update camera info for minimap
     const camera = this.cameras.main;
@@ -279,6 +280,9 @@ export class BuilderScene extends Phaser.Scene {
     }
     if (this.dialogZoneRenderer) {
       this.dialogZoneRenderer.destroy();
+    }
+    if (this.npcsController) {
+      this.npcsController.destroy();
     }
   }
 }

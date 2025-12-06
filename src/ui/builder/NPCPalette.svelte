@@ -56,7 +56,9 @@
     const canvasY = rect.height / 2;
     
     EventBus.emit(EVENTS.NPC_DROPPED, { assetKey: npcId, canvasX, canvasY });
-    closeOnNarrowScreen();
+    
+    // Close palette after placing
+    isNPCPaletteOpen.set(false);
   }
   
   onMount(() => {

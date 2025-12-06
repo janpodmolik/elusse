@@ -14,6 +14,7 @@
   import BackgroundSelect from '../shared/BackgroundSelect.svelte';
   import PixelButton from '../shared/PixelButton.svelte';
   import DialogBubble from '../overlays/DialogBubble.svelte';
+  import NPCDialogBubble from '../overlays/NPCDialogBubble.svelte';
   import FrameContent from '../overlays/FrameContent.svelte';
   import GameFrame from './GameFrame.svelte';
   import { switchToBuilder, getCurrentMapConfig } from '../../utils/sceneManager';
@@ -80,8 +81,9 @@
     {#if $isBuilderMode}
       <BuilderUI />
     {:else}
-      <!-- Game Mode: Dialog Bubble and Frame Content -->
+      <!-- Game Mode: Dialog Bubble, NPC Dialog Bubble, and Frame Content -->
       <DialogBubble />
+      <NPCDialogBubble />
       <FrameContent />
     {/if}
 

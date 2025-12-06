@@ -1,13 +1,17 @@
 import Phaser from 'phaser';
 import type { PlacedNPC } from '../data/mapConfig';
 import { getNPCDefinition } from '../data/npcs/npcRegistry';
-import { EventBus, EVENTS } from '../events/EventBus';
 
 export class NPC extends Phaser.Physics.Arcade.Sprite {
   public id: string;
   public npcId: string;
   private dialogData?: PlacedNPC['dialog'];
-  private interactionZone?: Phaser.GameObjects.Zone;
+  private _triggerRadius: number;
+  private selectionIndicator?: Phaser.GameObjects.Rectangle;
+  private radiusIndicator?: Phaser.GameObjects.Arc;
+  private _isSelected: boolean = false;
+  
+  private static readonly DEFAULT_TRIGGER_RADIUS = 200;
 
   constructor(scene: Phaser.Scene, config: PlacedNPC) {
     const definition = getNPCDefinition(config.npcId);
@@ -20,6 +24,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.id = config.id;
     this.npcId = config.npcId;
     this.dialogData = config.dialog;
+    this._triggerRadius = config.triggerRadius ?? NPC.DEFAULT_TRIGGER_RADIUS;
 
     // Add to scene and physics
     scene.add.existing(this);
@@ -47,9 +52,9 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.setupAnimations(definition);
     this.play(`${this.npcId}_idle`);
 
-    // Setup interaction
+    // NPC dialogs are now triggered by proximity, not click
+    // Interactive is still set for builder mode selection
     this.setInteractive({ cursor: 'pointer' });
-    this.on('pointerdown', this.interact, this);
   }
 
   private setupAnimations(definition: any) {
@@ -69,22 +74,98 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  public interact() {
-    if (this.dialogData && this.dialogData.length > 0) {
-      // Emit event to show dialog
-      // We'll need to handle this event in GameScene or a UI manager
-      EventBus.emit(EVENTS.SHOW_DIALOG, {
-        texts: this.dialogData,
-        npcId: this.id
-      });
-    }
-  }
-
   public updateDialog(newDialog: PlacedNPC['dialog']) {
     this.dialogData = newDialog;
   }
   
-  public setFlip(flip: boolean) {
+  public getDialogData(): PlacedNPC['dialog'] {
+    return this.dialogData;
+  }
+  
+  public get triggerRadius(): number {
+    return this._triggerRadius;
+  }
+  
+  public setTriggerRadius(radius: number) {
+    this._triggerRadius = radius;
+    // Update radius indicator if it exists
+    if (this.radiusIndicator) {
+      this.radiusIndicator.setRadius(radius);
+    }
+  }
+  
+  public setFlipped(flip: boolean) {
     this.setFlipX(flip);
+  }
+  
+  public get isSelected(): boolean {
+    return this._isSelected;
+  }
+  
+  public setSelected(selected: boolean) {
+    // Guard against invalid scene (e.g., after scene shutdown)
+    if (!this.scene?.add) return;
+    
+    this._isSelected = selected;
+    
+    if (selected) {
+      if (!this.selectionIndicator) {
+        // Create selection indicator (orange outline rectangle)
+        this.selectionIndicator = this.scene.add.rectangle(
+          this.x,
+          this.y,
+          this.displayWidth + 8,
+          this.displayHeight + 8,
+          0xe67e22,
+          0
+        );
+        this.selectionIndicator.setStrokeStyle(3, 0xe67e22, 1);
+        this.selectionIndicator.setDepth(this.depth - 1);
+      }
+      // Create radius indicator circle
+      if (!this.radiusIndicator) {
+        this.radiusIndicator = this.scene.add.circle(
+          this.x,
+          this.y,
+          this._triggerRadius,
+          0xe67e22,
+          0.15
+        );
+        this.radiusIndicator.setStrokeStyle(2, 0xe67e22, 0.5);
+        this.radiusIndicator.setDepth(this.depth - 2);
+      }
+    } else {
+      if (this.selectionIndicator) {
+        this.selectionIndicator.destroy();
+        this.selectionIndicator = undefined;
+      }
+      if (this.radiusIndicator) {
+        this.radiusIndicator.destroy();
+        this.radiusIndicator = undefined;
+      }
+    }
+  }
+  
+  public updateSelectionIndicator() {
+    if (this.selectionIndicator && this._isSelected) {
+      this.selectionIndicator.setPosition(this.x, this.y);
+      this.selectionIndicator.setSize(this.displayWidth + 8, this.displayHeight + 8);
+    }
+    if (this.radiusIndicator && this._isSelected) {
+      this.radiusIndicator.setPosition(this.x, this.y);
+      this.radiusIndicator.setRadius(this._triggerRadius);
+    }
+  }
+  
+  public destroy(fromScene?: boolean) {
+    if (this.selectionIndicator) {
+      this.selectionIndicator.destroy();
+      this.selectionIndicator = undefined;
+    }
+    if (this.radiusIndicator) {
+      this.radiusIndicator.destroy();
+      this.radiusIndicator = undefined;
+    }
+    super.destroy(fromScene);
   }
 }

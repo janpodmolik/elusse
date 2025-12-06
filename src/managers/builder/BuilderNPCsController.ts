@@ -1,20 +1,26 @@
 import Phaser from 'phaser';
 import { PlacedNPCManager } from '../../managers/PlacedNPCManager';
-import { selectedItemId, builderConfig, builderEditMode, clearSelection } from '../../stores/builderStores';
-import { addPlacedNPC, updatePlacedNPC, deletePlacedNPC } from '../../stores/builder/npcStores';
+import { builderConfig, builderEditMode, clearSelection, selectedItemId, selectItem } from '../../stores/builderStores';
+import { addPlacedNPC, deletePlacedNPC } from '../../stores/builder/npcStores';
+import { isNPCPaletteOpen } from '../../stores/uiStores';
 import type { PlacedNPC } from '../../data/mapConfig';
 import { EventBus, EVENTS } from '../../events/EventBus';
-import { getNPCDefinition, NPC_REGISTRY } from '../../data/npcs/npcRegistry';
+import { getNPCDefinition } from '../../data/npcs/npcRegistry';
 
 export class BuilderNPCsController {
   private scene: Phaser.Scene;
   private groundY: number;
+  private worldWidth: number;
+  private worldHeight: number;
   public npcManager!: PlacedNPCManager;
   private unsubscribers: Array<() => void> = [];
+  private currentSelectedId: string | null = null;
 
-  constructor(scene: Phaser.Scene, groundY: number) {
+  constructor(scene: Phaser.Scene, groundY: number, worldWidth: number, worldHeight: number) {
     this.scene = scene;
     this.groundY = groundY;
+    this.worldWidth = worldWidth;
+    this.worldHeight = worldHeight;
   }
 
   static preloadAssets(scene: Phaser.Scene): void {
@@ -24,7 +30,9 @@ export class BuilderNPCsController {
   create(existingNPCs: PlacedNPC[]): PlacedNPCManager {
     this.npcManager = new PlacedNPCManager(
       this.scene, 
-      this.groundY, 
+      this.groundY,
+      this.worldWidth,
+      this.worldHeight,
       true
     );
     
@@ -40,14 +48,23 @@ export class BuilderNPCsController {
   }
 
   private setupStoreSubscriptions(): void {
-    // Subscribe to selection changes
-    // We might need to update visuals if we add selection box to NPCs
+    // Subscribe to selection changes to track current selection
+    const selectionUnsubscribe = selectedItemId.subscribe(id => {
+      this.currentSelectedId = id;
+    });
+    this.unsubscribers.push(selectionUnsubscribe);
     
     // Subscribe to edit mode changes
+    // Only disable NPCs when in dialogs mode (consistent with items and frames)
     const editModeUnsubscribe = builderEditMode.subscribe(mode => {
-      // Enable/disable interactivity based on mode
-      // For now, we assume NPCs are always interactive in 'npcs' mode
-      // But we might want to disable them in other modes
+      if (mode === 'dialogs') {
+        // Clear selection and disable interactions only in dialogs mode
+        clearSelection();
+        this.npcManager.setInteractiveEnabled(false);
+      } else {
+        // Re-enable in all other modes
+        this.npcManager.setInteractiveEnabled(true);
+      }
     });
     this.unsubscribers.push(editModeUnsubscribe);
     
@@ -66,7 +83,7 @@ export class BuilderNPCsController {
         }
       });
       
-      // Check for updated NPCs
+      // Check for updated NPCs (position, flipX, dialog, scale changes)
       currentNPCs.forEach(newNPCData => {
         const oldNPCData = previousNPCs.find(npc => npc.id === newNPCData.id);
         if (oldNPCData && JSON.stringify(oldNPCData) !== JSON.stringify(newNPCData)) {
@@ -74,13 +91,8 @@ export class BuilderNPCsController {
         }
       });
       
-      // Check for new NPCs
-      currentNPCs.forEach(newNPCData => {
-        const exists = previousNPCs.find(npc => npc.id === newNPCData.id);
-        if (!exists) {
-          this.npcManager.createNPC(newNPCData);
-        }
-      });
+      // Note: New NPCs are created via EVENTS.NPC_DROPPED handler, not here.
+      // This subscription only handles updates and deletions.
       
       previousNPCs = JSON.parse(JSON.stringify(currentNPCs));
     });
@@ -88,11 +100,15 @@ export class BuilderNPCsController {
   }
 
   private setupAssetDropListener(): void {
-    EventBus.on(EVENTS.NPC_DROPPED, (data: { assetKey: string, canvasX: number, canvasY: number }) => {
+    const subscription = EventBus.on(EVENTS.NPC_DROPPED, (data: { assetKey: string, canvasX: number, canvasY: number }) => {
       const { assetKey, canvasX, canvasY } = data;
       
       // Convert canvas coordinates to world coordinates
       const worldPoint = this.scene.cameras.main.getWorldPoint(canvasX, canvasY);
+      
+      // Clamp to world bounds immediately
+      const worldX = Math.max(0, Math.min(this.worldWidth, worldPoint.x));
+      const worldY = Math.max(0, Math.min(this.worldHeight, worldPoint.y));
       
       // Create new NPC data
       const definition = getNPCDefinition(assetKey);
@@ -101,14 +117,22 @@ export class BuilderNPCsController {
       const newNPC: PlacedNPC = {
         id: `npc_${Date.now()}`,
         npcId: assetKey,
-        x: Math.round(worldPoint.x),
-        y: Math.round(worldPoint.y), // Or snap to ground
+        x: Math.round(worldX),
+        y: Math.round(worldY),
         scale: definition.scale,
         flipX: false
       };
       
+      // Add to store AND create sprite (like Items do)
       addPlacedNPC(newNPC);
+      this.npcManager.createNPC(newNPC);
+      selectItem(newNPC.id);
+      // Close NPC palette after adding NPC
+      isNPCPaletteOpen.set(false);
     });
+    
+    // Store subscription for cleanup
+    this.unsubscribers.push(() => subscription.unsubscribe());
   }
 
   private setupDeleteKeys(): void {
@@ -117,25 +141,24 @@ export class BuilderNPCsController {
   }
 
   private handleDelete(): void {
-    // Check if we have a selected NPC
-    // We need to know if the selected item is an NPC
-    // We can check store or ask manager
-    // For now, let's assume if we are in 'npcs' mode and have selection, it's an NPC
-    // But we need access to current mode and selection
-    // We can subscribe to them or get current value
-    // Let's use the store subscription approach or just check store value if available
-    // Since we are inside a class, we can't easily get store value without subscription or get()
-    // But we can use the imported stores with get() if we import 'get' from svelte/store
-    // Or just rely on the fact that deletePlacedNPC checks if ID exists
-    
-    // Actually, we should check if the selected ID corresponds to an NPC
-    // We can do this by checking if npcManager has this ID
-    // But we don't have access to the selected ID here directly unless we store it
-    // Let's subscribe to selectedItemId and store it locally
+    // Check if the selected ID corresponds to an NPC in our manager
+    if (this.currentSelectedId) {
+      const npc = this.npcManager.getNPC(this.currentSelectedId);
+      if (npc) {
+        deletePlacedNPC(this.currentSelectedId);
+        clearSelection();
+      }
+    }
+  }
+  
+  /** Call in scene update loop to keep selection visuals in sync */
+  update(): void {
+    this.npcManager.update();
   }
 
   destroy(): void {
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
+    this.npcManager.destroy();
     this.scene.input.keyboard?.off('keydown-DELETE');
     this.scene.input.keyboard?.off('keydown-BACKSPACE');
   }

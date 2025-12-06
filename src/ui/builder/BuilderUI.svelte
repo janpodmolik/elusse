@@ -8,6 +8,7 @@
     isFramePanelOpen,
     isSocialPanelOpen,
     isDialogZonePanelOpen,
+    isNPCConfigPanelOpen,
     toggleItemPalette, 
     toggleFramePalette, 
     toggleSocialPalette, 
@@ -28,6 +29,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
   import TempZoneButton from './TempZoneButton.svelte';
   import DialogModeHint from '../overlays/DialogModeHint.svelte';
   import ItemControlsOverlay from '../overlays/ItemControlsOverlay.svelte';
+  import NPCControlsOverlay from '../overlays/NPCControlsOverlay.svelte';
   import FrameControlsOverlay from '../overlays/FrameControlsOverlay.svelte';
   import DialogZoneControlsOverlay from '../overlays/DialogZoneControlsOverlay.svelte';
   import SocialControlsOverlay from '../overlays/SocialControlsOverlay.svelte';
@@ -57,6 +59,10 @@ import DialogZonePanel from './DialogZonePanel.svelte';
     if (target.closest('.draggable-panel')) {
       return;
     }
+    // If click is on canvas (Phaser scene), ignore - let Phaser handle double-clicks
+    if (target.tagName === 'CANVAS') {
+      return;
+    }
     
     // Close all panels
     isItemPaletteOpen.set(false);
@@ -66,6 +72,7 @@ import DialogZonePanel from './DialogZonePanel.svelte';
     isFramePanelOpen.set(false);
     isSocialPanelOpen.set(false);
     isDialogZonePanelOpen.set(false);
+    isNPCConfigPanelOpen.set(false);
   }
 
   $effect(() => {
@@ -90,6 +97,9 @@ import DialogZonePanel from './DialogZonePanel.svelte';
 
 <!-- Item controls overlay (positioned above selected item) -->
 <ItemControlsOverlay />
+
+<!-- NPC controls overlay (positioned above selected NPC) -->
+<NPCControlsOverlay />
 
 <!-- Frame controls overlay (positioned above selected frame) -->
 <FrameControlsOverlay />

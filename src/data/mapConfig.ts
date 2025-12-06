@@ -20,6 +20,7 @@ export interface PlacedNPC {
   scale?: number;
   flipX?: boolean;
   dialog?: LocalizedText[]; // Optional dialog content
+  triggerRadius?: number; // Proximity radius for dialog trigger (default: 200)
 }
 
 /**

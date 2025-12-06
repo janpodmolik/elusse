@@ -1,4 +1,4 @@
-import { derived } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import type { PlacedNPC } from '../../data/mapConfig';
 import { builderState } from './builderState';
 
@@ -13,6 +13,20 @@ export const selectedNPC = derived(builderState, $state => {
   if (!$state.selectedItemId || !$state.config?.placedNPCs) return null;
   return $state.config.placedNPCs.find(npc => npc.id === $state.selectedItemId) ?? null;
 });
+
+/** Whether selected NPC is horizontally flipped */
+export const selectedNPCFlipX = derived(selectedNPC, $npc => $npc?.flipX ?? false);
+
+/**
+ * Screen position of selected NPC (updated from Phaser scene)
+ * Used for positioning NPC controls overlay
+ */
+export const selectedNPCScreenPosition = writable<{ screenX: number; screenY: number; npcHeight: number } | null>(null);
+
+/** Update selected NPC screen position (called from BuilderScene/PlacedNPCManager) */
+export function updateSelectedNPCScreenPosition(pos: { screenX: number; screenY: number; npcHeight: number } | null): void {
+  selectedNPCScreenPosition.set(pos);
+}
 
 // ==================== Actions - Placed NPCs ====================
 
@@ -83,6 +97,10 @@ export function updateNPCDialogText(id: string, language: Language, updates: { t
       isDirty: true
     };
   });
+}
+
+export function updateNPCFlipX(id: string, flipX: boolean): void {
+  updatePlacedNPC(id, { flipX });
 }
 
 export function deletePlacedNPC(id: string): void {

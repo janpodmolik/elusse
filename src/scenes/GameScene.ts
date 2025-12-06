@@ -10,14 +10,14 @@ import {
   setGameWorldDimensions, 
   setPlayerScreenPosition, 
   setGameCameraInfo, 
-  setActiveDialogZone 
+  setActiveDialogZone,
+  setActiveNPCDialog
 } from '../stores';
-import type { DialogZone, LocalizedText } from '../types/DialogTypes';
+import type { DialogZone } from '../types/DialogTypes';
 import type { IPlayer } from '../entities';
 import { GamePlayerManager } from '../managers/game/GamePlayerManager';
 import { MapManager } from '../managers/game/MapManager';
 import type { MapConfig } from '../data/mapConfig';
-import { EventBus, EVENTS } from '../events/EventBus';
 
 export class GameScene extends Phaser.Scene {
   // Managers
@@ -49,6 +49,12 @@ export class GameScene extends Phaser.Scene {
   
   // Currently active dialog zone (for detecting zone exit)
   private currentDialogZone: DialogZone | null = null;
+  
+  // Currently active NPC dialog (for proximity detection)
+  private currentNPCId: string | null = null;
+  
+  // NPC proximity threshold (in pixels) - fallback if NPC doesn't have custom radius
+  private readonly NPC_PROXIMITY_THRESHOLD = 200;
 
   // Store unsubscribe functions
   private unsubscribers: Array<() => void> = [];
@@ -163,7 +169,7 @@ export class GameScene extends Phaser.Scene {
       }
       
       // Initialize NPC manager
-      this.npcManager = new PlacedNPCManager(this, groundY, false);
+      this.npcManager = new PlacedNPCManager(this, groundY, mapConfig.worldWidth, mapConfig.worldHeight, false);
       
       // Load placed NPCs from config
       if (mapConfig.placedNPCs && mapConfig.placedNPCs.length > 0) {
@@ -190,9 +196,6 @@ export class GameScene extends Phaser.Scene {
       // Setup resize handler
       this.scale.on('resize', this.handleResize, this);
       
-      // Listen for NPC dialog events
-      EventBus.on(EVENTS.SHOW_DIALOG, this.handleShowDialog, this);
-      
       // Mark as initialized - safe to call update()
       this.isInitialized = true;
     } catch (error) {
@@ -202,21 +205,6 @@ export class GameScene extends Phaser.Scene {
       // Hide loading indicator
       isLoading.set(false);
     }
-  }
-
-  private handleShowDialog(data: { texts: LocalizedText[], npcId: string }) {
-    // Create a temporary dialog zone structure to reuse the existing UI
-    const tempZone: DialogZone = {
-      id: 'npc-dialog-' + data.npcId + '-' + Date.now(),
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      text: data.texts,
-      isTemporary: true
-    };
-    
-    setActiveDialogZone(tempZone);
   }
 
   /**
@@ -290,12 +278,11 @@ export class GameScene extends Phaser.Scene {
     // Remove resize listener
     this.scale.off('resize', this.handleResize, this);
     
-    // Remove NPC dialog listener
-    EventBus.off(EVENTS.SHOW_DIALOG, this.handleShowDialog, this);
-    
-    // Clear active dialog zone
+    // Clear active dialog zone and NPC dialog
     setActiveDialogZone(null);
+    setActiveNPCDialog(null);
     this.currentDialogZone = null;
+    this.currentNPCId = null;
     
     // Clean up store subscriptions to prevent memory leaks
     this.unsubscribers.forEach(unsubscribe => unsubscribe());
@@ -336,6 +323,9 @@ export class GameScene extends Phaser.Scene {
     
     // Check dialog zone collisions
     this.checkDialogZonesForPosition(playerX);
+    
+    // Check NPC proximity
+    this.checkNPCProximity(playerX, playerY, camera);
 
     // Update all parallax layers tiling for infinite scrolling effect
     if (this.mapManager) {
@@ -375,6 +365,72 @@ export class GameScene extends Phaser.Scene {
     if (updatedZone) {
       this.currentDialogZone = updatedZone;
       setActiveDialogZone(updatedZone);
+    }
+  }
+  
+  /**
+   * Check NPC proximity and show dialog bubble when player is near
+   */
+  private checkNPCProximity(playerX: number, playerY: number, camera: Phaser.Cameras.Scene2D.Camera): void {
+    if (!this.npcManager) return;
+    
+    const npcs = this.npcManager.getAllNPCs();
+    let nearestNPC: { id: string; distance: number; npc: any } | null = null;
+    
+    // Find nearest NPC within their individual trigger radius
+    for (const npc of npcs) {
+      // Check if NPC has dialog content
+      const dialogData = npc.getDialogData?.() ?? [];
+      if (!dialogData || dialogData.length === 0) continue;
+      
+      // Check if any text has content
+      const hasContent = dialogData.some((t: { content?: string }) => t.content && t.content.trim().length > 0);
+      if (!hasContent) continue;
+      
+      const dx = npc.x - playerX;
+      const dy = npc.y - playerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Use per-NPC trigger radius
+      const threshold = npc.triggerRadius ?? this.NPC_PROXIMITY_THRESHOLD;
+      
+      if (distance <= threshold) {
+        if (!nearestNPC || distance < nearestNPC.distance) {
+          nearestNPC = { id: npc.id, distance, npc };
+        }
+      }
+    }
+    
+    // Update active NPC dialog if changed
+    if (nearestNPC) {
+      const npc = nearestNPC.npc;
+      const npcScreenX = npc.x - camera.scrollX;
+      const npcScreenY = npc.y - camera.scrollY;
+      
+      if (this.currentNPCId !== nearestNPC.id) {
+        // New NPC in proximity
+        this.currentNPCId = nearestNPC.id;
+        setActiveNPCDialog({
+          npcId: nearestNPC.id,
+          texts: npc.getDialogData() ?? [],
+          screenX: npcScreenX,
+          screenY: npcScreenY,
+          npcHeight: npc.displayHeight
+        });
+      } else {
+        // Same NPC, just update position
+        setActiveNPCDialog({
+          npcId: nearestNPC.id,
+          texts: npc.getDialogData() ?? [],
+          screenX: npcScreenX,
+          screenY: npcScreenY,
+          npcHeight: npc.displayHeight
+        });
+      }
+    } else if (this.currentNPCId) {
+      // No NPC in proximity, clear dialog
+      this.currentNPCId = null;
+      setActiveNPCDialog(null);
     }
   }
 }

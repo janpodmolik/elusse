@@ -5,6 +5,7 @@ import { writable, derived } from 'svelte/store';
 import type { PlacedItem } from '../../data/mapConfig';
 import { getItemDepth } from '../../constants/depthLayers';
 import { builderState } from './builderState';
+import { isNPCConfigPanelOpen } from '../uiStores';
 
 // ==================== Derived Stores ====================
 
@@ -92,6 +93,9 @@ export function deletePlacedItem(id: string): void {
 
 /** Select an item by ID (or null to deselect) */
 export function selectItem(id: string | null): void {
+  // Close NPC config panel when changing selection (user can reopen with double-click or EDIT button)
+  isNPCConfigPanelOpen.set(false);
+  
   builderState.update(state => ({
     ...state,
     selectedItemId: id,
