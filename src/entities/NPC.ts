@@ -1,7 +1,19 @@
 import Phaser from 'phaser';
 import type { PlacedNPC } from '../data/mapConfig';
-import { getNPCDefinition } from '../data/npcs/npcRegistry';
+import { getNPCDefinition, type NPCDefinition } from '../data/npcs/npcRegistry';
+import { NPCState } from './npc/NPCState';
+import { IdleState } from './npc/states/IdleState';
 
+/**
+ * Represents an NPC entity in the game world.
+ * Handles rendering, physics, animations, and interaction (selection, dialogs).
+ * 
+ * Key features:
+ * - Supports both Game and Builder modes.
+ * - Handles "top offset" for correct depth sorting and hitbox positioning.
+ * - Manages selection state and visual indicators (outline, radius).
+ * - Implements State Machine for behavior (Idle, Patrol, etc.).
+ */
 export class NPC extends Phaser.Physics.Arcade.Sprite {
   public id: string;
   public npcId: string;
@@ -14,7 +26,13 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   /** Top offset in scaled pixels (empty space at top of sprite) */
   private _topOffset: number = 0;
   
+  private currentState?: NPCState;
+  
   private static readonly DEFAULT_TRIGGER_RADIUS = 200;
+  // Hitbox is 50% of frame width
+  private static readonly HITBOX_WIDTH_FACTOR = 0.5;
+  // Hitbox is 90% of content height (frame height - top offset)
+  private static readonly HITBOX_HEIGHT_FACTOR = 0.9;
 
   constructor(scene: Phaser.Scene, config: PlacedNPC, builderMode: boolean = false) {
     const definition = getNPCDefinition(config.npcId);
@@ -47,37 +65,67 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.setImmovable(true);
     (this.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     
-    // Adjust hitbox based on topOffset - excludes empty space at top
+    this.setupHitbox(definition);
+    
+    // Setup animations - only in game mode
+    if (!this.isBuilderMode) {
+      this.setupAnimations(definition);
+      // Initialize state machine with Idle state
+      this.setNPCState(new IdleState(this));
+    }
+    // In builder mode, just show the first frame (static image)
+  }
+
+  /**
+   * Switch the NPC to a new state.
+   * Exits the current state and enters the new one.
+   */
+  public setNPCState(newState: NPCState) {
+    if (this.currentState) {
+      this.currentState.exit();
+    }
+    this.currentState = newState;
+    this.currentState.enter();
+  }
+
+  protected preUpdate(time: number, delta: number): void {
+    super.preUpdate(time, delta);
+    if (this.currentState) {
+      this.currentState.update(time, delta);
+    }
+  }
+
+  /**
+   * Configures the physics body and interactive area based on the NPC definition.
+   * Centralizes the logic for hitbox calculations.
+   */
+  private setupHitbox(definition: NPCDefinition) {
     const topOffset = definition.topOffset ?? 0;
     const contentHeight = definition.frameHeight - topOffset;
-    const width = definition.frameWidth * 0.5;
-    const height = contentHeight * 0.9;
+    
+    // Calculate dimensions based on factors
+    const width = definition.frameWidth * NPC.HITBOX_WIDTH_FACTOR;
+    const height = contentHeight * NPC.HITBOX_HEIGHT_FACTOR;
+    
+    // Physics body (unscaled coordinates relative to sprite center)
     this.body?.setSize(width, height);
     this.body?.setOffset(
       (definition.frameWidth - width) / 2,
       topOffset + (contentHeight - height)
     );
     
-    // Set interactive hitArea - smaller width for easier clicking between NPCs
-    const hitWidth = definition.frameWidth * 0.5;
-    const hitHeight = contentHeight * 0.9;
-    const hitX = (definition.frameWidth - hitWidth) / 2;
-    const hitY = topOffset + (contentHeight - hitHeight);
+    // Interactive hitArea (matches physics body)
+    const hitX = (definition.frameWidth - width) / 2;
+    const hitY = topOffset + (contentHeight - height);
+    
     this.setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(hitX, hitY, hitWidth, hitHeight),
+      hitArea: new Phaser.Geom.Rectangle(hitX, hitY, width, height),
       hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       cursor: 'pointer'
     });
-    
-    // Setup animations - only in game mode
-    if (!this.isBuilderMode) {
-      this.setupAnimations(definition);
-      this.play(`${this.npcId}_idle`);
-    }
-    // In builder mode, just show the first frame (static image)
   }
 
-  private setupAnimations(definition: any) {
+  private setupAnimations(definition: NPCDefinition) {
     if (!definition.animations) return;
 
     const animKey = `${this.npcId}_idle`;
@@ -144,8 +192,8 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     const topOffset = definition.topOffset ?? 0;
     const contentHeight = definition.frameHeight - topOffset;
     
-    const hitWidth = definition.frameWidth * 0.5 * scale;
-    const hitHeight = contentHeight * 0.9 * scale;
+    const hitWidth = definition.frameWidth * NPC.HITBOX_WIDTH_FACTOR * scale;
+    const hitHeight = contentHeight * NPC.HITBOX_HEIGHT_FACTOR * scale;
     // Offset from center: move down by half of topOffset (scaled)
     const offsetY = (topOffset * scale) / 2;
     

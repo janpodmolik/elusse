@@ -30,7 +30,7 @@ export interface DragConstraints {
 }
 
 export interface SpriteInteractionConfig {
-  sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Container;
+  sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Container | Phaser.Physics.Arcade.Sprite;
   scene: Phaser.Scene;
   callbacks?: DragCallbacks;
   constraints?: DragConstraints;

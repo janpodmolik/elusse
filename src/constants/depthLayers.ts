@@ -69,3 +69,34 @@ export function getItemDepth(layer: 'behind' | 'front'): number {
 export function isItemBehindPlayer(depth: number): boolean {
   return depth < DEPTH_LAYERS.PLAYER;
 }
+
+/**
+ * Update a game object's depth based on its Y position.
+ * Uses the bottom of the object's bounds for accurate sorting.
+ * 
+ * @param gameObject - The game object to update (must have getBounds and setDepth methods)
+ * @param worldHeight - The total world height for normalization
+ * @returns The calculated depth value, or -1 if object doesn't support bounds
+ * 
+ * @example
+ * ```typescript
+ * // In update loop:
+ * updateSpriteDepth(playerSprite, worldHeight);
+ * updateSpriteDepth(npcSprite, worldHeight);
+ * ```
+ */
+export function updateSpriteDepth(
+  gameObject: Phaser.GameObjects.GameObject,
+  worldHeight: number
+): number {
+  // Check if object has getBounds method
+  if (!('getBounds' in gameObject) || typeof (gameObject as any).getBounds !== 'function') {
+    return -1;
+  }
+  
+  const bounds = (gameObject as Phaser.GameObjects.Sprite).getBounds();
+  const bottomY = bounds.bottom;
+  const depth = calculateDepthFromY(bottomY, worldHeight);
+  (gameObject as Phaser.GameObjects.Sprite).setDepth(depth);
+  return depth;
+}

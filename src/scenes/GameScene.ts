@@ -1,129 +1,188 @@
-import Phaser from 'phaser';
 import { PlacedItemManager } from '../managers/PlacedItemManager';
 import { PlacedNPCManager } from '../managers/PlacedNPCManager';
 import { GameSocialManager } from '../managers/GameSocialManager';
 import { dialogZones as dialogZonesStore } from '../stores/builderStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
-import { calculateDepthFromY } from '../constants/depthLayers';
+import { updateSpriteDepth } from '../constants/depthLayers';
 import { 
   isLoading, 
-  setGameWorldDimensions, 
   setPlayerScreenPosition, 
-  setGameCameraInfo, 
   setActiveDialogZone,
   setActiveNPCDialog
 } from '../stores';
 import type { DialogZone } from '../types/DialogTypes';
 import type { IPlayer } from '../entities';
 import { GamePlayerManager } from '../managers/game/GamePlayerManager';
-import { MapManager } from '../managers/game/MapManager';
+import { GameCameraController } from '../managers/game/GameCameraController';
+import { WorldManager } from '../managers/WorldManager';
+import { AssetPreloader } from '../utils/AssetPreloader';
+import { BaseScene } from './BaseScene';
 import type { MapConfig } from '../data/mapConfig';
 
-export class GameScene extends Phaser.Scene {
-  // Managers
-  private playerManager!: GamePlayerManager;
-  private mapManager!: MapManager;
+/**
+ * GameScene - Runtime game with player control
+ * 
+ * Main gameplay scene where player walks around, interacts with NPCs,
+ * and triggers dialog zones.
+ * 
+ * @extends BaseScene
+ * 
+ * @lifecycle
+ * 1. init() - Store config, initialize managers
+ * 2. preload() - Queue assets via AssetPreloader
+ * 3. create() - Register handlers, start async initializeScene()
+ * 4. initializeScene() - Load map, create entities, setup camera
+ * 5. update() - Game loop (player movement, proximity checks)
+ * 6. shutdown() - Cleanup managers and subscriptions
+ * 
+ * @managers
+ * - WorldManager: Map config, background, ground
+ * - GamePlayerManager: Player entity creation
+ * - GameCameraController: Camera bounds, following, resize
+ * - PlacedItemManager: Static items in world
+ * - PlacedNPCManager: NPC entities
+ * - GameSocialManager: Social icons
+ * 
+ * @stores
+ * - isLoading: Loading overlay state
+ * - dialogZonesStore: Live updates from builder
+ * - setActiveDialogZone: Current zone for UI
+ * - setActiveNPCDialog: Current NPC dialog for UI
+ */
+
+export class GameScene extends BaseScene {
+  // =========================================================================
+  // MANAGERS
+  // =========================================================================
   
-  // Unified player interface
-  private player: IPlayer | null = null;
-
-  // Public accessor for map config (used by sceneManager)
-  public getMapConfig(): MapConfig | null {
-    return this.mapManager?.getConfig() || null;
-  }
-
-  // Placed items system (replaces dialog trigger system)
+  /** Manages world configuration, background, and ground */
+  private worldManager!: WorldManager;
+  
+  /** Manages player entity creation and assets */
+  private playerManager!: GamePlayerManager;
+  
+  /** Manages camera bounds, following, and resize */
+  private cameraController!: GameCameraController;
+  
+  /** Manages placed items (furniture, decorations) */
   private itemManager!: PlacedItemManager;
   
-  // Placed NPCs system
+  /** Manages NPC entities */
   private npcManager!: PlacedNPCManager;
   
-  // Social manager for clickable social icons
+  /** Manages clickable social icons */
   private socialManager!: GameSocialManager;
   
-  // Dialog zones loaded from config
+  // =========================================================================
+  // STATE
+  // =========================================================================
+  
+  /** Current player entity (legacy or modular) */
+  private player: IPlayer | null = null;
+  
+  /** Dialog zones loaded from config */
   private dialogZones: DialogZone[] = [];
   
-  // Currently active dialog zone (for detecting zone exit)
+  /** Currently active dialog zone (for detecting zone exit) */
   private currentDialogZone: DialogZone | null = null;
   
-  // Currently active NPC dialog (for proximity detection)
+  /** Currently active NPC (for proximity detection) */
   private currentNPCId: string | null = null;
   
-  // NPC proximity threshold (in pixels) - fallback if NPC doesn't have custom radius
-  private readonly NPC_PROXIMITY_THRESHOLD = 200;
-
-  // Store unsubscribe functions
-  private unsubscribers: Array<() => void> = [];
-  
-  // Init data stored for async loading
+  /** Init data stored for async loading */
   private initData?: { useBuilderConfig?: boolean };
   
-  // Initialization flag to prevent update() before async init completes
-  private isInitialized: boolean = false;
+  // =========================================================================
+  // CONSTANTS
+  // =========================================================================
+  
+  /** NPC proximity threshold (fallback if NPC doesn't have custom radius) */
+  private static readonly NPC_PROXIMITY_THRESHOLD = 200;
+  
+  // =========================================================================
+  // PUBLIC API
+  // =========================================================================
+  
+  /** Get current map config (used by sceneManager) */
+  public getMapConfig(): MapConfig | null {
+    return this.worldManager?.getConfig() || null;
+  }
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
   }
 
+  // =========================================================================
+  // LIFECYCLE: INIT
+  // =========================================================================
+
   init(data?: { useBuilderConfig?: boolean }): void {
-    // Store init data for async processing in create()
+    super.init(data);
+    
+    // Store init data for async processing
     this.initData = data;
-    // Reset initialization flag
-    this.isInitialized = false;
     
     // Initialize managers
+    this.worldManager = new WorldManager(this);
     this.playerManager = new GamePlayerManager(this);
-    this.mapManager = new MapManager(this);
+    this.cameraController = new GameCameraController(this);
     
-    // Initialize player settings
+    // Initialize player settings from localStorage
     this.playerManager.init();
   }
 
-  preload(): void {
-    // Preload player assets
-    this.playerManager.preload();
+  // =========================================================================
+  // LIFECYCLE: PRELOAD
+  // =========================================================================
 
-    // Load UI assets for placed items
-    PlacedItemManager.preloadAssets(this);
+  preload(): void {
+    // Preload player assets (may skip if using modular)
+    this.playerManager.preload();
     
-    // Load NPC assets
-    PlacedNPCManager.preloadAssets(this);
-    
-    // Load social assets
-    GameSocialManager.preloadAssets(this);
+    // Preload all game assets via centralized preloader
+    AssetPreloader.preloadForGame(this, false); // skins already handled above
   }
 
+  // =========================================================================
+  // LIFECYCLE: CREATE
+  // =========================================================================
+
   create(): void {
-    // Register shutdown handler for proper cleanup when scene stops
-    this.events.on('shutdown', this.shutdown, this);
+    super.create();
     
     // Start async initialization
     this.initializeScene();
   }
 
+  // =========================================================================
+  // ASYNC INITIALIZATION
+  // =========================================================================
+
   /**
-   * Async scene initialization
-   * Separated from create() because Phaser doesn't await async create
+   * Async scene initialization.
+   * Separated from create() because Phaser doesn't await async create.
    */
-  private async initializeScene(): Promise<void> {
-    // Show loading indicator
+  protected async initializeScene(): Promise<void> {
     isLoading.set(true);
     
     try {
-      // Load player assets
+      // Load player assets (modular character if selected)
       await this.playerManager.loadAssets();
       
-      // Load map configuration
-      const mapConfig = await this.mapManager.loadMapConfiguration(this.initData?.useBuilderConfig);
+      // Load map configuration from file or builder store
+      const mapConfig = await this.worldManager.loadConfiguration(this.initData?.useBuilderConfig);
       
-      // Setup background
-      await this.mapManager.setupBackground();
+      // Setup parallax background
+      await this.worldManager.setupBackground();
+      
+      // Setup physics world bounds
+      this.worldManager.setupWorldBounds();
 
-      // Create ground with physics
-      const { ground, groundY, groundHeight } = this.mapManager.createGround();
+      // Create physics ground
+      const { ground, groundHeight } = this.worldManager.createGround('physics');
+      const groundY = this.worldManager.getGroundY();
 
-      // Create player
+      // Create player entity
       this.player = this.playerManager.createPlayer(mapConfig, ground, groundHeight);
 
       // Initialize placed items system (read-only mode for game scene)
@@ -171,165 +230,90 @@ export class GameScene extends Phaser.Scene {
         // Re-check current zone to update dialog text immediately
         this.recheckCurrentZone();
       });
-      this.unsubscribers.push(unsubDialogZones);
+      this.addUnsubscriber(unsubDialogZones);
 
-      // Setup camera to follow player
+      // Setup camera
+      this.cameraController.setConfig(mapConfig);
       if (this.player) {
-        this.cameras.main.startFollow(this.player.getGameObject(), true, 0.1, 0.1);
+        this.cameraController.followPlayer(this.player.getGameObject());
       }
-      this.setupCameraBounds();
-      
-      // Setup resize handler
-      this.scale.on('resize', this.handleResize, this);
+      this.cameraController.setupBounds();
       
       // Mark as initialized - safe to call update()
       this.isInitialized = true;
     } catch (error) {
       console.error('[GameScene] Failed to initialize scene:', error);
-      // Show error state to user - could emit event or set error store
     } finally {
-      // Hide loading indicator
       isLoading.set(false);
     }
   }
 
-  /**
-   * Setup camera bounds with zoom adjustment to always show full world height
-   */
-  private setupCameraBounds(): void {
-    const mapConfig = this.mapManager.getConfig();
-    if (!mapConfig) return;
-
-    const camera = this.cameras.main;
-    const viewportHeight = camera.height;
-    const viewportWidth = camera.width;
-    
-    // Calculate zoom to ensure full world height is always visible
-    // If viewport is shorter than world, we need to zoom out
-    const zoomToFitHeight = viewportHeight / mapConfig.worldHeight;
-    const zoom = Math.min(1, zoomToFitHeight); // Never zoom in beyond 1x
-    
-    camera.setZoom(zoom);
-    
-    // Effective viewport size after zoom
-    const effectiveViewportHeight = viewportHeight / zoom;
-    const effectiveViewportWidth = viewportWidth / zoom;
-    
-    // Calculate bounds - allow negative Y to center vertically when viewport > world
-    let boundsY = 0;
-    let boundsHeight = mapConfig.worldHeight;
-    
-    if (effectiveViewportHeight > mapConfig.worldHeight) {
-      // Viewport is taller than world - center vertically
-      boundsY = (mapConfig.worldHeight - effectiveViewportHeight) / 2;
-      boundsHeight = effectiveViewportHeight;
-    }
-    
-    // Similarly for X axis
-    let boundsX = 0;
-    let boundsWidth = mapConfig.worldWidth;
-    
-    if (effectiveViewportWidth > mapConfig.worldWidth) {
-      boundsX = (mapConfig.worldWidth - effectiveViewportWidth) / 2;
-      boundsWidth = effectiveViewportWidth;
-    }
-    
-    camera.setBounds(boundsX, boundsY, boundsWidth, boundsHeight);
-    
-    // Update game world dimensions for UI overlay
-    setGameWorldDimensions(
-      mapConfig.worldWidth,
-      mapConfig.worldHeight,
-      viewportWidth,
-      viewportHeight,
-      zoom
-    );
-  }
+  // =========================================================================
+  // RESIZE HANDLING
+  // =========================================================================
 
   /**
-   * Handle window/canvas resize
+   * Handle window/canvas resize.
+   * Delegates to camera controller.
    */
-  private handleResize(_gameSize: Phaser.Structs.Size): void {
-    // Guard: only handle resize when scene is active
-    if (!this.cameras?.main || !this.mapManager) return;
-    
-    // Update camera bounds with vertical centering
-    this.setupCameraBounds();
+  protected handleResize(_gameSize: Phaser.Structs.Size): void {
+    if (!this.cameraController) return;
+    this.cameraController.handleResize();
   }
+
+  // =========================================================================
+  // SHUTDOWN
+  // =========================================================================
 
   shutdown(): void {
-    // Mark as not initialized to stop update() calls
-    this.isInitialized = false;
-    
-    // Remove resize listener
-    this.scale.off('resize', this.handleResize, this);
-    
-    // Clear active dialog zone and NPC dialog
+    // Clear active dialog states
     setActiveDialogZone(null);
     setActiveNPCDialog(null);
     this.currentDialogZone = null;
     this.currentNPCId = null;
     
-    // Clean up store subscriptions to prevent memory leaks
-    this.unsubscribers.forEach(unsubscribe => unsubscribe());
-    this.unsubscribers = [];
+    // Destroy managers
+    this.worldManager?.destroy();
+    this.itemManager?.destroy();
+    this.socialManager?.destroy();
     
-    // Clean up placed items
-    if (this.itemManager) {
-      this.itemManager.destroy();
-    }
-    
-    // Clean up social manager
-    if (this.socialManager) {
-      this.socialManager.destroy();
-    }
+    // Call parent cleanup (subscriptions, resize handler)
+    super.shutdown();
   }
 
+  // =========================================================================
+  // UPDATE LOOP
+  // =========================================================================
+
   update(): void {
-    // Guard against update being called before async initialization completes
+    // Guard: wait for async initialization
     if (!this.isInitialized || !this.player) return;
     
-    // Update player and get position via unified interface
+    // Update player
     this.player.update();
     const { x: playerX, y: playerY } = this.player.getPosition();
     
     // Get world height for depth calculation
-    const worldHeight = this.mapManager.getConfig()?.worldHeight ?? 640;
+    const worldHeight = this.worldManager.getConfig()?.worldHeight ?? 640;
     
-    // Calculate player's bottom Y and update player depth
-    const playerGameObject = this.player.getGameObject();
-    const playerBounds = playerGameObject.getBounds();
-    const playerBottomY = playerBounds.bottom;
-    const playerDepth = calculateDepthFromY(playerBottomY, worldHeight);
-    playerGameObject.setDepth(playerDepth);
+    // Update depth sorting based on Y position
+    updateSpriteDepth(this.player.getGameObject(), worldHeight);
+    this.itemManager?.updateAutoDepth(worldHeight);
+    this.npcManager?.updateAutoDepth(worldHeight);
     
-    // Update auto-depth for items and NPCs based on Y position
-    if (this.itemManager) {
-      this.itemManager.updateAutoDepth(worldHeight);
-    }
-    if (this.npcManager) {
-      this.npcManager.updateAutoDepth(worldHeight);
-    }
-    
-    // Update player screen position for UI (dialog bubbles)
+    // Update player screen position for UI
     const camera = this.cameras.main;
-    const screenX = playerX - camera.scrollX;
-    const screenY = playerY - camera.scrollY;
-    setPlayerScreenPosition(screenX, screenY);
+    setPlayerScreenPosition(playerX - camera.scrollX, playerY - camera.scrollY);
     
     // Update camera info for overlay
-    setGameCameraInfo(camera.scrollX, camera.scrollY, camera.zoom);
+    this.cameraController.updateCameraInfo();
     
-    // Check dialog zone collisions
+    // Check dialog zone and NPC proximity
     this.checkDialogZonesForPosition(playerX);
-    
-    // Check NPC proximity
     this.checkNPCProximity(playerX, playerY, camera);
 
-    // Update all parallax layers tiling for infinite scrolling effect
-    if (this.mapManager) {
-      this.mapManager.update(this.cameras.main);
-    }
+    // Update parallax scrolling
+    this.worldManager.updateParallax(camera);
   }
   
   /**
@@ -391,7 +375,7 @@ export class GameScene extends Phaser.Scene {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       // Use per-NPC trigger radius
-      const threshold = npc.triggerRadius ?? this.NPC_PROXIMITY_THRESHOLD;
+      const threshold = npc.triggerRadius ?? GameScene.NPC_PROXIMITY_THRESHOLD;
       
       if (distance <= threshold) {
         if (!nearestNPC || distance < nearestNPC.distance) {

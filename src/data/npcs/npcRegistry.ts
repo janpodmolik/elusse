@@ -1,12 +1,21 @@
 export type NPCCategory = 'humans' | 'fantasy';
 
+/**
+ * Defines the static properties of an NPC type.
+ */
 export interface NPCDefinition {
+  /** Unique identifier for the NPC type (e.g., 'beggar', 'toad') */
   id: string;
+  /** Display name for UI */
   name: string;
+  /** Path to the spritesheet asset */
   path: string;
   category: NPCCategory;
+  /** Width of a single frame in the spritesheet */
   frameWidth: number;
+  /** Height of a single frame in the spritesheet */
   frameHeight: number;
+  /** Default scale factor for the sprite */
   scale: number;
   /** 
    * Offset from top of frame where actual content starts (in pixels before scale).
@@ -14,6 +23,7 @@ export interface NPCDefinition {
    * Default is 0 (no offset).
    */
   topOffset?: number;
+  /** Animation configurations */
   animations?: {
     idle: {
       startFrame: number;
@@ -28,6 +38,10 @@ export interface NPCDefinition {
   };
 }
 
+/**
+ * Registry of all available NPC types in the game.
+ * Used for asset loading and entity creation.
+ */
 export const NPC_REGISTRY: NPCDefinition[] = [
   // HUMANS
   {

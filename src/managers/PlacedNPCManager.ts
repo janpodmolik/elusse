@@ -11,12 +11,19 @@ import { calculateDepthFromY } from '../constants/depthLayers';
 
 import { NPC_REGISTRY } from '../data/npcs/npcRegistry';
 
+/**
+ * Manages the lifecycle and interaction of placed NPCs in the scene.
+ * 
+ * Responsibilities:
+ * - Creating and destroying NPC entities.
+ * - Handling selection and interaction events (click, drag).
+ * - Syncing with the builder store (in builder mode).
+ * - Preloading NPC assets.
+ */
 export class PlacedNPCManager {
   private scene: Phaser.Scene;
   private npcs: Map<string, NPC> = new Map();
   private isBuilderMode: boolean;
-  // @ts-expect-error Reserved for future ground snapping
-  private groundY: number;
   private worldWidth: number;
   private worldHeight: number;
   private selectedNPCId: string | null = null;
@@ -24,9 +31,8 @@ export class PlacedNPCManager {
   private cleanupFunctions: Map<string, () => void> = new Map();
   private doubleClickDetector = new DoubleClickDetector();
 
-  constructor(scene: Phaser.Scene, groundY: number, worldWidth: number, worldHeight: number, builderMode: boolean = false) {
+  constructor(scene: Phaser.Scene, _groundY: number, worldWidth: number, worldHeight: number, builderMode: boolean = false) {
     this.scene = scene;
-    this.groundY = groundY;
     this.worldWidth = worldWidth;
     this.worldHeight = worldHeight;
     this.isBuilderMode = builderMode;
@@ -40,6 +46,10 @@ export class PlacedNPCManager {
     }
   }
 
+  /**
+   * Preloads all NPC spritesheets defined in the registry.
+   * Should be called in the scene's preload method.
+   */
   static preloadAssets(scene: Phaser.Scene) {
     NPC_REGISTRY.forEach(npc => {
       scene.load.spritesheet(npc.id, npc.path, {
@@ -49,10 +59,17 @@ export class PlacedNPCManager {
     });
   }
 
+  /**
+   * Creates multiple NPCs from a list of configuration data.
+   */
   createNPCs(npcs: PlacedNPC[]) {
     npcs.forEach(npc => this.createNPC(npc));
   }
 
+  /**
+   * Creates a single NPC and adds it to the manager.
+   * In builder mode, it also enables interaction.
+   */
   createNPC(data: PlacedNPC) {
     const npc = new NPC(this.scene, data, this.isBuilderMode);
     this.npcs.set(data.id, npc);

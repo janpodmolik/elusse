@@ -1,8 +1,4 @@
-import Phaser from 'phaser';
-import { loadBackgroundAssets } from '../utils/BackgroundLoader';
-import { createParallaxBackground, updateParallaxTiling, destroyParallaxLayers, type ParallaxLayers } from '../utils/ParallaxHelper';
-import { backgroundManager } from '../data/background';
-import { preloadSkins, createAllSkinAnimations } from '../utils/skinLoader';
+import { createAllSkinAnimations } from '../utils/skinLoader';
 import type { MapConfig } from '../data/mapConfig';
 import { BuilderCameraController } from '../managers/builder/BuilderCameraController';
 import { BuilderPlayerController } from '../managers/builder/BuilderPlayerController';
@@ -12,43 +8,89 @@ import { BuilderSocialsController } from '../managers/builder/BuilderSocialsCont
 import { BuilderNPCsController } from '../managers/builder/BuilderNPCsController';
 import { DialogZoneRenderer } from '../managers/builder/DialogZoneRenderer';
 import { PlacedItemManager } from '../managers/PlacedItemManager';
-import { GROUND_HEIGHT } from '../managers/builder/builderConstants';
-import { GroundManager } from '../managers/GroundManager';
+import { WorldManager } from '../managers/WorldManager';
 import { SCENE_KEYS } from '../constants/sceneKeys';
 import { updateCameraInfo } from '../stores/gameStores';
 import { EventBus, EVENTS, type MinimapNavigateEvent } from '../events/EventBus';
-import { calculateDepthFromY } from '../constants/depthLayers';
+import { updateSpriteDepth } from '../constants/depthLayers';
+import { AssetPreloader } from '../utils/AssetPreloader';
+import { BaseScene } from './BaseScene';
 
 /**
  * BuilderScene - Interactive map builder with visual editor
- * Modular architecture using specialized controllers
+ * 
+ * Allows users to place items, NPCs, socials, and configure dialog zones.
+ * Uses specialized controllers for each entity type.
+ * 
+ * @extends BaseScene
+ * 
+ * @lifecycle
+ * 1. init() - Store config, reset guards
+ * 2. preload() - Queue assets via AssetPreloader
+ * 3. create() - Register handlers, start async initializeScene()
+ * 4. initializeScene() - Create background, entities, setup camera
+ * 5. update() - Update depth sorting, selection visuals, camera info
+ * 6. shutdown() - Cleanup controllers and subscriptions
+ * 
+ * @controllers
+ * - WorldManager: Background and ground
+ * - BuilderCameraController: Pan, zoom, minimap navigation
+ * - BuilderPlayerController: Draggable player preview
+ * - BuilderGridOverlay: Visual grid for alignment
+ * - BuilderItemsController: Placeable items
+ * - BuilderSocialsController: Social icons
+ * - BuilderNPCsController: NPC entities
+ * - DialogZoneRenderer: Dialog zone visualization
+ * 
+ * @stores
+ * - updateCameraInfo: Camera state for minimap
+ * - EventBus: Minimap navigation events
  */
-export class BuilderScene extends Phaser.Scene {
-  // Visual elements
-  private parallaxLayers: ParallaxLayers | null = null;
+export class BuilderScene extends BaseScene {
+  // =========================================================================
+  // MANAGERS & CONTROLLERS
+  // =========================================================================
   
-  // Controllers
+  /** Manages world configuration, background, and ground */
+  private worldManager!: WorldManager;
+  
+  /** Manages camera pan, zoom, and minimap navigation */
   private cameraController!: BuilderCameraController;
+  
+  /** Manages draggable player preview */
   private playerController!: BuilderPlayerController;
+  
+  /** Manages visual grid overlay */
   private gridOverlay!: BuilderGridOverlay;
+  
+  /** Manages placeable items */
   private itemsController!: BuilderItemsController;
+  
+  /** Manages social icons */
   private socialsController!: BuilderSocialsController;
+  
+  /** Manages NPC entities */
   private npcsController!: BuilderNPCsController;
+  
+  /** Manages dialog zone visualization */
   private dialogZoneRenderer!: DialogZoneRenderer;
   
-  // Configuration
+  // =========================================================================
+  // STATE
+  // =========================================================================
+  
+  /** Map configuration from init data */
   private config!: MapConfig;
   
-  // Event subscriptions
+  /** Minimap navigation event subscription */
   private minimapSubscription?: { unsubscribe: () => void };
   
-  // Shutdown guard to prevent double cleanup
-  private isShuttingDown = false;
-  
-  // Saved camera position to restore
+  /** Saved camera position to restore after scene switch */
   private savedCameraPosition: { scrollX: number; scrollY: number; zoom: number } | null = null;
   
-  // Public access for UI
+  // =========================================================================
+  // PUBLIC API
+  // =========================================================================
   public get itemManager(): PlacedItemManager {
     return this.itemsController?.getManager();
   }
@@ -72,48 +114,60 @@ export class BuilderScene extends Phaser.Scene {
     super({ key: SCENE_KEYS.BUILDER });
   }
 
+  // =========================================================================
+  // LIFECYCLE: INIT
+  // =========================================================================
+
   init(data: { config: MapConfig; savedCameraPosition?: { scrollX: number; scrollY: number; zoom: number } | null }): void {
+    super.init(data);
+    
     this.config = data.config;
     this.savedCameraPosition = data.savedCameraPosition ?? null;
+    
+    // Initialize world manager with config
+    this.worldManager = new WorldManager(this);
+    this.worldManager.setConfiguration(this.config);
   }
+
+  // =========================================================================
+  // LIFECYCLE: PRELOAD
+  // =========================================================================
 
   preload(): void {
-    // Load player sprite sheets
-    preloadSkins(this);
-    
-    // Load UI assets for placed items
-    PlacedItemManager.preloadAssets(this);
-    
-    // Load social assets
-    BuilderSocialsController.preloadAssets(this);
-    
-    // Load NPC assets
-    BuilderNPCsController.preloadAssets(this);
+    // Preload all builder assets via centralized preloader
+    AssetPreloader.preloadForBuilder(this);
   }
 
+  // =========================================================================
+  // LIFECYCLE: CREATE
+  // =========================================================================
+
   create(): void {
-    // Reset shutdown guard for scene restart
-    this.isShuttingDown = false;
+    super.create();
     
     // Start async initialization
     this.initializeScene();
   }
   
+  // =========================================================================
+  // ASYNC INITIALIZATION
+  // =========================================================================
+
   /**
-   * Scene initialization
+   * Async scene initialization.
+   * Creates background, entities, and sets up camera.
    */
-  private async initializeScene(): Promise<void> {
+  protected async initializeScene(): Promise<void> {
     // Create animations for all skins
     createAllSkinAnimations(this);
     
-    // Set world bounds
-    this.physics.world.setBounds(0, 0, this.config.worldWidth, this.config.worldHeight);
-
-    // Initialize controllers
-    const bgConfig = backgroundManager.getCurrentConfig();
-    const groundHeight = bgConfig.groundHeight ?? GROUND_HEIGHT;
-    const groundY = this.config.worldHeight - groundHeight;
+    // Setup physics world bounds
+    this.worldManager.setupWorldBounds();
     
+    // Get ground Y for entity placement
+    const { groundY } = this.worldManager.createGround('visual');
+    
+    // Initialize controllers
     this.cameraController = new BuilderCameraController(this, this.config.worldWidth, this.config.worldHeight);
     this.playerController = new BuilderPlayerController(this, this.config.worldWidth, this.config.worldHeight);
     this.gridOverlay = new BuilderGridOverlay(this, this.config.worldWidth, this.config.worldHeight);
@@ -122,14 +176,11 @@ export class BuilderScene extends Phaser.Scene {
     this.npcsController = new BuilderNPCsController(this, groundY, this.config.worldWidth, this.config.worldHeight);
     this.dialogZoneRenderer = new DialogZoneRenderer(this, this.config.worldWidth, this.config.worldHeight);
 
-    // Load and create background
-    this.createBackground();
+    // Setup background
+    await this.worldManager.setupBackground();
 
     // Create grid overlay
     this.gridOverlay.create();
-
-    // Create ground visual reference
-    this.createGroundReference();
 
     // Preload modular character if needed, then create player
     await this.playerController.preload();
@@ -167,75 +218,35 @@ export class BuilderScene extends Phaser.Scene {
       this.navigateToPosition(data.worldX, data.worldY);
     });
     
-    // Setup resize handler
-    this.scale.on('resize', this.handleResize, this);
-    
-    // Register shutdown handler for proper cleanup when scene stops
-    this.events.on('shutdown', this.shutdown, this);
+    // Mark as initialized
+    this.isInitialized = true;
   }
 
-  private async createBackground(): Promise<void> {
-    const config = backgroundManager.getCurrentConfig();
-    
-    // Load background assets if not already loaded
-    try {
-      await loadBackgroundAssets(this, config);
-    } catch (error) {
-      console.error('Failed to load background:', error);
-      return;
-    }
-
-    // Destroy existing layers
-    if (this.parallaxLayers) {
-      destroyParallaxLayers(this.parallaxLayers);
-      this.parallaxLayers = null;
-    }
-
-    // Create new parallax layers using shared helper
-    this.parallaxLayers = createParallaxBackground(
-      this,
-      this.config.worldWidth,
-      this.config.worldHeight,
-      config
-    );
-  }
-
-  private createGroundReference(): void {
-    const config = backgroundManager.getCurrentConfig();
-    const groundHeight = config.groundHeight ?? GROUND_HEIGHT;
-
-    GroundManager.createVisualGround(this, {
-      worldWidth: this.config.worldWidth,
-      worldHeight: this.config.worldHeight,
-      height: groundHeight,
-    });
-  }
+  // =========================================================================
+  // UPDATE LOOP
+  // =========================================================================
 
   update(): void {
-    // Update all parallax layers tiling for infinite scrolling effect
-    if (this.parallaxLayers) {
-      updateParallaxTiling(this.parallaxLayers, this.cameras.main);
-    }
+    // Guard: wait for initialization
+    if (!this.isInitialized) return;
+    
+    // Update parallax scrolling
+    this.worldManager.updateParallax(this.cameras.main);
     
     // Get world height for depth calculation
     const worldHeight = this.config.worldHeight;
     
-    // Get player sprite for auto-depth calculations
-    const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
-    
     // Update player depth based on Y position
+    const playerSprite = this.data.get('playerSprite') as Phaser.GameObjects.Sprite | undefined;
     if (playerSprite) {
-      const playerBounds = playerSprite.getBounds();
-      const playerBottomY = playerBounds.bottom;
-      const playerDepth = calculateDepthFromY(playerBottomY, worldHeight);
-      playerSprite.setDepth(playerDepth);
+      updateSpriteDepth(playerSprite, worldHeight);
     }
     
-    // Update auto-depth for items and NPCs based on Y position
+    // Update auto-depth for items and NPCs
     this.itemManager?.updateAutoDepth(worldHeight);
     this.npcsController?.updateAutoDepth(worldHeight);
     
-    // Update selection visuals and screen position (for UI overlay)
+    // Update selection visuals
     this.itemManager?.updateSelectionVisuals();
     this.socialsController?.updateSelectionVisuals();
     this.dialogZoneRenderer?.updateSelectionVisuals();
@@ -243,9 +254,6 @@ export class BuilderScene extends Phaser.Scene {
     
     // Update camera info for minimap
     const camera = this.cameras.main;
-    
-    // Use worldView for accurate world-to-screen conversion
-    // worldView represents the visible area in world coordinates
     updateCameraInfo({
       scrollX: camera.worldView.x,
       scrollY: camera.worldView.y,
@@ -259,60 +267,51 @@ export class BuilderScene extends Phaser.Scene {
     });
   }
   
+  // =========================================================================
+  // NAVIGATION
+  // =========================================================================
+  
   /** Navigate camera to a position (called from minimap click) */
   private navigateToPosition(x: number, y: number): void {
     this.cameraController.centerOn(x, y);
   }
   
+  // =========================================================================
+  // RESIZE HANDLING
+  // =========================================================================
+
   /**
-   * Handle window/canvas resize
+   * Handle window/canvas resize.
+   * Delegates to camera controller and redraws grid.
    */
-  private handleResize(_gameSize: Phaser.Structs.Size): void {
-    // Guard: only handle resize when scene is active
-    if (!this.cameras?.main || !this.config) return;
+  protected handleResize(_gameSize: Phaser.Structs.Size): void {
+    if (!this.cameraController || !this.config) return;
     
-    // Let camera controller handle zoom/bounds recalculation
-    this.cameraController?.handleResize();
-    
-    // Update grid overlay if exists
-    if (this.gridOverlay) {
-      this.gridOverlay.redraw();
-    }
+    this.cameraController.handleResize();
+    this.gridOverlay?.redraw();
   }
 
+  // =========================================================================
+  // SHUTDOWN
+  // =========================================================================
+
   shutdown(): void {
-    // Guard against double shutdown
-    if (this.isShuttingDown) return;
-    this.isShuttingDown = true;
+    // Clean up minimap subscription
+    this.minimapSubscription?.unsubscribe();
     
-    // Remove resize listener
-    this.scale.off('resize', this.handleResize, this);
-    // Clean up event subscriptions
-    if (this.minimapSubscription) {
-      this.minimapSubscription.unsubscribe();
-    }
+    // Destroy world manager
+    this.worldManager?.destroy();
     
-    // Clean up controllers
-    if (this.cameraController) {
-      this.cameraController.destroy();
-    }
-    if (this.playerController) {
-      this.playerController.destroy();
-    }
-    if (this.gridOverlay) {
-      this.gridOverlay.destroy();
-    }
-    if (this.itemsController) {
-      this.itemsController.destroy();
-    }
-    if (this.socialsController) {
-      this.socialsController.destroy();
-    }
-    if (this.dialogZoneRenderer) {
-      this.dialogZoneRenderer.destroy();
-    }
-    if (this.npcsController) {
-      this.npcsController.destroy();
-    }
+    // Destroy controllers
+    this.cameraController?.destroy();
+    this.playerController?.destroy();
+    this.gridOverlay?.destroy();
+    this.itemsController?.destroy();
+    this.socialsController?.destroy();
+    this.dialogZoneRenderer?.destroy();
+    this.npcsController?.destroy();
+    
+    // Call parent cleanup
+    super.shutdown();
   }
 }
