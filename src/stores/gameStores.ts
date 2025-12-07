@@ -44,11 +44,13 @@ export const gameWorldDimensions = writable<{
   worldHeight: number;
   offsetX: number;
   offsetY: number;
+  ready: boolean;
 }>({ 
   worldWidth: 640, 
   worldHeight: 640,
   offsetX: 0,
-  offsetY: 0
+  offsetY: 0,
+  ready: false
 });
 
 /** Update game world dimensions (called from GameScene on create and resize) */
@@ -75,7 +77,19 @@ export function setGameWorldDimensions(
     worldWidth: frameWidth, 
     worldHeight: frameHeight, 
     offsetX, 
-    offsetY 
+    offsetY,
+    ready: true
+  });
+}
+
+/** Reset game world dimensions (called when leaving game scene) */
+export function resetGameWorldDimensions(): void {
+  gameWorldDimensions.set({
+    worldWidth: 640,
+    worldHeight: 640,
+    offsetX: 0,
+    offsetY: 0,
+    ready: false
   });
 }
 

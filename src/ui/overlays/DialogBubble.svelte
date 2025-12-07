@@ -5,7 +5,7 @@
     DIALOG_BUBBLE_VERTICAL_OFFSET
   } from '../../constants/uiConstants';
   
-  const BUBBLE_WIDTH = 320;
+  const MAX_BUBBLE_WIDTH = 320;
   const BUBBLE_MARGIN = 20;
   
   // Calculate bubble bottom position (bubble sits above player)
@@ -15,10 +15,10 @@
   // Check if we're on a narrow screen
   let isNarrowScreen = $derived(window.innerWidth <= NARROW_SCREEN_BREAKPOINT);
   
-  // Clamp bubble position to stay on screen
+  // Clamp bubble position to stay on screen (use max width for safe margin)
   let clampedLeft = $derived.by(() => {
     if (isNarrowScreen) return window.innerWidth / 2;
-    const halfWidth = BUBBLE_WIDTH / 2;
+    const halfWidth = MAX_BUBBLE_WIDTH / 2;
     const minX = halfWidth + BUBBLE_MARGIN;
     const maxX = window.innerWidth - halfWidth - BUBBLE_MARGIN;
     return Math.max(minX, Math.min(maxX, $playerScreenPosition.x));
@@ -48,8 +48,12 @@
     position: fixed;
     transform: translateX(-50%);
     
-    /* Fixed width to prevent resizing */
-    width: 320px;
+    /* Shrink to content */
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    min-width: 60px;
+    max-width: 320px;
     max-height: 400px;
     
     background: #f8f8f8;
@@ -111,8 +115,8 @@
     color: #444;
     overflow-y: auto;
     max-height: 320px;
-    white-space: pre-wrap;
     word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   
   @keyframes bubbleIn {
@@ -128,8 +132,7 @@
   
   /* Narrow screen adjustments */
   .dialog-bubble.narrow {
-    width: calc(100vw - 40px);
-    max-width: 320px;
+    max-width: calc(100vw - 40px);
   }
   
   .dialog-bubble.narrow::after,

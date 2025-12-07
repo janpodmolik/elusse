@@ -72,8 +72,8 @@
   <BackgroundSelect />
 {:else}
   <div class="game-ui-wrapper">
-    <!-- Game Frame (decorative border) - only in game mode -->
-    {#if $gameFrameVisible && !$isBuilderMode}
+    <!-- Game Frame (decorative border) - only in game mode and after loading -->
+    {#if $gameFrameVisible && !$isBuilderMode && !$isLoading}
       <GameFrame />
     {/if}
 
@@ -149,6 +149,7 @@
     {#if $isLoading}
       <div class="loader-overlay">
         <div class="pixel-loader"></div>
+        <div class="loader-text">LOADING</div>
       </div>
     {/if}
   </div>

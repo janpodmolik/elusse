@@ -10,6 +10,9 @@
   // Get game world dimensions from store
   $: dimensions = $gameWorldDimensions;
   
+  // Only show frame when dimensions are ready
+  $: isReady = dimensions.ready;
+  
   // Calculate frame position and size based on world dimensions
   $: frameStyle = `
     top: ${dimensions.offsetY}px;
@@ -26,6 +29,7 @@
   $: maskBottom = dimensions.offsetY + dimensions.worldHeight;
 </script>
 
+{#if isReady}
 <!-- Masking overlays to hide content outside game area -->
 <div class="game-mask mask-top" style="height: {maskTop}px; background: {frameColor};"></div>
 <div class="game-mask mask-bottom" style="top: {maskBottom}px; background: {frameColor};"></div>
@@ -48,12 +52,13 @@
   <div class="frame-corner corner-bottom-left"></div>
   <div class="frame-corner corner-bottom-right"></div>
 </div>
+{/if}
 
 <style>
   .game-frame {
     position: fixed;
     pointer-events: none;
-    z-index: 100;
+    z-index: 1000;
     /* Dimensions set dynamically via style attribute */
   }
 

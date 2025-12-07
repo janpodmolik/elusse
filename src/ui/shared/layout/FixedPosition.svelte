@@ -25,7 +25,7 @@
 <style>
   .fixed {
     position: fixed;
-    z-index: 900;
+    z-index: 1100;
     pointer-events: none;
   }
   

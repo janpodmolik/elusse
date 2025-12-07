@@ -2,7 +2,7 @@
   import { activeNPCDialog, activeNPCDialogText, activeDialogText } from '../../stores/dialogStores';
   import { DIALOG_BUBBLE_VERTICAL_OFFSET } from '../../constants/uiConstants';
   
-  const BUBBLE_WIDTH = 300;
+  const MAX_BUBBLE_WIDTH = 300;
   const BUBBLE_MARGIN = 20;
   const PLAYER_BUBBLE_HEIGHT = 120; // Estimated height of player bubble + gap
   
@@ -24,27 +24,17 @@
     return bottom;
   });
   
-  // Clamp bubble position to stay on screen
-  let clampedLeft = $derived.by(() => {
+  // Position bubble directly at NPC position
+  let bubbleLeft = $derived.by(() => {
     if (!$activeNPCDialog) return 0;
-    const npcX = $activeNPCDialog.screenX;
-    const halfWidth = BUBBLE_WIDTH / 2;
-    const minX = halfWidth + BUBBLE_MARGIN;
-    const maxX = window.innerWidth - halfWidth - BUBBLE_MARGIN;
-    return Math.max(minX, Math.min(maxX, npcX));
-  });
-  
-  // Calculate arrow offset (how much the arrow should shift from center)
-  let arrowOffset = $derived.by(() => {
-    if (!$activeNPCDialog) return 0;
-    return $activeNPCDialog.screenX - clampedLeft;
+    return $activeNPCDialog.screenX;
   });
 </script>
 
 {#if $activeNPCDialogText && $activeNPCDialog}
   <div 
     class="npc-dialog-bubble"
-    style="bottom: {bubbleBottom}px; left: {clampedLeft}px; --arrow-offset: {arrowOffset}px;"
+    style="bottom: {bubbleBottom}px; left: {bubbleLeft}px;"
   >
     {#if $activeNPCDialogText.content}
       <div class="dialog-content">{$activeNPCDialogText.content}</div>
@@ -57,8 +47,12 @@
     position: fixed;
     transform: translateX(-50%);
     
-    /* Fixed width to prevent resizing */
-    width: 300px;
+    /* Shrink to content */
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    min-width: 60px;
+    max-width: 300px;
     max-height: 300px;
     
     background: #f8f8f8;
@@ -90,7 +84,7 @@
     content: '';
     position: absolute;
     bottom: -16px;
-    left: calc(50% + var(--arrow-offset, 0px));
+    left: 50%;
     transform: translateX(-50%);
     
     width: 0;
@@ -105,7 +99,7 @@
     content: '';
     position: absolute;
     bottom: -9px;
-    left: calc(50% + var(--arrow-offset, 0px));
+    left: 50%;
     transform: translateX(-50%);
     
     width: 0;

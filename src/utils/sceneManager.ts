@@ -5,7 +5,7 @@
 
 import type { MapConfig } from '../data/mapConfig';
 import { enterBuilderMode, exitBuilderMode } from '../stores/builderStores';
-import { saveBuilderCameraPosition, consumeSavedBuilderCameraPosition } from '../stores/gameStores';
+import { saveBuilderCameraPosition, consumeSavedBuilderCameraPosition, resetGameWorldDimensions } from '../stores/gameStores';
 import { SCENE_KEYS } from '../constants/sceneKeys';
 import type { BuilderScene } from '../scenes/BuilderScene';
 
@@ -57,6 +57,9 @@ export function switchToBuilder(mapConfig: MapConfig): boolean {
 
     // Stop game scene
     gameInstance.scene.stop(SCENE_KEYS.GAME);
+    
+    // Reset game world dimensions (hides GameFrame)
+    resetGameWorldDimensions();
     
     // Check if there's a saved builder camera position to restore
     const savedBuilderPos = consumeSavedBuilderCameraPosition();

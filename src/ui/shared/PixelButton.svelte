@@ -62,7 +62,7 @@
     cursor: pointer;
     user-select: none;
     outline: none;
-    z-index: 999;
+    z-index: 1100;
     display: flex;
     align-items: center;
     justify-content: center;
